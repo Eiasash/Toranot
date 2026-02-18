@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { PatientEntry, Task } from "../types";
-import { usePatientsDispatch } from "../context/PatientsContext";
+import { usePatientsDispatch, usePatientsState } from "../context/PatientsContext";
 import { TaskItem } from "./TaskItem";
 
 const FLAG_COLORS: Record<string, string> = {
@@ -48,6 +48,7 @@ function TaskProgress({ done, total }: { done: number; total: number }) {
 /* ─── Mobile Card ──────────────────────────────────────────── */
 
 export function PatientCard({ patient }: { patient: PatientEntry }) {
+  const { showTomorrow } = usePatientsState();
   const dispatch = usePatientsDispatch();
   const [diagExpanded, setDiagExpanded] = useState(false);
   const allTasks = sortTasks([...patient.tasks, ...patient.generatedTasks]);
@@ -123,7 +124,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
         )}
 
 
-        {patient.tomorrowNotes.length > 0 && (
+        {showTomorrow && patient.tomorrowNotes.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {patient.tomorrowNotes.map((s, i) => (
               <span

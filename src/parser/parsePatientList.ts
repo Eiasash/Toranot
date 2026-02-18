@@ -171,6 +171,14 @@ function parsePatientLine(
       }
       continue;
     }
+    // Heuristic: if segment mentions מחר/לבוקר, treat as tomorrow note (not an on-call task)
+    const implicitMachar = /\bמחר\b|\bלבוקר\b|\bבבוקר\b/.test(part);
+    if (implicitMachar) {
+      // strip the word מחר if it prefixes the segment
+      tomorrowNotes.push(part.replace(/^מחר\s*[:\-]?\s*/,"").trim() || part);
+      continue;
+    }
+
     // Heuristic: if it contains an action verb, time, or known shorthand, treat as task
     const isTask =
       /(?:בדיק|ב"ד|CT|US|\bBS\b|Bladder\s*Scan|תור |לתת |להזמין|לבצע|למדוד|לשלוח|טיפול|ניקוז|עירוי|צילום|דימות|ייעוץ|שיחה|א\.?ק\.?ג)/i.test(

@@ -15,6 +15,7 @@ import { generateId } from "../utils/id";
 interface PatientsState {
   patients: PatientEntry[];
   activeSection: Section;
+  showTomorrow: boolean;
 }
 
 function loadSavedPatients(): PatientEntry[] {
@@ -29,6 +30,7 @@ function loadSavedPatients(): PatientEntry[] {
 const initialState: PatientsState = {
   patients: loadSavedPatients(),
   activeSection: "SIDE_A",
+  showTomorrow: false,
 };
 
 // Actions
@@ -37,7 +39,8 @@ type Action =
   | { type: "SET_SECTION"; section: Section }
   | { type: "TOGGLE_TASK"; patientId: string; taskId: string }
   | { type: "ADD_TASK"; patientId: string; text: string }
-  | { type: "CLEAR_ALL" };
+  | { type: "CLEAR_ALL" }
+  | { type: "TOGGLE_SHOW_TOMORROW" };
 
 function toggleTaskInList(tasks: Task[], taskId: string): Task[] {
   return tasks.map((t) =>
