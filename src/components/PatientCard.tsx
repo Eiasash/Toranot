@@ -1,176 +1,327 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { PatientEntry, Task } from "../types";
-import { usePatientsDispatch, usePatientsState } from "../context/PatientsContext";
 import { TaskItem } from "./TaskItem";
-
-const FLAG_COLORS: Record<string, string> = {
-  DNR: "bg-red-600 text-white",
-  DNI: "bg-red-500 text-white",
-  NPO: "bg-orange-500 text-white",
-  FALL: "bg-purple-500 text-white",
-  ISO: "bg-yellow-500 text-black",
-  MRSA: "bg-pink-600 text-white",
-  VRE: "bg-pink-500 text-white",
-  ESBL: "bg-pink-400 text-white",
-};
+import { usePatientsDispatch, usePatientsState } from "../context/PatientsContext";
 
 function FlagBadge({ flag }: { flag: string }) {
-  const color = FLAG_COLORS[flag] ?? "bg-gray-500 text-white";
   return (
-    <span dir="auto" className={`text-[11px] font-bold px-1.5 py-0.5 rounded ${color}`}>
+    <span
+      className={[
+        "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold",
+        flag.toUpperCase().includes("DNR") || flag.toUpperCase().includes("DNI")
+          ? "bg-red-600 text-white"
+          : "bg-gray-200 text-gray-800",
+      ].join(" ")}
+    >
       {flag}
     </span>
   );
 }
 
 function sortTasks(tasks: Task[]) {
-  const urgencyOrder = { stat: 0, urgent: 1, morning: 2, routine: 3 };
-  return [...tasks].sort((a, b) => {
-    if (a.done !== b.done) return a.done ? 1 : -1;
-    return (urgencyOrder[a.urgency] ?? 3) - (urgencyOrder[b.urgency] ?? 3);
-  });
+  const weight: Record<Task["urgency"], number> = {
+    stat: 0,
+    urgent: 1,
+    morning: 2,
+    routine: 3,
+  };
+  return [...tasks].sort((a, b) => weight[a.urgency] - weight[b.urgency]);
 }
 
 function TaskProgress({ done, total }: { done: number; total: number }) {
-  if (total === 0) return null;
-  const allDone = done === total;
   return (
-    <span
-      className={`text-sm font-bold tabular-nums shrink-0 ${
-        allDone ? "text-green-600" : "text-blue-600"
-      }`}
-    >
+    <span className="inline-flex items-center justify-center px-2 py-1 rounded-lg bg-blue-600 text-white text-sm font-semibold tabular-nums">
       {done}/{total}
     </span>
   );
 }
 
-/* ─── Mobile Card ──────────────────────────────────────────── */
-
 export function PatientCard({ patient }: { patient: PatientEntry }) {
-  const { showTomorrow } = usePatientsState();
   const dispatch = usePatientsDispatch();
-  const [diagExpanded, setDiagExpanded] = useState(false);
-  const allTasks = sortTasks([...patient.tasks, ...patient.generatedTasks]);
+  const { showTomorrow } = usePatientsState();
+
+  const manualNotes = patient.notes ?? [];
+
+  const allTasks = useMemo(
+    () => sortTasks([...patient.tasks, ...patient.generatedTasks]),
+    [patient.tasks, patient.generatedTasks],
+  );
+
   const doneCount = allTasks.filter((t) => t.done).length;
   const totalCount = allTasks.length;
-  const isLongDiag = patient.diagnosis != null && patient.diagnosis.length > 80;
+
+  const [addOpen, setAddOpen] = useState(false);
+  const [addType, setAddType] = useState<"task" | "note">("task");
+  const [draft, setDraft] = useState("");
+
+  const add = () => {
+    const text = draft.trim();
+    if (!text) return;
+
+    if (addType === "task") {
+      dispatch({ type: "ADD_TASK", patientId: patient.id, text });
+    } else {
+      dispatch({ type: "ADD_NOTE", patientId: patient.id, text });
+    }
+
+    setDraft("");
+  };
 
   return (
-    <article className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-      {/* Header Row: Room | Name | Age | Progress */}
-      <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-gray-100 bg-gray-50/60">
-        {patient.room && (
-          <span className="inline-flex items-center justify-center min-w-[2.25rem] h-7 px-1.5 rounded bg-blue-700 text-white text-xs font-bold font-mono shrink-0">
-            {patient.room}
-          </span>
-        )}
-        <span className="flex-1 min-w-0 font-semibold text-gray-900 truncate">
-          {patient.name ?? "לא ידוע"}
-        </span>
-        {patient.age != null && (
-          <span className="text-xs text-gray-500 bg-gray-200/70 rounded px-1.5 py-0.5 shrink-0 tabular-nums">
-            {patient.age}
-          </span>
-        )}
-        <TaskProgress done={doneCount} total={totalCount} />
-      </div>
-
-      <div className="px-3 py-2 space-y-2">
-        {/* Flags Row */}
-        {patient.flags.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {patient.flags.map((flag) => (
-              <FlagBadge key={flag} flag={flag} />
-            ))}
-          </div>
-        )}
-
-        {/* Diagnosis Block */}
-        {patient.diagnosis && (
-          <div>
-            <p
-              dir="auto"
-              className={`text-sm text-gray-700 leading-relaxed whitespace-pre-line ${
-                !diagExpanded ? "line-clamp-3" : ""
-              }`}
-            >
-              {patient.diagnosis}
-            </p>
-            {isLongDiag && (
-              <button
-                onClick={() => setDiagExpanded(!diagExpanded)}
-                className="text-xs text-blue-600 mt-0.5"
-              >
-                {diagExpanded ? "הצג פחות" : "הצג עוד"}
-              </button>
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-semibold truncate">
+              {patient.name ?? "לא ידוע"}
+            </span>
+            {patient.room && (
+              <span className="shrink-0 text-sm bg-blue-600 text-white px-2 py-0.5 rounded-lg">
+                {patient.room}
+              </span>
             )}
           </div>
-        )}
-
-        {/* Status Row */}
-        {patient.status.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {patient.status.map((s, i) => (
-              <span
-                key={i}
-                dir="auto"
-                className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded"
-              >
-                {s}
-              </span>
-            ))}
+          <div className="text-sm text-gray-600 mt-1" dir="auto">
+            {patient.diagnosis ?? ""}
           </div>
+        </div>
+
+        <div className="text-right shrink-0">
+          <TaskProgress done={doneCount} total={totalCount} />
+          {patient.age && (
+            <div className="text-xs text-gray-500 mt-1 tabular-nums">
+              {patient.age}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Flags */}
+      {patient.flags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {patient.flags.map((f) => (
+            <FlagBadge key={f} flag={f} />
+          ))}
+        </div>
+      )}
+
+      {/* Status + tomorrow + manual notes */}
+      {(patient.status.length > 0 ||
+        (showTomorrow && patient.tomorrowNotes.length > 0) ||
+        manualNotes.length > 0) && (
+        <div className="space-y-2">
+          {patient.status.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {patient.status.map((s, i) => (
+                <span
+                  key={i}
+                  dir="auto"
+                  className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded"
+                  style={{ unicodeBidi: "plaintext" }}
+                >
+                  {s}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {showTomorrow && patient.tomorrowNotes.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {patient.tomorrowNotes.map((s, i) => (
+                <span
+                  key={i}
+                  dir="auto"
+                  className="text-xs bg-green-50 text-green-900 px-2 py-0.5 rounded border border-green-200"
+                  style={{ unicodeBidi: "plaintext" }}
+                  title="מחר (לא תורן)"
+                >
+                  מחר: {s}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {manualNotes.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {manualNotes.map((n, idx) => (
+                <span
+                  key={idx}
+                  dir="auto"
+                  className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-900 px-2 py-0.5 rounded border border-blue-200"
+                  style={{ unicodeBidi: "plaintext" }}
+                  title="הערת תורן"
+                >
+                  {n}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      dispatch({
+                        type: "REMOVE_NOTE",
+                        patientId: patient.id,
+                        index: idx,
+                      })
+                    }
+                    className="ml-1 text-blue-700 hover:text-blue-900"
+                    aria-label="מחק הערה"
+                    title="מחק"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tasks */}
+      <div className="space-y-2">
+        {allTasks.length === 0 ? (
+          <div className="text-sm text-gray-500">אין משימות תורן</div>
+        ) : (
+          allTasks.map((task) => (
+            <TaskItem
+              key={task.id}
+              task={task}
+              onToggle={() =>
+                dispatch({
+                  type: "TOGGLE_TASK",
+                  patientId: patient.id,
+                  taskId: task.id,
+                })
+              }
+              onSetNote={(note) =>
+                dispatch({
+                  type: "SET_TASK_NOTE",
+                  patientId: patient.id,
+                  taskId: task.id,
+                  note,
+                })
+              }
+            />
+          ))
         )}
+      </div>
 
-
-        {showTomorrow && patient.tomorrowNotes.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {patient.tomorrowNotes.map((s, i) => (
-              <span
-                key={i}
-                dir="auto"
-                className="text-xs bg-amber-50 text-amber-800 px-2 py-0.5 rounded border border-amber-100"
-                title="מחר"
+      {/* Add manual task / note */}
+      <div className="pt-2 border-t border-gray-100 space-y-2">
+        {!addOpen ? (
+          <button
+            type="button"
+            onClick={() => setAddOpen(true)}
+            className="w-full py-2 rounded-xl border border-gray-200 text-sm text-gray-700"
+          >
+            + הוסף משימה / הערה
+          </button>
+        ) : (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setAddType("task")}
+                className={[
+                  "px-3 py-1 rounded-lg text-sm border",
+                  addType === "task"
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-white text-gray-700 border-gray-200",
+                ].join(" ")}
               >
-                מחר: {s}
-              </span>
-            ))}
-          </div>
-        )}
+                משימה
+              </button>
+              <button
+                type="button"
+                onClick={() => setAddType("note")}
+                className={[
+                  "px-3 py-1 rounded-lg text-sm border",
+                  addType === "note"
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-white text-gray-700 border-gray-200",
+                ].join(" ")}
+              >
+                הערה
+              </button>
 
-        {/* Tasks */}
-        {allTasks.length > 0 && (
-          <div className="space-y-1.5 pt-0.5 pb-1">
-            {allTasks.map((task) => (
-              <TaskItem
-                key={task.id}
-                task={task}
-                onToggle={() =>
-                  dispatch({
-                    type: "TOGGLE_TASK",
-                    patientId: patient.id,
-                    taskId: task.id,
-                  })
+              <button
+                type="button"
+                onClick={() => {
+                  setAddOpen(false);
+                  setDraft("");
+                }}
+                className="ml-auto px-3 py-1 rounded-lg text-sm border border-gray-200 text-gray-700"
+              >
+                סגור
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") add();
+                  if (e.key === "Escape") setAddOpen(false);
+                }}
+                dir="auto"
+                style={{ unicodeBidi: "plaintext" }}
+                placeholder={
+                  addType === "task"
+                    ? "משימה חדשה (למשל: BS)"
+                    : "הערה (למשל: BS 250ml)"
                 }
+                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-400 outline-none"
               />
-            ))}
+              <button
+                type="button"
+                onClick={add}
+                className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm"
+              >
+                הוסף
+              </button>
+            </div>
+
+            <div className="text-xs text-gray-500">
+              הערה נשמרת אצל המטופל, משימה נספרת במונה תורן.
+            </div>
           </div>
         )}
       </div>
-    </article>
+    </div>
   );
 }
 
-/* ─── Desktop Table Row ────────────────────────────────────── */
-
 export function PatientRow({ patient }: { patient: PatientEntry }) {
   const dispatch = usePatientsDispatch();
+  const { showTomorrow } = usePatientsState();
+
   const [expanded, setExpanded] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [addType, setAddType] = useState<"task" | "note">("task");
+  const [draft, setDraft] = useState("");
+
+  const manualNotes = patient.notes ?? [];
+
   const allTasks = sortTasks([...patient.tasks, ...patient.generatedTasks]);
   const doneCount = allTasks.filter((t) => t.done).length;
   const totalCount = allTasks.length;
-  const hasDetail = allTasks.length > 0 || patient.status.length > 0;
+
+  const hasDetail =
+    allTasks.length > 0 ||
+    patient.status.length > 0 ||
+    (showTomorrow && patient.tomorrowNotes.length > 0) ||
+    manualNotes.length > 0;
+
+  const add = () => {
+    const text = draft.trim();
+    if (!text) return;
+
+    if (addType === "task") {
+      dispatch({ type: "ADD_TASK", patientId: patient.id, text });
+    } else {
+      dispatch({ type: "ADD_NOTE", patientId: patient.id, text });
+    }
+
+    setDraft("");
+  };
 
   return (
     <>
@@ -205,6 +356,7 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
           <TaskProgress done={doneCount} total={totalCount} />
         </td>
       </tr>
+
       {expanded && (
         <tr className="border-b border-gray-100 bg-gray-50/50">
           <td colSpan={6} className="px-8 py-3">
@@ -216,17 +368,61 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
                       key={i}
                       dir="auto"
                       className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded"
+                      style={{ unicodeBidi: "plaintext" }}
                     >
                       {s}
                     </span>
                   ))}
                 </div>
               )}
-              {patient.diagnosis && (
-                <p dir="auto" className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
-                  {patient.diagnosis}
-                </p>
+
+              {showTomorrow && patient.tomorrowNotes.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {patient.tomorrowNotes.map((s, i) => (
+                    <span
+                      key={i}
+                      dir="auto"
+                      className="text-xs bg-green-50 text-green-900 px-2 py-0.5 rounded border border-green-200"
+                      style={{ unicodeBidi: "plaintext" }}
+                      title="מחר (לא תורן)"
+                    >
+                      מחר: {s}
+                    </span>
+                  ))}
+                </div>
               )}
+
+              {manualNotes.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {manualNotes.map((n, idx) => (
+                    <span
+                      key={idx}
+                      dir="auto"
+                      className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-900 px-2 py-0.5 rounded border border-blue-200"
+                      style={{ unicodeBidi: "plaintext" }}
+                      title="הערת תורן"
+                    >
+                      {n}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          dispatch({
+                            type: "REMOVE_NOTE",
+                            patientId: patient.id,
+                            index: idx,
+                          })
+                        }
+                        className="ml-1 text-blue-700 hover:text-blue-900"
+                        aria-label="מחק הערה"
+                        title="מחק"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
               {allTasks.length > 0 && (
                 <div className="space-y-1.5">
                   {allTasks.map((task) => (
@@ -240,10 +436,101 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
                           taskId: task.id,
                         })
                       }
+                      onSetNote={(note) =>
+                        dispatch({
+                          type: "SET_TASK_NOTE",
+                          patientId: patient.id,
+                          taskId: task.id,
+                          note,
+                        })
+                      }
                     />
                   ))}
                 </div>
               )}
+
+              {/* Add manual task / note */}
+              <div className="pt-2 border-t border-gray-200 space-y-2">
+                {!addOpen ? (
+                  <button
+                    type="button"
+                    onClick={() => setAddOpen(true)}
+                    className="w-full py-2 rounded-xl border border-gray-300 text-sm text-gray-700 bg-white"
+                  >
+                    + הוסף משימה / הערה
+                  </button>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setAddType("task")}
+                        className={[
+                          "px-3 py-1 rounded-lg text-sm border",
+                          addType === "task"
+                            ? "bg-blue-600 text-white border-blue-600"
+                            : "bg-white text-gray-700 border-gray-200",
+                        ].join(" ")}
+                      >
+                        משימה
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAddType("note")}
+                        className={[
+                          "px-3 py-1 rounded-lg text-sm border",
+                          addType === "note"
+                            ? "bg-blue-600 text-white border-blue-600"
+                            : "bg-white text-gray-700 border-gray-200",
+                        ].join(" ")}
+                      >
+                        הערה
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAddOpen(false);
+                          setDraft("");
+                        }}
+                        className="ml-auto px-3 py-1 rounded-lg text-sm border border-gray-200 text-gray-700"
+                      >
+                        סגור
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        value={draft}
+                        onChange={(e) => setDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") add();
+                          if (e.key === "Escape") setAddOpen(false);
+                        }}
+                        dir="auto"
+                        style={{ unicodeBidi: "plaintext" }}
+                        placeholder={
+                          addType === "task"
+                            ? "משימה חדשה"
+                            : "הערה (תורן)"
+                        }
+                        className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-400 outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={add}
+                        className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm"
+                      >
+                        הוסף
+                      </button>
+                    </div>
+
+                    <div className="text-xs text-gray-500">
+                      הערה נשמרת אצל המטופל, משימה נספרת במונה תורן.
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </td>
         </tr>

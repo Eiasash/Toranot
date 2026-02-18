@@ -2,6 +2,7 @@ export {
   SECTIONS,
   SECTION_LABEL,
   detectSectionFromHeader,
+  detectSectionFromRoom,
 } from "./patient";
 
 export type {

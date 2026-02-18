@@ -1,5 +1,5 @@
 import type { PatientEntry, Task, TaskCategory } from "../types";
-import { Section, detectSectionFromHeader } from "../types";
+import { Section, detectSectionFromHeader, detectSectionFromRoom } from "../types";
 import { generateId } from "../utils/id";
 import { applyRules } from "../engine/rules";
 
@@ -130,6 +130,10 @@ function parsePatientLine(
   const diagTokens = tokens.slice(idx);
   const diagnosis = diagTokens.length > 0 ? diagTokens.join(" ") : null;
 
+  // If the room itself implies a section (e.g. 'ניטור 3'), prefer that.
+  const inferredSection = detectSectionFromRoom(room);
+  const finalSection: Section = inferredSection ?? section;
+
   // Parse extra segments into status and tasks
   const status: string[] = [];
   const tasks: Task[] = [];
@@ -216,7 +220,7 @@ function parsePatientLine(
 
   const entry: PatientEntry = {
     id: generateId("pt-"),
-    section,
+    section: finalSection,
     date,
     room,
     name,
@@ -227,6 +231,7 @@ function parsePatientLine(
     tomorrowNotes,
     tasks,
     generatedTasks: [],
+    notes: [],
     scannedAt: new Date().toISOString(),
     confidence: Math.min(confidence, 1),
   };

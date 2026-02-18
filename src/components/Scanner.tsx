@@ -213,12 +213,23 @@ export function Scanner({ onTextExtracted, onCancel }: ScannerProps) {
     ];
 
     function matchHeader(line: string): number | null {
-      const t = line.replace(/\s+/g, "");
-      if (t.includes("צדא")) return 0;
-      if (t.includes("צדב")) return 1;
-      if (t.includes("צדג")) return 2;
-      if (t.includes("שיקום")) return 3;
-      if (t.includes("ניטור") || t.includes("מוניטור")) return 4;
+      const raw = line.trim();
+      if (!raw) return null;
+
+      // Strip separators like ":" / "-" and ignore digits.
+      const cleaned = raw.replace(/[:：\-–—]+/g, " ").trim();
+      if (/\d/.test(cleaned)) return null;
+
+      const t = cleaned.replace(/\s+/g, "").toLowerCase();
+
+      if (t === "צדא" || t === "sidea") return 0;
+      if (t === "צדב" || t === "sideb") return 1;
+      if (t === "צדג" || t === "sidec") return 2;
+
+      if (t === "שיקום" || t === "שיקומי" || t === "rehab" || t === "rehabilitation") return 3;
+
+      if (t === "ניטור" || t === "מוניטור" || t === "monitor" || t === "monitoring") return 4;
+
       return null;
     }
 
@@ -420,6 +431,7 @@ export function Scanner({ onTextExtracted, onCancel }: ScannerProps) {
       </div>
     </div>
   );
+}
 
 function CameraIcon({ size = 24 }: { size?: number }) {
   return (
@@ -452,5 +464,4 @@ function Spinner() {
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
     </svg>
   );
-}
 }

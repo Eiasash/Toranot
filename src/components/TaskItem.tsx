@@ -1,86 +1,166 @@
+import { useEffect, useState } from "react";
 import type { Task } from "../types";
 
-const URGENCY_STYLES: Record<string, { row: string; badge: string }> = {
-  stat: {
-    row: "border-red-200 bg-red-50/50",
-    badge: "bg-red-100 text-red-700",
-  },
-  urgent: {
-    row: "border-orange-200 bg-orange-50/50",
-    badge: "bg-orange-100 text-orange-700",
-  },
-  morning: {
-    row: "border-amber-200 bg-amber-50/30",
-    badge: "bg-amber-100 text-amber-700",
-  },
-  routine: {
-    row: "border-gray-200 bg-white",
-    badge: "bg-gray-100 text-gray-600",
-  },
-};
-
-const URGENCY_LABEL: Record<string, string> = {
-  stat: "סטט",
-  urgent: "דחוף",
-  morning: "בוקר",
-  routine: "שגרה",
-};
-
-interface TaskItemProps {
-  task: Task;
-  onToggle: () => void;
+function urgencyBadge(urgency: Task["urgency"]) {
+  switch (urgency) {
+    case "stat":
+      return (
+        <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200">
+          סטט
+        </span>
+      );
+    case "urgent":
+      return (
+        <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200">
+          דחוף
+        </span>
+      );
+    case "morning":
+      return (
+        <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200">
+          בוקר
+        </span>
+      );
+    default:
+      return (
+        <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200">
+          שגרה
+        </span>
+      );
+  }
 }
 
-export function TaskItem({ task, onToggle }: TaskItemProps) {
-  const style = URGENCY_STYLES[task.urgency] ?? URGENCY_STYLES.routine;
+function backgroundFromUrgency(task: Task) {
+  if (task.done) return "bg-white";
+  switch (task.urgency) {
+    case "stat":
+      return "bg-red-50";
+    case "urgent":
+      return "bg-orange-50";
+    case "morning":
+      return "bg-blue-50";
+    default:
+      return "bg-white";
+  }
+}
+
+export function TaskItem({
+  task,
+  onToggle,
+  onSetNote,
+}: {
+  task: Task;
+  onToggle: () => void;
+  onSetNote?: (note: string | null) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(task.note ?? "");
+
+  useEffect(() => {
+    setDraft(task.note ?? "");
+  }, [task.note]);
+
+  const save = () => {
+    if (!onSetNote) {
+      setEditing(false);
+      return;
+    }
+    const trimmed = draft.trim();
+    onSetNote(trimmed ? trimmed : null);
+    setEditing(false);
+  };
+
+  const noteExists = !!(task.note && task.note.trim());
 
   return (
-    <button
-      onClick={onToggle}
-      className={`
-        flex items-center gap-2.5 w-full py-2 px-2.5 rounded border text-right
-        transition-colors active:scale-[0.99]
-        ${task.done ? "bg-gray-50 border-gray-100 opacity-50" : style.row}
-      `}
-    >
-      <span
-        className={`
-          w-4 h-4 rounded-sm border-2 shrink-0 flex items-center justify-center
-          ${task.done ? "bg-green-600 border-green-600" : "border-gray-300 bg-white"}
-        `}
+    <div className="w-full">
+      <div
+        className={[
+          "flex items-start gap-2 p-2 rounded-lg border",
+          backgroundFromUrgency(task),
+          task.done ? "opacity-60" : "",
+        ].join(" ")}
+        role="button"
+        tabIndex={0}
+        onClick={() => {
+          if (editing) return;
+          onToggle();
+        }}
+        onKeyDown={(e) => {
+          if (editing) return;
+          if (e.key === "Enter" || e.key === " ") onToggle();
+        }}
       >
-        {task.done && (
-          <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-            <path
-              d="M2 6l3 3 5-5"
-              stroke="white"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        )}
-      </span>
-      <span
-        dir="auto"
-        className={`flex-1 text-sm leading-snug ${
-          task.done ? "line-through text-gray-400" : "text-gray-800"
-        }`}
-      >
-        {task.text}
-      </span>
-      {!task.done && (
-        <span
-          className={`text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0 ${style.badge}`}
-        >
-          {URGENCY_LABEL[task.urgency]}
-        </span>
-      )}
-      {task.time && (
-        <span dir="ltr" className="text-[11px] font-mono text-gray-400 shrink-0">
-          {task.time}
-        </span>
-      )}
-    </button>
+        <input
+          type="checkbox"
+          checked={task.done}
+          onChange={onToggle}
+          onClick={(e) => e.stopPropagation()}
+          className="mt-1 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        />
+
+        <div className="flex-1 min-w-0">
+          <div
+            className="text-sm leading-snug whitespace-pre-wrap break-words"
+            dir="auto"
+            style={{ unicodeBidi: "plaintext" }}
+          >
+            {task.text}
+          </div>
+
+          {noteExists && !editing && (
+            <div
+              className="mt-1 text-xs text-gray-600 whitespace-pre-wrap break-words"
+              dir="auto"
+              style={{ unicodeBidi: "plaintext" }}
+            >
+              📝 {task.note}
+            </div>
+          )}
+
+          {editing && (
+            <div
+              className="mt-2 flex items-center gap-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <input
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") save();
+                  if (e.key === "Escape") setEditing(false);
+                }}
+                placeholder="הערה / תוצאה (למשל: BS 250ml)"
+                dir="auto"
+                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+              />
+              <button
+                type="button"
+                onClick={save}
+                className="px-3 py-2 text-sm rounded-lg bg-blue-600 text-white"
+              >
+                שמור
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col items-end gap-1">
+          {!task.done && urgencyBadge(task.urgency)}
+
+          <button
+            type="button"
+            title="הוסף הערה"
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditing((v) => !v);
+            }}
+            className="text-xs px-2 py-0.5 rounded-lg bg-white border border-gray-200 text-gray-700"
+          >
+            ✎
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

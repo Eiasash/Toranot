@@ -10,6 +10,8 @@ function mergeTaskState(oldTask: Task, newTask: Task): Task {
     ...newTask,
     done: oldTask.done,
     doneTime: oldTask.doneTime,
+    // Preserve any manual remark/result the user wrote.
+    note: oldTask.note ?? newTask.note ?? null,
   };
 }
 
@@ -39,6 +41,7 @@ function mergePatient(oldP: PatientEntry, newP: PatientEntry): PatientEntry {
     scannedAt: newP.scannedAt,
     tasks: [...mergedExtracted, ...manualKeep],
     generatedTasks: mergedGenerated,
+    notes: Array.from(new Set([...(oldP.notes ?? []), ...(newP.notes ?? [])])),
   };
 }
 
