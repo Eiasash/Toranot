@@ -268,7 +268,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
                     ? "משימה חדשה (למשל: BS)"
                     : "הערה (למשל: BS 250ml)"
                 }
-                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-400 outline-none"
+                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-xl bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-400 outline-none"
               />
               <button
                 type="button"
@@ -304,12 +304,6 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
   const doneCount = allTasks.filter((t) => t.done).length;
   const totalCount = allTasks.length;
 
-  const hasDetail =
-    allTasks.length > 0 ||
-    patient.status.length > 0 ||
-    (showTomorrow && patient.tomorrowNotes.length > 0) ||
-    manualNotes.length > 0;
-
   const add = () => {
     const text = draft.trim();
     if (!text) return;
@@ -326,11 +320,11 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
   return (
     <>
       <tr
-        onClick={() => hasDetail && setExpanded(!expanded)}
+        onClick={() => setExpanded(!expanded)}
         className={`
           border-b border-gray-100 transition-colors
-          ${hasDetail ? "cursor-pointer" : ""}
-          ${expanded ? "bg-blue-50/30" : hasDetail ? "hover:bg-gray-50" : ""}
+          cursor-pointer
+          ${expanded ? "bg-blue-50/30" : "hover:bg-gray-50"}
         `}
       >
         <td className="py-2.5 px-4 font-mono font-bold text-blue-700 text-sm whitespace-nowrap">
@@ -353,7 +347,10 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
           </div>
         </td>
         <td className="py-2.5 px-4 text-center">
-          <TaskProgress done={doneCount} total={totalCount} />
+          <div className="inline-flex items-center justify-center gap-2">
+            <TaskProgress done={doneCount} total={totalCount} />
+            <span className="text-gray-400 text-sm">{expanded ? "▴" : "▾"}</span>
+          </div>
         </td>
       </tr>
 
@@ -514,7 +511,7 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
                             ? "משימה חדשה"
                             : "הערה (תורן)"
                         }
-                        className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-400 outline-none"
+                        className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-xl bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-400 outline-none"
                       />
                       <button
                         type="button"

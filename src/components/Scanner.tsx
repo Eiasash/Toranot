@@ -140,7 +140,7 @@ function ApiKeySetup({ onSaved }: { onSaved: () => void }) {
         onChange={(e) => { setKey(e.target.value); setError(""); }}
         placeholder="sk-ant-api03-..."
         dir="ltr"
-        className="w-full p-3 border border-gray-300 rounded-xl text-sm font-mono focus:ring-2 focus:ring-blue-400 outline-none"
+        className="w-full p-3 border border-gray-300 rounded-xl bg-white text-gray-900 placeholder:text-gray-400 text-sm font-mono whitespace-pre-wrap break-words focus:ring-2 focus:ring-blue-400 outline-none"
       />
       {error && <p className="text-xs text-red-500 text-center">{error}</p>}
       <a

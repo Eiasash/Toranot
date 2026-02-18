@@ -95,7 +95,7 @@ export function InputArea() {
         rows={8}
         autoFocus
         style={{ unicodeBidi: "plaintext" }}
-        className="w-full p-3 border border-gray-300 rounded-xl text-base leading-relaxed resize-y focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none whitespace-pre-wrap break-words"
+        className="w-full p-3 border border-gray-300 rounded-xl bg-white text-gray-900 placeholder:text-gray-400 text-base leading-relaxed resize-y focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none whitespace-pre-wrap break-words"
       />
       <button
         onClick={() => handleImport()}

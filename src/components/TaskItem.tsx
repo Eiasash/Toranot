@@ -96,7 +96,7 @@ export function TaskItem({
           checked={task.done}
           onChange={onToggle}
           onClick={(e) => e.stopPropagation()}
-          className="mt-1 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          className="mt-1 h-5 w-5 rounded border-gray-300 bg-white accent-blue-600 text-blue-600 focus:ring-blue-500"
         />
 
         <div className="flex-1 min-w-0">
@@ -132,7 +132,8 @@ export function TaskItem({
                 }}
                 placeholder="הערה / תוצאה (למשל: BS 250ml)"
                 dir="auto"
-                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+                style={{ unicodeBidi: "plaintext" }}
+                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-400 outline-none"
               />
               <button
                 type="button"

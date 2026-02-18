@@ -6,6 +6,7 @@
 }
 
 html {
+  color-scheme: light;
   /* dvh fallback for older Android Chrome (pre-108) */
   min-height: 100vh;
   min-height: 100dvh;
