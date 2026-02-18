@@ -27,10 +27,19 @@ function loadSavedPatients(): PatientEntry[] {
   }
 }
 
+function loadShowTomorrow(): boolean {
+  try {
+    const saved = localStorage.getItem("toranot-show-tomorrow");
+    return saved === "true";
+  } catch {
+    return false;
+  }
+}
+
 const initialState: PatientsState = {
   patients: loadSavedPatients(),
   activeSection: "SIDE_A",
-  showTomorrow: false,
+  showTomorrow: loadShowTomorrow(),
 };
 
 // Actions
@@ -104,6 +113,8 @@ function reducer(state: PatientsState, action: Action): PatientsState {
       };
     case "CLEAR_ALL":
       return { ...state, patients: [] };
+    case "TOGGLE_SHOW_TOMORROW":
+      return { ...state, showTomorrow: !state.showTomorrow };
     default:
       return state;
   }
@@ -124,6 +135,15 @@ export function PatientsProvider({ children }: { children: ReactNode }) {
       // Storage quota exceeded — ignore
     }
   }, [state.patients]);
+
+  // Persist showTomorrow preference
+  useEffect(() => {
+    try {
+      localStorage.setItem("toranot-show-tomorrow", state.showTomorrow.toString());
+    } catch {
+      // Storage quota exceeded — ignore
+    }
+  }, [state.showTomorrow]);
 
   return (
     <PatientsStateContext.Provider value={state}>

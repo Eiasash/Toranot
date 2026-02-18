@@ -4,7 +4,7 @@
  * 2. Asset caching for offline support
  */
 
-const CACHE_NAME = "toranot-v3";
+const CACHE_NAME = "toranot-v4";
 
 const PRECACHE_ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 
