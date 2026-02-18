@@ -133,9 +133,44 @@ function parsePatientLine(
   // Parse extra segments into status and tasks
   const status: string[] = [];
   const tasks: Task[] = [];
+  const tomorrowNotes: string[] = [];
 
-  for (const part of extraParts) {
+  for (const rawPart of extraParts) {
+    const part = rawPart.trim();
     if (!part) continue;
+
+    // If OCR labels columns, respect them.
+    const toranMatch = part.match(/^(?:תורן)\s*[:\-]\s*(.*)$/);
+    if (toranMatch) {
+      const body = toranMatch[1].trim();
+      if (body) {
+        for (const chunk of body.split(/\s*[;\n•]+\s*/).map((c) => c.trim()).filter(Boolean)) {
+          tasks.push({
+            id: generateId("task-"),
+            text: chunk,
+            urgency: detectUrgency(chunk),
+            category: classifyTaskCategory(chunk),
+            source: "extracted",
+            done: false,
+            doneTime: null,
+            time: extractTime(chunk),
+            confidence: 0.9,
+          });
+        }
+      }
+      continue;
+    }
+
+    const macharMatch = part.match(/^(?:מחר)\s*[:\-]\s*(.*)$/);
+    if (macharMatch) {
+      const body = macharMatch[1].trim();
+      if (body) {
+        for (const chunk of body.split(/\s*[;\n•]+\s*/).map((c) => c.trim()).filter(Boolean)) {
+          tomorrowNotes.push(chunk);
+        }
+      }
+      continue;
+    }
     // Heuristic: if it contains an action verb, time, or known shorthand, treat as task
     const isTask =
       /(?:בדיק|ב"ד|CT|US|\bBS\b|Bladder\s*Scan|תור |לתת |להזמין|לבצע|למדוד|לשלוח|טיפול|ניקוז|עירוי|צילום|דימות|ייעוץ|שיחה|א\.?ק\.?ג)/i.test(
@@ -181,6 +216,7 @@ function parsePatientLine(
     diagnosis,
     flags: [...new Set(flags)],
     status,
+    tomorrowNotes,
     tasks,
     generatedTasks: [],
     scannedAt: new Date().toISOString(),

@@ -122,6 +122,22 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
           </div>
         )}
 
+
+        {patient.tomorrowNotes.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {patient.tomorrowNotes.map((s, i) => (
+              <span
+                key={i}
+                dir="auto"
+                className="text-xs bg-amber-50 text-amber-800 px-2 py-0.5 rounded border border-amber-100"
+                title="מחר"
+              >
+                מחר: {s}
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* Tasks */}
         {allTasks.length > 0 && (
           <div className="space-y-1.5 pt-0.5 pb-1">

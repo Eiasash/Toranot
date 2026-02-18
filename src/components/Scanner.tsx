@@ -16,25 +16,23 @@ type ScanState =
 const STORAGE_KEY = "toranot_anthropic_key";
 
 const OCR_PROMPT = `You are reading a Hebrew geriatrics ward shift sheet (דף תורן גריאטריה).
-The sheet is a table with columns: room/bed (חדר), patient name (שם), age (גיל), diagnosis (אבחנה), status (סטטוס), and tasks/notes (תורן/מחר).
+The sheet is a table with columns: room/bed (חדר), patient name (שם), age (גיל), diagnosis (אבחנה), status (סטטוס), TOREN (תורן), and MACHAR (מחר).
 
 Extract ALL patients from the image. For each patient output ONE line in this exact format:
-{room} {full_name} {age} {diagnosis} | {status_flags} | {tasks_and_notes}
+{room} {full_name} {age} {diagnosis} | {status_flags} | תורן: {oncall_tasks} | מחר: {tomorrow_notes}
 
 Rules:
 - room: e.g. 57/1, 49-3, ניטור 1, ניטור 3
 - full_name: Hebrew name as written
 - age: number only
 - diagnosis: as written, keep English medical terms (PNEUMONIA, CHF, AKI, SEPTIC SHOCK, BIPAP, etc.)
-- status_flags: DNR, DNI, NPO, BIPAP, ISOLATION, DNR/DNI etc. if present, else omit this segment
-- tasks_and_notes: any tasks, tomorrow notes, special instructions
-- Use | to separate segments. If a segment is empty, omit it.
+- status_flags: DNR, DNI, NPO, BIPAP, ISOLATION, DNR/DNI etc. if present; if none leave empty (but keep the segment only if you have any flags)
+- תורן: ONLY tasks that the on-call doctor should do tonight (orders, labs, imaging, consults, follow-ups). If the תורן cell is empty, output "תורן:" with nothing after it.
+- מחר: plans for the morning/team (general plan), NOT tasks for the on-call doctor. If empty, output "מחר:" with nothing after it.
+- Use | to separate segments.
 - Output section headers exactly as: צד א / צד ב / צד ג / שיקום / ניטור
-- ALWAYS include section headers and group patients under the correct header.
-- If the image contains multiple sections, output each section separately with its header.
-- If you are unsure which section a patient belongs to, put them under the closest matching header visible on the page; if none is visible, put them under צד א.
-- Output ONLY the structured text, no explanations, no markdown`;
-
+- Output ONLY the structured text, no explanations, no markdown
+`;
 async function runClaudeOCR(file: File, apiKey: string): Promise<string> {
   const base64 = await fileToBase64(file);
   const mediaType = (file.type?.startsWith("image/") ? file.type : "image/jpeg") as
