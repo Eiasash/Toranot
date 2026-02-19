@@ -30,7 +30,7 @@ interface PatientsState {
   shiftHistory: ShiftSnapshot[];
 }
 
-function normalizeTask(t: any): Task {
+export function normalizeTask(t: any): Task {
   return {
     ...t,
     done: !!t.done,
@@ -42,7 +42,7 @@ function normalizeTask(t: any): Task {
   } as Task;
 }
 
-function normalizePatient(p: any): PatientEntry {
+export function normalizePatient(p: any): PatientEntry {
   return {
     ...p,
     flags: Array.isArray(p.flags) ? p.flags : [],
@@ -96,7 +96,7 @@ const initialState: PatientsState = {
 // -----------------------------
 // Actions
 // -----------------------------
-type Action =
+export type Action =
   | { type: "IMPORT_TEXT"; text: string }
   | { type: "SET_SECTION"; section: Section }
   | { type: "TOGGLE_TASK"; patientId: string; taskId: string }
@@ -116,7 +116,7 @@ type Action =
   | { type: "CLEAR_ALL" }
   | { type: "TOGGLE_SHOW_TOMORROW" };
 
-function inferUrgencyFromText(text: string): Urgency {
+export function inferUrgencyFromText(text: string): Urgency {
   const t = text.trim();
   if (!t) return "routine";
   if (/(^|\b)(סטט|STAT|דחוף)(\b|!)/i.test(t)) return "stat";
@@ -141,7 +141,7 @@ function setTaskNoteInList(tasks: Task[], taskId: string, note: string | null): 
   return tasks.map((t) => (t.id === taskId ? { ...t, note } : t));
 }
 
-function reducer(state: PatientsState, action: Action): PatientsState {
+export function reducer(state: PatientsState, action: Action): PatientsState {
   switch (action.type) {
     case "IMPORT_TEXT": {
       const parsed = parsePatientList(action.text);

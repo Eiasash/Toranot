@@ -107,4 +107,89 @@ describe("mergeScan", () => {
       ["כהן יוסף", "לוי שרה"].sort(),
     );
   });
+
+  // ─── New edge case tests ───
+
+  it("new patient with no existing match is added fresh", () => {
+    const existing = parsePatientList("101 כהן יוסף 72");
+    const incoming = parsePatientList("102 לוי שרה 65");
+
+    const merged = mergeScan(existing, incoming);
+    expect(merged).toHaveLength(2);
+    expect(merged.map((p) => p.name).sort()).toEqual(["כהן יוסף", "לוי שרה"].sort());
+  });
+
+  it("empty incoming scan keeps all existing patients", () => {
+    const existing = parsePatientList(`צד א
+101 כהן יוסף 72
+102 לוי שרה 65`);
+
+    const merged = mergeScan(existing, []);
+    expect(merged).toHaveLength(2);
+  });
+
+  it("empty existing state accepts all incoming patients", () => {
+    const incoming = parsePatientList("101 כהן יוסף 72");
+    const merged = mergeScan([], incoming);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].name).toBe("כהן יוסף");
+  });
+
+  it("preserves notes across rescans (deduplication)", () => {
+    const first = parsePatientList(SCAN_TEXT);
+    first[0].notes = ["note A", "note B"];
+
+    const second = parsePatientList(SCAN_TEXT);
+    const merged = mergeScan(first, second);
+
+    // Notes from old entry should be preserved
+    expect(merged[0].notes).toContain("note A");
+    expect(merged[0].notes).toContain("note B");
+  });
+
+  it("chained rescans preserve accumulated manual tasks", () => {
+    // Scan 1
+    const scan1 = parsePatientList("101 כהן יוסף 72");
+    scan1[0].tasks.push(makeManualTask("task from scan 1"));
+
+    // Scan 2 — merge into scan1
+    const scan2 = parsePatientList("101 כהן יוסף 72");
+    const after2 = mergeScan(scan1, scan2);
+    after2[0].tasks.push(makeManualTask("task from scan 2"));
+
+    // Scan 3 — merge into after2
+    const scan3 = parsePatientList("101 כהן יוסף 72");
+    const after3 = mergeScan(after2, scan3);
+
+    const manualTasks = after3[0].tasks.filter((t) => t.source === "manual");
+    expect(manualTasks).toHaveLength(2);
+    expect(manualTasks.map((t) => t.text)).toContain("task from scan 1");
+    expect(manualTasks.map((t) => t.text)).toContain("task from scan 2");
+  });
+
+  it("preserves task note across rescans", () => {
+    const first = parsePatientList(SCAN_TEXT);
+    const extractedTask = first[0].tasks.find((t) => t.source === "extracted");
+    expect(extractedTask).toBeDefined();
+    (extractedTask as any).note = "BS 250ml";
+
+    const second = parsePatientList(SCAN_TEXT);
+    const merged = mergeScan(first, second);
+
+    const mergedTask = merged[0].tasks.find(
+      (t) => t.source === "extracted" && t.text === extractedTask!.text,
+    );
+    expect(mergedTask).toBeDefined();
+    expect((mergedTask as any).note).toBe("BS 250ml");
+  });
+
+  it("updates scannedAt timestamp on rescan", () => {
+    const first = parsePatientList(SCAN_TEXT);
+
+    const second = parsePatientList(SCAN_TEXT);
+    const merged = mergeScan(first, second);
+
+    // The merged patient should have the new scannedAt
+    expect(merged[0].scannedAt).toBe(second[0].scannedAt);
+  });
 });
