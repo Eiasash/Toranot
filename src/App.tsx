@@ -132,6 +132,7 @@ type Modal = "none" | "reference" | "handoff" | "dashboard" | "history";
 function AppInner() {
   const [modal, setModal] = useState<Modal>("none");
   const { patients } = usePatientsState();
+  const dispatch = usePatientsDispatch();
 
   // Global pending count for dashboard button badge
   const pendingStat = patients
@@ -185,6 +186,19 @@ function AppInner() {
               title="היסטוריית משמרות"
             >
               📁
+            </button>
+
+            {/* Clear all */}
+            <button
+              onClick={() => {
+                if (confirm("למחוק את כל המטופלים? (ודא ששמרת להיסטוריה)")) {
+                  dispatch({ type: "CLEAR_ALL" });
+                }
+              }}
+              className="text-xs px-2 py-1 rounded-lg border bg-red-800 text-red-200 border-red-700 active:bg-red-600 transition-colors"
+              title="מחק הכל"
+            >
+              🗑️
             </button>
 
             <TomorrowToggle />
