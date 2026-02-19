@@ -3,7 +3,7 @@ import { usePatientsState } from "../context/PatientsContext";
 import { SECTION_LABEL, type PatientEntry, type Task } from "../types";
 
 function urgencyLabel(u: Task["urgency"]) {
-  return u === "stat" ? "🔴" : u === "urgent" ? "🟡" : "";
+  return u === "stat" ? "🔴" : u === "urgent" ? "🟡" : u === "extra" ? "🟣" : "";
 }
 
 function formatPatient(p: PatientEntry): string {

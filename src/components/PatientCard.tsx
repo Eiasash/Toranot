@@ -26,7 +26,8 @@ function sortTasks(tasks: Task[]) {
     stat: 0,
     urgent: 1,
     morning: 2,
-    routine: 3,
+    extra: 3,
+    routine: 4,
   };
   return [...tasks].sort((a, b) => weight[a.urgency] - weight[b.urgency]);
 }

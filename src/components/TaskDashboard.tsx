@@ -11,13 +11,15 @@ const URGENCY_ORDER: Record<Urgency, number> = {
   stat: 0,
   urgent: 1,
   morning: 2,
-  routine: 3,
+  extra: 3,
+  routine: 4,
 };
 
 const URGENCY_STYLE: Record<Urgency, string> = {
   stat: "bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800",
   urgent: "bg-orange-50 border-orange-200 dark:bg-orange-950 dark:border-orange-800",
   morning: "bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800",
+  extra: "bg-purple-50 border-purple-200 dark:bg-purple-950 dark:border-purple-800",
   routine: "bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700",
 };
 
@@ -25,6 +27,7 @@ const URGENCY_LABEL: Record<Urgency, string> = {
   stat: "🔴 סטט",
   urgent: "🟡 דחוף",
   morning: "🔵 בוקר",
+  extra: "🟣 תוספת",
   routine: "⚪ שגרה",
 };
 
@@ -68,7 +71,7 @@ export function TaskDashboard({ onClose }: { onClose: () => void }) {
   }, [allDashTasks, filter]);
 
   const counts = useMemo(() => {
-    const c = { stat: 0, urgent: 0, morning: 0, routine: 0, overdue: 0 };
+    const c = { stat: 0, urgent: 0, morning: 0, extra: 0, routine: 0, overdue: 0 };
     const now = new Date();
     for (const d of allDashTasks) {
       c[d.task.urgency]++;

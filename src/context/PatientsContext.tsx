@@ -102,7 +102,7 @@ type Action =
   | { type: "TOGGLE_TASK"; patientId: string; taskId: string }
   | { type: "SET_TASK_NOTE"; patientId: string; taskId: string; note: string | null }
   | { type: "SET_TASK_DUE"; patientId: string; taskId: string; dueAt: string | null }
-  | { type: "ADD_TASK"; patientId: string; text: string }
+  | { type: "ADD_TASK"; patientId: string; text: string; urgency?: Urgency }
   | { type: "ADD_NOTE"; patientId: string; text: string }
   | { type: "REMOVE_NOTE"; patientId: string; index: number }
   | { type: "ADD_LAB"; patientId: string; lab: LabEntry }
@@ -213,7 +213,7 @@ function reducer(state: PatientsState, action: Action): PatientsState {
                   {
                     id: generateId("manual-"),
                     text,
-                    urgency: inferUrgencyFromText(text),
+                    urgency: action.urgency ?? inferUrgencyFromText(text),
                     category: "other",
                     source: "manual",
                     done: false,

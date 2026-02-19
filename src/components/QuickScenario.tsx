@@ -74,7 +74,8 @@ export function QuickScenario({
       dispatch({
         type: "ADD_TASK",
         patientId: patient.id,
-        text: `${t.urgency === "stat" ? "סטט " : t.urgency === "urgent" ? "דחוף " : ""}${t.text}`,
+        text: t.text,
+        urgency: "extra",
       });
     }
     onClose();

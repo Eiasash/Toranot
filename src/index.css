@@ -36,6 +36,20 @@ body {
   color: #f3f4f6;
 }
 
+/* Fix task text overflow on narrow devices */
+.break-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Ensure header doesn't overflow on narrow screens */
+@media (max-width: 380px) {
+  header button {
+    font-size: 0.65rem;
+    padding: 0.2rem 0.4rem;
+  }
+}
+
 /* Hide mobile scrollbar but keep scrolling */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;

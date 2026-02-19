@@ -12,7 +12,7 @@ export const SECTION_LABEL: Record<Section, string> = {
   MONITOR: "ניטור",
 };
 
-export type Urgency = "stat" | "urgent" | "morning" | "routine";
+export type Urgency = "stat" | "urgent" | "morning" | "routine" | "extra";
 
 export type TaskCategory =
   | "labs"

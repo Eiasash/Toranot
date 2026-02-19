@@ -21,6 +21,12 @@ function urgencyBadge(urgency: Task["urgency"]) {
           בוקר
         </span>
       );
+    case "extra":
+      return (
+        <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">
+          תוספת
+        </span>
+      );
     default:
       return (
         <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200">
@@ -31,16 +37,18 @@ function urgencyBadge(urgency: Task["urgency"]) {
 }
 
 function backgroundFromUrgency(task: Task) {
-  if (task.done) return "bg-white";
+  if (task.done) return "bg-white dark:bg-gray-800";
   switch (task.urgency) {
     case "stat":
-      return "bg-red-50";
+      return "bg-red-50 dark:bg-red-900/20";
     case "urgent":
-      return "bg-orange-50";
+      return "bg-orange-50 dark:bg-orange-900/20";
     case "morning":
-      return "bg-blue-50";
+      return "bg-blue-50 dark:bg-blue-900/20";
+    case "extra":
+      return "bg-purple-50 dark:bg-purple-900/20";
     default:
-      return "bg-white";
+      return "bg-white dark:bg-gray-800";
   }
 }
 
