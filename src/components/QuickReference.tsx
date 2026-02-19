@@ -11,6 +11,7 @@ interface ProtocolEntry {
   empiric: string;
   alternative: string;
   notes: string;
+  dagLink?: string;
 }
 
 const PROTOCOLS: ProtocolEntry[] = [
@@ -28,273 +29,131 @@ const PROTOCOLS: ProtocolEntry[] = [
     category: "respiratory",
     empiric: "Piperacillin-Tazobactam 4.5g IV q6h",
     alternative: "Meropenem 1g IV q8h (אם ESBL/Pseudomonas)",
-    notes: "שקול Vancomycin אם חשד MRSA. תרביות דם + כיח לפני ABx.",
+    notes: "שקול Vancomycin אם חשד MRSA. משך טיפול: 7-8 ימים (14d ל-Pseudomonas).",
   },
   {
-    condition: "UTI (Uncomplicated)",
-    conditionHe: "זיהום שתן לא מסובך",
-    category: "genitourinary",
+    condition: "UTI — Uncomplicated",
+    conditionHe: "דלקת בדרכי השתן — לא מסובכת",
+    category: "gu",
     empiric: "Ciprofloxacin 500mg PO q12h x7d",
-    alternative: "Ceftriaxone 2g IV q24h (אם IV נדרש)",
-    notes: "תרבית שתן לפני ABx. שקול Nitrofurantoin 100 PO q6h x5d (cystitis).",
+    alternative: "Cephalexin 500mg PO q6h / Nitrofurantoin 100mg PO q12h x5d",
+    notes: "תרבית שתן לפני ABx. Nitrofurantoin רק אם CrCl>30.",
   },
   {
-    condition: "Pyelonephritis",
-    conditionHe: "פיאלונפריטיס",
-    category: "genitourinary",
+    condition: "UTI — Complicated / Pyelonephritis",
+    conditionHe: "דלקת בדרכי השתן — מסובכת / פיאלונפריטיס",
+    category: "gu",
     empiric: "Ceftriaxone 2g IV q24h",
-    alternative: "Ciprofloxacin 500mg PO q12h (אם PO אפשרי)",
-    notes: "תרביות דם x2 אם חום/ספסיס. החלפת/הוצאת קטטר אם קיים.",
+    alternative: "Ciprofloxacin 400mg IV q12h / Gentamicin 5mg/kg IV q24h",
+    notes: "תרביות דם x2 + שתן. שקול US כליות אם אין שיפור ב-48-72h.",
   },
   {
-    condition: "Sepsis (Unknown Source)",
-    conditionHe: "ספסיס — מקור לא ידוע",
-    category: "systemic",
+    condition: "Sepsis / Septic Shock",
+    conditionHe: "ספסיס / הלם ספטי",
+    category: "sepsis",
     empiric: "Piperacillin-Tazobactam 4.5g IV q6h",
-    alternative: "Meropenem 1g IV q8h ± Amikacin 15mg/kg IV (אם הלם)",
-    notes: "ABx תוך שעה! תרביות דם x2 לפני. Lactate + NaCl 30ml/kg bolus.",
+    alternative: "Meropenem 1g IV q8h ± Amikacin 15mg/kg IV (once daily)",
+    notes: "ABx תוך שעה! Lactate + תרביות x2 + NaCl 30ml/kg. Hour-1 Bundle!",
   },
   {
-    condition: "Cellulitis",
-    conditionHe: "צלוליטיס",
+    condition: "Cellulitis / Erysipelas",
+    conditionHe: "צלוליטיס / ארסיפלס",
     category: "skin",
-    empiric: "Cefazolin 2g IV q8h",
-    alternative: "Cephalexin 500mg PO q6h (קל); Clindamycin 600mg IV q8h (MRSA)",
-    notes: "סימון גבולות בעט + תיעוד צילום. ניקוז אם מוגלה.",
+    empiric: "Cefazolin 2g IV q8h (inpatient) / Cephalexin 500mg PO q6h (outpt)",
+    alternative: "Clindamycin 600mg IV q8h (allergy/MRSA)",
+    notes: "סמן גבולות! אם מוגלה/אבצס → שקול MRSA coverage + ניקוז.",
   },
   {
     condition: "C. difficile",
     conditionHe: "קלוסטרידיום דיפיצילה",
-    category: "gastrointestinal",
-    empiric: "Vancomycin 125mg PO q6h x10d",
-    alternative: "Fidaxomicin 200mg PO q12h x10d",
-    notes: "הפסקת ABx מיותרים. בידוד מגע. אין Metronidazole כקו ראשון.",
+    category: "gi",
+    empiric: "Vancomycin 125mg PO q6h x10-14d",
+    alternative: "Fidaxomicin 200mg PO q12h x10d (אם הישנות)",
+    notes: "הפסק ABx מיותרים! בידוד מגע. Metronidazole רק אם אין Vanco PO.",
   },
   {
-    condition: "COPD Exacerbation",
-    conditionHe: "החמרת COPD",
-    category: "respiratory",
-    empiric: "Amoxicillin-Clavulanate 875/125 PO q12h",
-    alternative: "Azithromycin 500mg PO x3d / Levofloxacin 750mg PO",
-    notes: "ABx רק אם כיח מוגלתי. Prednisone 40mg PO x5d. Nebulizers.",
+    condition: "Meningitis — Bacterial",
+    conditionHe: "דלקת קרום המוח — חיידקית",
+    category: "neuro",
+    empiric: "Ceftriaxone 2g IV q12h + Vancomycin 15-20mg/kg IV q8-12h + Dexamethasone 0.15mg/kg IV q6h",
+    alternative: "Meropenem 2g IV q8h (אם אלרגיה ל-Cephalosporins)",
+    notes: "דקסמתזון לפני או עם מנת ABx ראשונה! LP + תרביות דם לפני ABx.",
   },
   {
-    condition: "Meningitis (Bacterial)",
-    conditionHe: "דלקת קרומי מוח חיידקית",
-    category: "neurological",
-    empiric: "Ceftriaxone 2g IV q12h + Vancomycin 15-20mg/kg IV q8-12h + Dexamethasone",
-    alternative: "Meropenem 2g IV q8h (אם אלרגיה)",
-    notes: "LP לפני ABx אם אפשר (אין עיכוב!). Dexamethasone 0.15mg/kg לפני/עם ABx ראשון.",
+    condition: "Endocarditis — Empiric",
+    conditionHe: "אנדוקרדיטיס — אמפירי",
+    category: "cardiac",
+    empiric: "Vancomycin 15-20mg/kg IV q8-12h + Gentamicin 1mg/kg IV q8h",
+    alternative: "Consult ID",
+    notes: "3 סטים תרביות דם לפני ABx! Echo (TTE/TEE). התייעצות זיהומיות.",
   },
   {
-    condition: "Endocarditis (Native Valve)",
-    conditionHe: "אנדוקרדיטיס — מסתם טבעי",
-    category: "cardiovascular",
-    empiric: "Ampicillin-Sulbactam 3g IV q6h + Gentamicin 1mg/kg IV q8h",
-    alternative: "Vancomycin 15-20mg/kg IV q12h (אם אלרגיה/MRSA)",
-    notes: "תרביות דם x3 מאתרים שונים. Echo (TTE → TEE).",
+    condition: "Intra-abdominal Infection",
+    conditionHe: "זיהום תוך-בטני",
+    category: "gi",
+    empiric: "Piperacillin-Tazobactam 4.5g IV q6h",
+    alternative: "Meropenem 1g IV q8h / Ceftriaxone + Metronidazole",
+    notes: "CT בטן + אגן. שקול ניקוז כירורגי/מלעורי.",
+  },
+  {
+    condition: "Febrile Neutropenia",
+    conditionHe: "חום עם נויטרופניה",
+    category: "sepsis",
+    empiric: "Piperacillin-Tazobactam 4.5g IV q6h (or Meropenem if unstable)",
+    alternative: "Cefepime 2g IV q8h",
+    notes: "ANC<500 + T≥38.3°C. תרביות x2 + CXR + U/A. דחוף!",
   },
 ];
 
 // ─────────────────────────────────────────────────────────
-// DATA: Common On-Call Medications
+// DATA: Common On-Call Meds
 // ─────────────────────────────────────────────────────────
 
-interface OnCallMed {
+interface MedEntry {
+  name: string;
   indication: string;
-  drug: string;
   dose: string;
+  route: string;
   notes: string;
 }
 
-const ON_CALL_MEDS: OnCallMed[] = [
-  { indication: "כאב קל-בינוני", drug: "Paracetamol", dose: "1g PO/IV q6h (מקס 4g/d)", notes: "קו ראשון. זהירות בכבד." },
-  { indication: "כאב בינוני-חזק", drug: "Tramadol", dose: "50-100mg PO/IV q6h", notes: "בחילה שכיחה. מוריד סף פרכוסים." },
-  { indication: "כאב חזק", drug: "Morphine", dose: "2-5mg IV q4h PRN", notes: "ניטור נשימתי. Naloxone בהישג יד." },
-  { indication: "בחילה / הקאה", drug: "Metoclopramide", dose: "10mg IV/PO q8h", notes: "לא ביחד עם חסמי דופמין. מקס 30mg/d." },
-  { indication: "בחילה (קו שני)", drug: "Ondansetron", dose: "4mg IV/PO q8h", notes: "עצירות. QT prolongation." },
-  { indication: "חום / כאב", drug: "Ibuprofen", dose: "400mg PO q8h", notes: "לא ב-AKI/GI bleed/anticoag. עם אוכל." },
-  { indication: "נדודי שינה", drug: "Zolpidem", dose: "5mg PO HS", notes: "5mg בקשישים. סיכון נפילה." },
-  { indication: "עצירות", drug: "Lactulose", dose: "15-30ml PO q12h", notes: "טיטרציה לפי תגובה." },
-  { indication: "עצירות (קו שני)", drug: "Bisacodyl", dose: "10mg PO/PR HS", notes: "לא לשימוש כרוני." },
-  { indication: "חרדה / אגיטציה", drug: "Haloperidol", dose: "0.5-2mg IV/PO", notes: "זהירות QT. מועדף על benzos בדליריום." },
-  { indication: "היפוגליקמיה", drug: "Dextrose 50%", dose: "50ml IV (25g)", notes: "בהכרה → גלוקוז PO. Glucagon 1mg IM אם אין גישה." },
-  { indication: "אנפילקסיס", drug: "Epinephrine", dose: "0.3-0.5mg IM (1:1000) ירך", notes: "חזור כל 5-15 דק'. נוזלים IV." },
-  { indication: "היפרקלמיה", drug: "Calcium Gluconate", dose: "10% 10ml IV ב-10 דק'", notes: "הגנת לב. אינו מוריד K+." },
-  { indication: "SVT", drug: "Adenosine", dose: "6mg IV rapid push → 12mg", notes: "עם flush מהיר. יש Defibrillator בהישג יד." },
-  { indication: "AF (rate control)", drug: "Metoprolol", dose: "5mg IV q5min x3, then 25-50mg PO q6h", notes: "לא ב-CHF decompensated. שקול Diltiazem." },
+const ONCALL_MEDS: MedEntry[] = [
+  { name: "Paracetamol", indication: "כאב / חום", dose: "1g", route: "PO/IV", notes: "מקס 4g/24h. 2g/24h בכבד" },
+  { name: "Dipyrone (Optalgin)", indication: "כאב / חום", dose: "1g", route: "PO/IV", notes: "זהירות: אגרנולוציטוזיס" },
+  { name: "Morphine", indication: "כאב חזק", dose: "2-4mg", route: "IV q4h", notes: "הפחת בקשישים, כליות. Naloxone 0.4mg IV אם דיכוי נשימתי" },
+  { name: "Ondansetron", indication: "בחילה / הקאה", dose: "4-8mg", route: "IV/PO q8h", notes: "QTc! מקס 16mg/24h" },
+  { name: "Metoclopramide", indication: "בחילה / הקאה", dose: "10mg", route: "IV/PO q8h", notes: "C/I: חסימת מעי, פרקינסון" },
+  { name: "Omeprazole", indication: "PPI", dose: "40mg", route: "IV/PO q12-24h", notes: "GI bleed: 80mg bolus → 8mg/h drip" },
+  { name: "Furosemide", indication: "עודף נוזלים", dose: "20-80mg", route: "IV", notes: "עקוב K+, Cr. כפלת מינון PO ביחס ל-IV" },
+  { name: "KCl", indication: "היפוקלמיה", dose: "10-20mEq/h IV", route: "IV/PO", notes: "מקס 20mEq/h IV (מוניטור). 40mEq PO x2-3/d" },
+  { name: "MgSO4", indication: "היפומגנזמיה", dose: "2g", route: "IV over 1h", notes: "חיוני לתיקון K+" },
+  { name: "Calcium Gluconate", indication: "היפרקלמיה + ECG∆", dose: "10ml (10%)", route: "IV over 2-3min", notes: "מגן לב. אפקט 30-60 דק'" },
+  { name: "Insulin Regular + D50", indication: "היפרקלמיה", dose: "10U + 50ml D50W", route: "IV", notes: "מוריד K+ ~0.5-1mEq/L. עקוב סוכר!" },
+  { name: "NaCl 0.9%", indication: "החייאה / Pre-renal AKI", dose: "500ml-1L bolus", route: "IV", notes: "ספסיס: 30ml/kg. זהירות ב-CHF" },
+  { name: "Haloperidol", indication: "דליריום / אגיטציה", dose: "0.5-2mg", route: "IV/PO", notes: "❌ לא בפרקינסון. QTc! הפחת בקשישים" },
+  { name: "Melatonin", indication: "שינה / דליריום", dose: "3-5mg", route: "PO HS", notes: "קו ראשון לשינה בקשישים" },
+  { name: "Enoxaparin", indication: "מניעת DVT / טיפול", dose: "40mg SC qd (prophylaxis) / 1mg/kg SC q12h (tx)", route: "SC", notes: "התאם ל-CrCl! CrCl<30 → 30mg qd / 1mg/kg qd" },
+  { name: "Naloxone", indication: "דיכוי נשימתי מאופיואידים", dose: "0.4mg", route: "IV/IM", notes: "חזור כל 2-3 דק'. t½ קצר — מוניטור!" },
 ];
 
 // ─────────────────────────────────────────────────────────
-// COMPONENT
+// CATEGORIES
 // ─────────────────────────────────────────────────────────
 
-type Tab = "abx" | "meds" | "crcl" | "curb65";
+const PROTO_CATEGORIES = [
+  { key: "all", label: "הכל" },
+  { key: "respiratory", label: "נשימתי" },
+  { key: "gu", label: "שתן" },
+  { key: "sepsis", label: "ספסיס" },
+  { key: "skin", label: "עור" },
+  { key: "gi", label: "GI" },
+  { key: "neuro", label: "נוירו" },
+  { key: "cardiac", label: "לב" },
+];
 
-const TAB_LABELS: Record<Tab, string> = {
-  abx: "ABx פרוטוקול",
-  meds: "תרופות תורן",
-  crcl: "CrCl",
-  curb65: "CURB-65",
-};
-
-export function QuickReference({ onClose }: { onClose: () => void }) {
-  const [tab, setTab] = useState<Tab>("abx");
-  const [search, setSearch] = useState("");
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
-      onClick={onClose}
-    >
-      {/* backdrop */}
-      <div className="absolute inset-0 bg-black/50" />
-
-      {/* modal */}
-      <div
-        className="relative z-10 bg-white w-full sm:max-w-2xl sm:rounded-xl rounded-t-xl max-h-[85dvh] flex flex-col shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-          <h2 className="text-base font-bold text-slate-800">עזר קליני מהיר</h2>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 text-xl leading-none px-1"
-            aria-label="סגור"
-          >
-            &times;
-          </button>
-        </div>
-
-        {/* tabs */}
-        <div className="flex border-b border-gray-200 px-2 gap-1 overflow-x-auto scrollbar-hide">
-          {(Object.keys(TAB_LABELS) as Tab[]).map((t) => (
-            <button
-              key={t}
-              onClick={() => { setTab(t); setSearch(""); }}
-              className={
-                "px-3 py-2 text-xs font-medium whitespace-nowrap border-b-2 transition-colors " +
-                (tab === t
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-slate-500 hover:text-slate-700")
-              }
-            >
-              {TAB_LABELS[t]}
-            </button>
-          ))}
-        </div>
-
-        {/* body */}
-        <div className="flex-1 overflow-y-auto p-4">
-          {tab === "abx" && <AbxTab search={search} onSearch={setSearch} />}
-          {tab === "meds" && <MedsTab search={search} onSearch={setSearch} />}
-          {tab === "crcl" && <CrClCalculator />}
-          {tab === "curb65" && <Curb65Calculator />}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── ABx Protocols Tab ───────────────────────────────────
-
-function AbxTab({ search, onSearch }: { search: string; onSearch: (v: string) => void }) {
-  const filtered = useMemo(() => {
-    if (!search.trim()) return PROTOCOLS;
-    const q = search.trim().toLowerCase();
-    return PROTOCOLS.filter(
-      (p) =>
-        p.condition.toLowerCase().includes(q) ||
-        p.conditionHe.includes(q) ||
-        p.empiric.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q),
-    );
-  }, [search]);
-
-  return (
-    <div className="space-y-3">
-      <input
-        type="text"
-        value={search}
-        onChange={(e) => onSearch(e.target.value)}
-        placeholder="חיפוש לפי מצב / אנטיביוטיקה..."
-        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-      />
-      {filtered.length === 0 && (
-        <p className="text-sm text-slate-400 text-center py-4">לא נמצאו תוצאות</p>
-      )}
-      {filtered.map((p, i) => (
-        <div key={i} className="border border-gray-200 rounded-lg p-3 space-y-1.5">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className="font-bold text-sm text-slate-800">{p.conditionHe}</p>
-              <p className="text-xs text-slate-500">{p.condition}</p>
-            </div>
-            <span className="text-[10px] bg-slate-100 text-slate-500 rounded px-1.5 py-0.5 whitespace-nowrap">
-              {p.category}
-            </span>
-          </div>
-          <div className="text-xs space-y-1">
-            <p>
-              <span className="font-semibold text-green-700">Empiric: </span>
-              <span className="text-slate-700">{p.empiric}</span>
-            </p>
-            <p>
-              <span className="font-semibold text-amber-700">Alternative: </span>
-              <span className="text-slate-700">{p.alternative}</span>
-            </p>
-            <p className="text-slate-500 italic">{p.notes}</p>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ─── On-Call Meds Tab ────────────────────────────────────
-
-function MedsTab({ search, onSearch }: { search: string; onSearch: (v: string) => void }) {
-  const filtered = useMemo(() => {
-    if (!search.trim()) return ON_CALL_MEDS;
-    const q = search.trim().toLowerCase();
-    return ON_CALL_MEDS.filter(
-      (m) =>
-        m.indication.includes(q) ||
-        m.drug.toLowerCase().includes(q) ||
-        m.notes.includes(q),
-    );
-  }, [search]);
-
-  return (
-    <div className="space-y-3">
-      <input
-        type="text"
-        value={search}
-        onChange={(e) => onSearch(e.target.value)}
-        placeholder="חיפוש לפי התוויה / תרופה..."
-        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-      />
-      {filtered.length === 0 && (
-        <p className="text-sm text-slate-400 text-center py-4">לא נמצאו תוצאות</p>
-      )}
-      <div className="divide-y divide-gray-100">
-        {filtered.map((m, i) => (
-          <div key={i} className="py-2.5 first:pt-0 last:pb-0">
-            <div className="flex items-start justify-between gap-2">
-              <p className="text-sm font-semibold text-slate-800">{m.indication}</p>
-              <span className="text-xs font-mono text-blue-600 whitespace-nowrap">{m.drug}</span>
-            </div>
-            <p className="text-xs text-slate-700 mt-0.5">{m.dose}</p>
-            <p className="text-xs text-slate-400 mt-0.5">{m.notes}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── CrCl Calculator (Cockcroft-Gault) ──────────────────
+// ─────────────────────────────────────────────────────────
+// CrCl CALCULATOR (Cockcroft-Gault)
+// ─────────────────────────────────────────────────────────
 
 function CrClCalculator() {
   const [age, setAge] = useState("");
@@ -302,98 +161,54 @@ function CrClCalculator() {
   const [creatinine, setCr] = useState("");
   const [female, setFemale] = useState(false);
 
-  const result = useMemo(() => {
+  const crcl = useMemo(() => {
     const a = parseFloat(age);
     const w = parseFloat(weight);
-    const cr = parseFloat(creatinine);
-    if (!a || !w || !cr || a <= 0 || w <= 0 || cr <= 0) return null;
-    const base = ((140 - a) * w) / (72 * cr);
-    return female ? base * 0.85 : base;
+    const c = parseFloat(creatinine);
+    if (!a || !w || !c || c <= 0) return null;
+    let val = ((140 - a) * w) / (72 * c);
+    if (female) val *= 0.85;
+    return Math.round(val);
   }, [age, weight, creatinine, female]);
 
-  function doseLabel(crcl: number): string {
-    if (crcl >= 60) return "מינון רגיל";
-    if (crcl >= 30) return "התאמה קלה (30-59)";
-    if (crcl >= 15) return "התאמה משמעותית (15-29)";
-    return "שקול דיאליזה (<15)";
-  }
-
-  function barColor(crcl: number): string {
-    if (crcl >= 60) return "bg-green-500";
-    if (crcl >= 30) return "bg-amber-500";
-    return "bg-red-500";
-  }
-
   return (
-    <div className="space-y-4">
-      <p className="text-xs text-slate-500">
-        Cockcroft-Gault — CrCl = [(140 - Age) x Weight] / (72 x Cr)
-        {" "}(x 0.85 לנשים)
-      </p>
-
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block">
-          <span className="text-xs text-slate-600">גיל (שנים)</span>
-          <input
-            type="number"
-            inputMode="numeric"
-            value={age}
-            onChange={(e) => setAge(e.target.value)}
-            className="mt-0.5 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-          />
+    <div className="space-y-3">
+      <h3 className="font-bold text-sm">מחשבון CrCl (Cockcroft-Gault)</h3>
+      <div className="grid grid-cols-2 gap-2">
+        <label className="text-xs text-gray-600">
+          גיל
+          <input type="number" value={age} onChange={(e) => setAge(e.target.value)}
+            className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 rounded-lg" placeholder="75" />
         </label>
-        <label className="block">
-          <span className="text-xs text-slate-600">משקל (ק&quot;ג)</span>
-          <input
-            type="number"
-            inputMode="decimal"
-            value={weight}
-            onChange={(e) => setWeight(e.target.value)}
-            className="mt-0.5 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-          />
+        <label className="text-xs text-gray-600">
+          משקל (kg)
+          <input type="number" value={weight} onChange={(e) => setWeight(e.target.value)}
+            className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 rounded-lg" placeholder="70" />
         </label>
-        <label className="block">
-          <span className="text-xs text-slate-600">Creatinine (mg/dL)</span>
-          <input
-            type="number"
-            inputMode="decimal"
-            step="0.1"
-            value={creatinine}
-            onChange={(e) => setCr(e.target.value)}
-            className="mt-0.5 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-          />
+        <label className="text-xs text-gray-600">
+          Creatinine (mg/dL)
+          <input type="number" step="0.1" value={creatinine} onChange={(e) => setCr(e.target.value)}
+            className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 rounded-lg" placeholder="1.2" />
         </label>
-        <label className="flex items-center gap-2 self-end pb-2">
-          <input
-            type="checkbox"
-            checked={female}
-            onChange={(e) => setFemale(e.target.checked)}
-            className="rounded border-gray-300"
-          />
-          <span className="text-sm text-slate-700">נקבה (x0.85)</span>
+        <label className="text-xs text-gray-600 flex items-end gap-2 pb-1.5">
+          <input type="checkbox" checked={female} onChange={() => setFemale(!female)}
+            className="h-4 w-4 rounded accent-blue-600" />
+          נקבה (×0.85)
         </label>
       </div>
-
-      {result !== null && (
-        <div className="border border-gray-200 rounded-lg p-3 space-y-2">
-          <div className="flex items-baseline justify-between">
-            <span className="text-sm font-bold text-slate-800">
-              CrCl = {result.toFixed(1)} mL/min
-            </span>
-            <span className="text-xs text-slate-500">{doseLabel(result)}</span>
-          </div>
-          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className={"h-full rounded-full transition-all " + barColor(result)}
-              style={{ width: `${Math.min(100, (result / 120) * 100)}%` }}
-            />
-          </div>
-          <div className="text-[10px] text-slate-400 flex justify-between">
-            <span>0</span>
-            <span>30</span>
-            <span>60</span>
-            <span>90</span>
-            <span>120+</span>
+      {crcl !== null && (
+        <div className={`text-center text-lg font-bold p-3 rounded-xl ${
+          crcl > 60 ? "bg-green-100 text-green-800" :
+          crcl > 30 ? "bg-yellow-100 text-yellow-800" :
+          crcl > 15 ? "bg-orange-100 text-orange-800" :
+          "bg-red-100 text-red-800"
+        }`}>
+          CrCl = {crcl} ml/min
+          <div className="text-xs font-normal mt-1">
+            {crcl > 60 ? "תקין / ירידה קלה" :
+             crcl > 30 ? "ירידה בינונית — התאם מינונים" :
+             crcl > 15 ? "ירידה חמורה — הפחת משמעותית" :
+             "אי-ספיקת כליות קשה — שקול דיאליזה"}
           </div>
         </div>
       )}
@@ -401,87 +216,231 @@ function CrClCalculator() {
   );
 }
 
-// ─── CURB-65 Calculator ─────────────────────────────────
+// ─────────────────────────────────────────────────────────
+// CURB-65 CALCULATOR
+// ─────────────────────────────────────────────────────────
 
-const CURB65_CRITERIA = [
-  { key: "C", label: "Confusion — בלבול חדש", desc: "שינוי הכרה / AMT ≤8" },
-  { key: "U", label: "Urea > 7 mmol/L (BUN > 20)", desc: "אוריאה מעל 7 ממול/ל" },
-  { key: "R", label: "RR ≥ 30 / min", desc: "קצב נשימה 30 ומעלה" },
-  { key: "B", label: "BP: SBP < 90 / DBP ≤ 60", desc: "לחץ דם סיסטולי <90 או דיאסטולי ≤60" },
-  { key: "65", label: "Age ≥ 65", desc: "גיל 65 ומעלה" },
-] as const;
+function CURB65Calculator() {
+  const [c, setC] = useState(false); // Confusion
+  const [u, setU] = useState(false); // Urea > 7 (BUN > 19)
+  const [r, setR] = useState(false); // RR ≥ 30
+  const [b, setB] = useState(false); // BP systolic < 90 or diastolic ≤ 60
+  const [age65, setAge65] = useState(false); // Age ≥ 65
 
-function curb65Recommendation(score: number): { text: string; color: string } {
-  if (score <= 1)
-    return { text: "סיכון נמוך — שקול טיפול אמבולטורי", color: "text-green-700" };
-  if (score === 2)
-    return { text: "סיכון בינוני — אשפוז קצר / מעקב צמוד", color: "text-amber-700" };
-  return { text: "סיכון גבוה — אשפוז + שקול ICU (אם 4-5)", color: "text-red-700" };
-}
+  const score = [c, u, r, b, age65].filter(Boolean).length;
 
-function Curb65Calculator() {
-  const [checked, setChecked] = useState<Set<string>>(new Set());
-
-  function toggle(key: string) {
-    setChecked((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  }
-
-  const score = checked.size;
-  const rec = curb65Recommendation(score);
+  const interpretation = score <= 1
+    ? { text: "סיכון נמוך — שקול טיפול אמבולטורי", color: "bg-green-100 text-green-800" }
+    : score === 2
+    ? { text: "סיכון בינוני — אשפוז קצר / מעקב צמוד", color: "bg-yellow-100 text-yellow-800" }
+    : { text: "סיכון גבוה — אשפוז. ≥4 שקול ICU", color: "bg-red-100 text-red-800" };
 
   return (
-    <div className="space-y-4">
-      <p className="text-xs text-slate-500">
-        CURB-65 — ניקוד חומרת דלקת ריאות נרכשת בקהילה (CAP)
-      </p>
-
+    <div className="space-y-3">
+      <h3 className="font-bold text-sm">CURB-65 (חומרת דלקת ריאות)</h3>
       <div className="space-y-2">
-        {CURB65_CRITERIA.map((c) => (
-          <button
-            key={c.key}
-            onClick={() => toggle(c.key)}
-            className={
-              "w-full text-right border rounded-lg px-3 py-2.5 flex items-start gap-2 transition-colors " +
-              (checked.has(c.key)
-                ? "bg-blue-50 border-blue-300"
-                : "bg-white border-gray-200 hover:border-gray-300")
-            }
-          >
-            <div
-              className={
-                "mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors " +
-                (checked.has(c.key)
-                  ? "bg-blue-500 border-blue-500 text-white"
-                  : "border-gray-300")
-              }
-            >
-              {checked.has(c.key) && (
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              )}
-            </div>
-            <div>
-              <p className="text-sm font-medium text-slate-800">{c.label}</p>
-              <p className="text-xs text-slate-500">{c.desc}</p>
-            </div>
-          </button>
+        {[
+          { val: c, set: setC, label: "C — Confusion (בלבול חדש)" },
+          { val: u, set: setU, label: "U — Urea > 7 mmol/L (BUN > 19)" },
+          { val: r, set: setR, label: "R — Respiratory Rate ≥ 30" },
+          { val: b, set: setB, label: "B — Blood Pressure: SBP<90 / DBP≤60" },
+          { val: age65, set: setAge65, label: "65 — גיל ≥ 65" },
+        ].map((item) => (
+          <label key={item.label} className="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" checked={item.val} onChange={() => item.set(!item.val)}
+              className="h-4 w-4 rounded accent-blue-600" />
+            {item.label}
+          </label>
         ))}
       </div>
+      <div className={`text-center p-3 rounded-xl font-bold ${interpretation.color}`}>
+        CURB-65 = {score}/5
+        <div className="text-xs font-normal mt-1">{interpretation.text}</div>
+      </div>
+    </div>
+  );
+}
 
-      <div className="border border-gray-200 rounded-lg p-3 space-y-2">
-        <div className="flex items-baseline justify-between">
-          <span className="text-lg font-bold text-slate-800">ציון: {score} / 5</span>
-          <span className="text-xs text-slate-500">
-            30-day mortality: {score === 0 ? "0.6%" : score === 1 ? "2.7%" : score === 2 ? "6.8%" : score === 3 ? "14%" : score === 4 ? "27%" : "57%"}
-          </span>
+// ─────────────────────────────────────────────────────────
+// TABS
+// ─────────────────────────────────────────────────────────
+
+type RefTab = "protocols" | "meds" | "crcl" | "curb65";
+
+const TABS: { key: RefTab; label: string }[] = [
+  { key: "protocols", label: "ABx פרוטוקולים" },
+  { key: "meds", label: "תרופות תורן" },
+  { key: "crcl", label: "CrCl" },
+  { key: "curb65", label: "CURB-65" },
+];
+
+// ─────────────────────────────────────────────────────────
+// MAIN COMPONENT
+// ─────────────────────────────────────────────────────────
+
+export function QuickReference({ onClose }: { onClose: () => void }) {
+  const [tab, setTab] = useState<RefTab>("protocols");
+  const [search, setSearch] = useState("");
+  const [protoCategory, setProtoCategory] = useState("all");
+
+  const filteredProtocols = useMemo(() => {
+    let list = PROTOCOLS;
+    if (protoCategory !== "all") {
+      list = list.filter((p) => p.category === protoCategory);
+    }
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter(
+        (p) =>
+          p.condition.toLowerCase().includes(q) ||
+          p.conditionHe.includes(q) ||
+          p.empiric.toLowerCase().includes(q) ||
+          p.alternative.toLowerCase().includes(q) ||
+          p.notes.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [search, protoCategory]);
+
+  const filteredMeds = useMemo(() => {
+    if (!search.trim()) return ONCALL_MEDS;
+    const q = search.trim().toLowerCase();
+    return ONCALL_MEDS.filter(
+      (m) =>
+        m.name.toLowerCase().includes(q) ||
+        m.indication.includes(q) ||
+        m.dose.toLowerCase().includes(q) ||
+        m.notes.toLowerCase().includes(q)
+    );
+  }, [search]);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center" onClick={onClose}>
+      <div
+        className="bg-white w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="bg-slate-800 text-white px-4 py-3 flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-bold">עזר קליני</h2>
+            <p className="text-xs text-slate-400">פרוטוקולי DAG ש\"צ + כלים</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-white/70 hover:text-white text-xl px-2"
+            aria-label="סגור"
+          >
+            ✕
+          </button>
         </div>
-        <p className={"text-sm font-semibold " + rec.color}>{rec.text}</p>
+
+        {/* Tabs */}
+        <div className="flex border-b border-gray-200 bg-gray-50 overflow-x-auto scrollbar-hide">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`flex-none px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                tab === t.key
+                  ? "border-blue-600 text-blue-700 bg-white"
+                  : "border-transparent text-gray-500"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Search (for protocols & meds) */}
+        {(tab === "protocols" || tab === "meds") && (
+          <div className="px-4 py-2 border-b border-gray-100">
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="חפש..."
+              dir="auto"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white placeholder:text-gray-400 focus:ring-2 focus:ring-blue-400 outline-none"
+            />
+          </div>
+        )}
+
+        {/* Protocol Category Filter */}
+        {tab === "protocols" && (
+          <div className="px-4 py-2 flex gap-1.5 overflow-x-auto scrollbar-hide border-b border-gray-100">
+            {PROTO_CATEGORIES.map((cat) => (
+              <button
+                key={cat.key}
+                onClick={() => setProtoCategory(cat.key)}
+                className={`flex-none px-3 py-1 text-xs rounded-full border transition-colors ${
+                  protoCategory === cat.key
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-white text-gray-600 border-gray-200"
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {tab === "protocols" && (
+            <>
+              {filteredProtocols.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-8">לא נמצאו פרוטוקולים</p>
+              ) : (
+                filteredProtocols.map((p, i) => (
+                  <div key={i} className="border border-gray-200 rounded-xl p-3 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="font-bold text-sm">{p.conditionHe}</div>
+                        <div className="text-xs text-gray-500">{p.condition}</div>
+                      </div>
+                    </div>
+                    <div className="text-sm space-y-1">
+                      <div>
+                        <span className="text-xs font-semibold text-green-700 bg-green-50 px-1.5 py-0.5 rounded">1st Line</span>
+                        <span className="mr-2 text-sm" dir="ltr">{p.empiric}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs font-semibold text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded">Alt</span>
+                        <span className="mr-2 text-sm" dir="ltr">{p.alternative}</span>
+                      </div>
+                      <div className="text-xs text-gray-600 bg-gray-50 rounded p-2">{p.notes}</div>
+                    </div>
+                  </div>
+                ))
+              )}
+              <a
+                href="https://szmc.anova.co.il/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block text-center text-sm text-blue-600 underline py-2"
+              >
+                פתח אתר DAG ש&quot;צ המלא →
+              </a>
+            </>
+          )}
+
+          {tab === "meds" && (
+            <div className="space-y-2">
+              {filteredMeds.map((m, i) => (
+                <div key={i} className="border border-gray-200 rounded-lg p-2.5 flex flex-wrap gap-x-4 gap-y-1 items-baseline">
+                  <span className="font-bold text-sm text-blue-800 min-w-[120px]" dir="ltr">{m.name}</span>
+                  <span className="text-xs text-gray-500">{m.indication}</span>
+                  <span className="text-sm font-mono bg-blue-50 text-blue-900 px-1.5 py-0.5 rounded" dir="ltr">{m.dose} {m.route}</span>
+                  <span className="text-xs text-gray-600 w-full">{m.notes}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {tab === "crcl" && <CrClCalculator />}
+          {tab === "curb65" && <CURB65Calculator />}
+        </div>
       </div>
     </div>
   );

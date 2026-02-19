@@ -2,6 +2,9 @@ import { useMemo, useState } from "react";
 import type { PatientEntry, Task } from "../types";
 import { TaskItem } from "./TaskItem";
 import { usePatientsDispatch, usePatientsState } from "../context/PatientsContext";
+import { LabBadges, AddLabForm } from "./LabTracker";
+import { QuickScenario } from "./QuickScenario";
+import { MedFlagBadges } from "./MedFlags";
 
 function FlagBadge({ flag }: { flag: string }) {
   return (
@@ -53,6 +56,8 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
   const [addOpen, setAddOpen] = useState(false);
   const [addType, setAddType] = useState<"task" | "note">("task");
   const [draft, setDraft] = useState("");
+  const [showScenario, setShowScenario] = useState(false);
+  const [showLabForm, setShowLabForm] = useState(false);
 
   const add = () => {
     const text = draft.trim();
@@ -68,11 +73,11 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 space-y-3">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-lg font-semibold truncate">
+            <span className="text-lg font-semibold truncate dark:text-gray-100">
               {patient.name ?? "לא ידוע"}
             </span>
             {patient.room && (
@@ -81,18 +86,49 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
               </span>
             )}
           </div>
-          <div className="text-sm text-gray-600 mt-1" dir="auto">
+          <div className="text-sm text-gray-600 dark:text-gray-400 mt-1" dir="auto">
             {patient.diagnosis ?? ""}
           </div>
         </div>
 
-        <div className="text-right shrink-0">
-          <TaskProgress done={doneCount} total={totalCount} />
-          {patient.age && (
-            <div className="text-xs text-gray-500 mt-1 tabular-nums">
-              {patient.age}
-            </div>
-          )}
+        <div className="text-right shrink-0 flex items-center gap-2">
+          {/* Reorder buttons */}
+          <div className="flex flex-col gap-0.5">
+            <button
+              onClick={() =>
+                dispatch({
+                  type: "REORDER_PATIENT",
+                  patientId: patient.id,
+                  direction: "up",
+                })
+              }
+              className="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-1"
+              title="הזז למעלה"
+            >
+              ▲
+            </button>
+            <button
+              onClick={() =>
+                dispatch({
+                  type: "REORDER_PATIENT",
+                  patientId: patient.id,
+                  direction: "down",
+                })
+              }
+              className="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-1"
+              title="הזז למטה"
+            >
+              ▼
+            </button>
+          </div>
+          <div>
+            <TaskProgress done={doneCount} total={totalCount} />
+            {patient.age && (
+              <div className="text-xs text-gray-500 mt-1 tabular-nums">
+                {patient.age}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -174,10 +210,36 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
         </div>
       )}
 
+      {/* Lab sparklines */}
+      <LabBadges patient={patient} />
+
+      {/* Medication safety flags */}
+      <MedFlagBadges patient={patient} />
+
+      {/* Quick action buttons */}
+      <div className="flex gap-1.5">
+        <button
+          onClick={() => setShowScenario(true)}
+          className="text-xs px-2.5 py-1 rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 active:bg-amber-100"
+        >
+          ⚡ תרחיש
+        </button>
+        <button
+          onClick={() => setShowLabForm(!showLabForm)}
+          className="text-xs px-2.5 py-1 rounded-lg border border-purple-200 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 active:bg-purple-100"
+        >
+          📊 Lab
+        </button>
+      </div>
+
+      {showLabForm && (
+        <AddLabForm patient={patient} onClose={() => setShowLabForm(false)} />
+      )}
+
       {/* Tasks */}
       <div className="space-y-2">
         {allTasks.length === 0 ? (
-          <div className="text-sm text-gray-500">אין משימות תורן</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">אין משימות תורן</div>
         ) : (
           allTasks.map((task) => (
             <TaskItem
@@ -204,12 +266,12 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
       </div>
 
       {/* Add manual task / note */}
-      <div className="pt-2 border-t border-gray-100 space-y-2">
+      <div className="pt-2 border-t border-gray-100 dark:border-gray-700 space-y-2">
         {!addOpen ? (
           <button
             type="button"
             onClick={() => setAddOpen(true)}
-            className="w-full py-2 rounded-xl border border-gray-200 text-sm text-gray-700"
+            className="w-full py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-300"
           >
             + הוסף משימה / הערה
           </button>
@@ -223,7 +285,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
                   "px-3 py-1 rounded-lg text-sm border",
                   addType === "task"
                     ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-gray-700 border-gray-200",
+                    : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600",
                 ].join(" ")}
               >
                 משימה
@@ -235,7 +297,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
                   "px-3 py-1 rounded-lg text-sm border",
                   addType === "note"
                     ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-gray-700 border-gray-200",
+                    : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600",
                 ].join(" ")}
               >
                 הערה
@@ -247,7 +309,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
                   setAddOpen(false);
                   setDraft("");
                 }}
-                className="ml-auto px-3 py-1 rounded-lg text-sm border border-gray-200 text-gray-700"
+                className="ml-auto px-3 py-1 rounded-lg text-sm border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300"
               >
                 סגור
               </button>
@@ -268,7 +330,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
                     ? "משימה חדשה (למשל: BS)"
                     : "הערה (למשל: BS 250ml)"
                 }
-                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-xl bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-400 outline-none"
+                className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-400 outline-none"
               />
               <button
                 type="button"
@@ -285,6 +347,10 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
           </div>
         )}
       </div>
+
+      {showScenario && (
+        <QuickScenario patient={patient} onClose={() => setShowScenario(false)} />
+      )}
     </div>
   );
 }

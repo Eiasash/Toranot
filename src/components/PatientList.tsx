@@ -4,7 +4,9 @@ import { PatientCard, PatientRow } from "./PatientCard";
 
 export function PatientList() {
   const { patients, activeSection } = usePatientsState();
-  const filtered = patients.filter((p) => p.section === activeSection);
+  const filtered = patients
+    .filter((p) => p.section === activeSection)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
   if (filtered.length === 0) {
     return (

@@ -12,4 +12,5 @@ export type {
   TaskSource,
   Task,
   PatientEntry,
+  LabEntry,
 } from "./patient";

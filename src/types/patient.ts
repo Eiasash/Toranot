@@ -40,6 +40,9 @@ export type Task = {
   // Manual remark/result, e.g. "BS 250ml" / "Called family" / etc.
   // Optional for backwards compatibility with old localStorage.
   note?: string | null;
+
+  // When this task is due (ISO string). Used for time-aware tasks.
+  dueAt?: string | null;
 };
 
 export type PatientEntry = {
@@ -63,6 +66,20 @@ export type PatientEntry = {
 
   scannedAt: string; // ISO string
   confidence: number; // 0..1 overall row confidence
+
+  // Lab values for tracking trends (manual entry)
+  labs?: LabEntry[];
+
+  // Display order within section (lower = higher on list)
+  order?: number;
+};
+
+export type LabEntry = {
+  id: string;
+  label: string; // e.g. "Cr", "K+", "WBC"
+  value: number;
+  unit?: string;
+  time: string; // ISO string
 };
 
 /**

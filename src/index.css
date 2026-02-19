@@ -5,6 +5,10 @@
   padding-top: env(safe-area-inset-top);
 }
 
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 html {
   color-scheme: light;
   /* dvh fallback for older Android Chrome (pre-108) */
@@ -16,11 +20,20 @@ html {
   -webkit-tap-highlight-color: transparent;
 }
 
+html.dark {
+  color-scheme: dark;
+}
+
 body {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   direction: rtl;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.dark body {
+  background-color: #111827;
+  color: #f3f4f6;
 }
 
 /* Hide mobile scrollbar but keep scrolling */
