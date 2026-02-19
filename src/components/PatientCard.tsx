@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import type { PatientEntry, Task } from "../types";
+import { SECTIONS, SECTION_LABEL } from "../types";
 import { TaskItem } from "./TaskItem";
 import { usePatientsDispatch, usePatientsState } from "../context/PatientsContext";
 import { LabBadges, AddLabForm } from "./LabTracker";
@@ -59,6 +60,31 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
   const [draft, setDraft] = useState("");
   const [showScenario, setShowScenario] = useState(false);
   const [showLabForm, setShowLabForm] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState(patient.name ?? "");
+  const [editRoom, setEditRoom] = useState(patient.room ?? "");
+  const [editSection, setEditSection] = useState(patient.section);
+  const [editDiagnosis, setEditDiagnosis] = useState(patient.diagnosis ?? "");
+
+  const saveEdit = () => {
+    dispatch({
+      type: "EDIT_PATIENT",
+      patientId: patient.id,
+      name: editName.trim() || undefined,
+      room: editRoom.trim() || undefined,
+      section: editSection,
+      diagnosis: editDiagnosis.trim() || undefined,
+    });
+    setEditing(false);
+  };
+
+  const startEdit = () => {
+    setEditName(patient.name ?? "");
+    setEditRoom(patient.room ?? "");
+    setEditSection(patient.section);
+    setEditDiagnosis(patient.diagnosis ?? "");
+    setEditing(true);
+  };
 
   const add = () => {
     const text = draft.trim();
@@ -77,19 +103,69 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-semibold truncate dark:text-gray-100">
-              {patient.name ?? "לא ידוע"}
-            </span>
-            {patient.room && (
-              <span className="shrink-0 text-sm bg-blue-600 text-white px-2 py-0.5 rounded-lg">
-                {patient.room}
-              </span>
-            )}
-          </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400 mt-1" dir="auto">
-            {patient.diagnosis ?? ""}
-          </div>
+          {editing ? (
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="שם"
+                  dir="auto"
+                  className="flex-1 min-w-0 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-gray-100"
+                />
+                <input
+                  value={editRoom}
+                  onChange={(e) => setEditRoom(e.target.value)}
+                  placeholder="חדר"
+                  dir="auto"
+                  className="w-20 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-gray-100"
+                />
+              </div>
+              <input
+                value={editDiagnosis}
+                onChange={(e) => setEditDiagnosis(e.target.value)}
+                placeholder="אבחנה"
+                dir="auto"
+                className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-gray-100"
+              />
+              <div className="flex items-center gap-2">
+                <select
+                  value={editSection}
+                  onChange={(e) => setEditSection(e.target.value as typeof editSection)}
+                  className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-gray-100"
+                >
+                  {SECTIONS.map((s) => (
+                    <option key={s} value={s}>{SECTION_LABEL[s]}</option>
+                  ))}
+                </select>
+                <button onClick={saveEdit} className="text-xs px-3 py-1 rounded-lg bg-blue-600 text-white">שמור</button>
+                <button onClick={() => setEditing(false)} className="text-xs px-3 py-1 rounded-lg bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200">ביטול</button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-semibold truncate dark:text-gray-100">
+                  {patient.name ?? "לא ידוע"}
+                </span>
+                {patient.room && (
+                  <span className="shrink-0 text-sm bg-blue-600 text-white px-2 py-0.5 rounded-lg">
+                    {patient.room}
+                  </span>
+                )}
+                <button
+                  onClick={startEdit}
+                  className="shrink-0 text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-1"
+                  title="ערוך פרטי מטופל"
+                >
+                  ✏️
+                </button>
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1" dir="auto">
+                {patient.diagnosis ?? ""}
+              </div>
+            </>
+          )}
         </div>
 
         <div className="text-right shrink-0 flex items-center gap-2">

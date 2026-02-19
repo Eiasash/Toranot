@@ -107,6 +107,7 @@ type Action =
   | { type: "REMOVE_NOTE"; patientId: string; index: number }
   | { type: "ADD_LAB"; patientId: string; lab: LabEntry }
   | { type: "REORDER_PATIENT"; patientId: string; direction: "up" | "down" }
+  | { type: "EDIT_PATIENT"; patientId: string; name?: string; room?: string; section?: Section; diagnosis?: string }
   | { type: "ARCHIVE_SHIFT"; label: string }
   | { type: "RESTORE_SHIFT"; snapshotId: string }
   | { type: "DELETE_SHIFT"; snapshotId: string }
@@ -293,6 +294,23 @@ function reducer(state: PatientsState, action: Action): PatientsState {
           if (p.id === b.id) return { ...p, order: idx };
           return p;
         }),
+      };
+    }
+
+    case "EDIT_PATIENT": {
+      return {
+        ...state,
+        patients: state.patients.map((p) =>
+          p.id === action.patientId
+            ? {
+                ...p,
+                ...(action.name !== undefined && { name: action.name }),
+                ...(action.room !== undefined && { room: action.room }),
+                ...(action.section !== undefined && { section: action.section }),
+                ...(action.diagnosis !== undefined && { diagnosis: action.diagnosis }),
+              }
+            : p,
+        ),
       };
     }
 
