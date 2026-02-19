@@ -140,6 +140,16 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
                 </select>
                 <button onClick={saveEdit} className="text-xs px-3 py-1 rounded-lg bg-blue-600 text-white">שמור</button>
                 <button onClick={() => setEditing(false)} className="text-xs px-3 py-1 rounded-lg bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200">ביטול</button>
+                <button
+                  onClick={() => {
+                    if (confirm(`למחוק את ${patient.name ?? "מטופל"}?`)) {
+                      dispatch({ type: "REMOVE_PATIENT", patientId: patient.id });
+                    }
+                  }}
+                  className="text-xs px-3 py-1 rounded-lg bg-red-600 text-white mr-auto"
+                >
+                  🗑️ מחק
+                </button>
               </div>
             </div>
           ) : (

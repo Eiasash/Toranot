@@ -108,6 +108,7 @@ type Action =
   | { type: "ADD_LAB"; patientId: string; lab: LabEntry }
   | { type: "REORDER_PATIENT"; patientId: string; direction: "up" | "down" }
   | { type: "EDIT_PATIENT"; patientId: string; name?: string; room?: string; section?: Section; diagnosis?: string }
+  | { type: "REMOVE_PATIENT"; patientId: string }
   | { type: "ARCHIVE_SHIFT"; label: string }
   | { type: "RESTORE_SHIFT"; snapshotId: string }
   | { type: "DELETE_SHIFT"; snapshotId: string }
@@ -311,6 +312,13 @@ function reducer(state: PatientsState, action: Action): PatientsState {
               }
             : p,
         ),
+      };
+    }
+
+    case "REMOVE_PATIENT": {
+      return {
+        ...state,
+        patients: state.patients.filter((p) => p.id !== action.patientId),
       };
     }
 
