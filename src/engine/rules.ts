@@ -7,10 +7,20 @@ interface RuleTask {
   category?: TaskCategory;
 }
 
+/**
+ * triggerField controls WHICH patient fields the regex runs against:
+ *  - "all"       → diagnosis + status + flags + task text (default, legacy behavior)
+ *  - "tasks"     → only status + flags + manual task text (NOT diagnosis)
+ *  - "diagnosis" → only the diagnosis field
+ *
+ * Use "tasks" for acute workup rules (DVT/PE, new seizure) that should NOT
+ * fire when the condition is the established/chronic diagnosis.
+ */
 interface Rule {
   trigger: RegExp;
   source: string;
   group?: string;
+  triggerField?: "all" | "tasks" | "diagnosis";
   tasks: RuleTask[];
 }
 
@@ -286,6 +296,7 @@ const RULES: Rule[] = [
     trigger: /DVT|PE\b|תסחיף ריאתי|פקקת ורידים|pulmonary\s*embol|deep\s*vein/i,
     source: "DVT / PE",
     group: "dvtpe",
+    triggerField: "tasks",  // Only fire when PE/DVT appears in tasks/status, NOT diagnosis
     tasks: [
       { text: "D-Dimer", urgency: "stat", category: "labs" },
       { text: "DVT → Doppler US ורידי", urgency: "stat", category: "imaging" },
@@ -418,17 +429,32 @@ export function applyRules(patient: PatientEntry): Task[] {
   const generated: Task[] = [];
   const matchedGroups = new Set<string>();
 
-  const combined = [
+  // Pre-build text blobs for each trigger scope
+  const diagnosisText = patient.diagnosis ?? "";
+  const tasksText = [
     ...patient.status,
     ...patient.flags,
-    patient.diagnosis ?? "",
     ...patient.tasks.map((t) => t.text),
   ].join(" ");
+  const allText = [tasksText, diagnosisText].join(" ");
 
   for (const rule of RULES) {
     if (rule.group && matchedGroups.has(rule.group)) continue;
 
-    if (rule.trigger.test(combined)) {
+    // Pick which text to match against
+    let textToMatch: string;
+    switch (rule.triggerField) {
+      case "tasks":
+        textToMatch = tasksText;
+        break;
+      case "diagnosis":
+        textToMatch = diagnosisText;
+        break;
+      default:
+        textToMatch = allText;
+    }
+
+    if (rule.trigger.test(textToMatch)) {
       if (rule.group) matchedGroups.add(rule.group);
 
       for (const taskDef of rule.tasks) {
