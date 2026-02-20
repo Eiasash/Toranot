@@ -18,7 +18,7 @@ import { safeGetItem, safeSetItem } from "../utils/storage";
 const STORAGE_KEY_PATIENTS = "toranot-patients";
 const STORAGE_KEY_SHIFT_HISTORY = "toranot-shift-history";
 const STORAGE_KEY_DARK_MODE = "toranot-dark";
-const MAX_SHIFT_HISTORY = 5;
+const MAX_SHIFT_HISTORY = 30;
 
 // -----------------------------
 // State
@@ -131,7 +131,8 @@ export type Action =
   | { type: "DELETE_SHIFT"; snapshotId: string }
   | { type: "TOGGLE_DARK_MODE" }
   | { type: "CLEAR_ALL" }
-  | { type: "TOGGLE_SHOW_TOMORROW" };
+  | { type: "TOGGLE_SHOW_TOMORROW" }
+  | { type: "IMPORT_BACKUP"; patients: PatientEntry[] };
 
 export function inferUrgencyFromText(text: string): Urgency {
   const t = text.trim();
@@ -372,6 +373,9 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
 
     case "CLEAR_ALL":
       return { ...state, patients: [] };
+
+    case "IMPORT_BACKUP":
+      return { ...state, patients: action.patients.map(normalizePatient) };
 
     default:
       return state;

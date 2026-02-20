@@ -1,0 +1,47 @@
+{
+  "anticholinergicHigh": [
+    "amitriptyline", "nortriptyline", "clomipramine", "imipramine", "doxepin",
+    "chlorpromazine", "thioridazine", "clozapine", "olanzapine",
+    "hydroxyzine", "promethazine", "diphenhydramine", "dimenhydrinate",
+    "oxybutynin", "tolterodine", "solifenacin", "darifenacin",
+    "benztropine", "trihexyphenidyl", "scopolamine",
+    "paroxetine", "cyclobenzaprine"
+  ],
+  "anticholinergicModerate": [
+    "cetirizine", "loratadine", "ranitidine", "cimetidine",
+    "quetiapine", "risperidone", "haloperidol",
+    "metoclopramide", "loperamide", "codeine", "tramadol",
+    "prednisone", "prednisolone", "theophylline",
+    "carbamazepine", "oxcarbazepine"
+  ],
+  "qtcProlonging": [
+    "amiodarone", "sotalol", "dronedarone",
+    "haloperidol", "chlorpromazine", "thioridazine", "ziprasidone",
+    "methadone", "erythromycin", "clarithromycin", "azithromycin",
+    "ciprofloxacin", "levofloxacin", "moxifloxacin",
+    "ondansetron", "domperidone", "metoclopramide",
+    "citalopram", "escitalopram",
+    "fluconazole", "ketoconazole",
+    "hydroxychloroquine"
+  ],
+  "nephrotoxic": [
+    "gentamicin", "tobramycin", "amikacin", "vancomycin",
+    "amphotericin", "acyclovir",
+    "ibuprofen", "naproxen", "diclofenac", "indomethacin", "celecoxib", "meloxicam",
+    "metformin", "lithium",
+    "cyclosporine", "tacrolimus",
+    "methotrexate"
+  ],
+  "fallRisk": [
+    "lorazepam", "diazepam", "clonazepam", "alprazolam", "midazolam", "nitrazepam",
+    "zolpidem", "zopiclone",
+    "doxazosin", "prazosin", "tamsulosin",
+    "amitriptyline", "nortriptyline", "trazodone", "mirtazapine",
+    "haloperidol", "quetiapine", "risperidone", "olanzapine",
+    "oxycodone", "morphine", "fentanyl", "tramadol", "codeine",
+    "gabapentin", "pregabalin"
+  ],
+  "_version": "1.0.0",
+  "_lastUpdated": "2025-02-20",
+  "_source": "Beers Criteria 2023 + STOPP/START v3"
+}

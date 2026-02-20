@@ -60,30 +60,50 @@ async function runClaudeOCR(file: File, apiKey: string): Promise<string> {
     ? (file.type as ImageMediaType)
     : "image/jpeg";
 
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      // NOTE: Direct browser access is required because this is a client-side PWA
-      // without a backend server. The API key is user-provided and stored locally.
-      "anthropic-dangerous-direct-browser-access": "true",
-    },
-    body: JSON.stringify({
-      model: OCR_MODEL,
-      max_tokens: OCR_MAX_TOKENS,
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
-            { type: "text", text: OCR_PROMPT },
-          ],
-        },
-      ],
-    }),
+  const body = JSON.stringify({
+    model: OCR_MODEL,
+    max_tokens: OCR_MAX_TOKENS,
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
+          { type: "text", text: OCR_PROMPT },
+        ],
+      },
+    ],
   });
+
+  // Try serverless proxy first (no API key exposure), fallback to direct
+  let response: Response;
+  const proxyUrl = `${window.location.origin}/.netlify/functions/ocr-proxy`;
+  
+  try {
+    const proxyRes = await fetch(proxyUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+    });
+    // If proxy works (even with error status), use it
+    if (proxyRes.status !== 404) {
+      response = proxyRes;
+    } else {
+      throw new Error("Proxy not available");
+    }
+  } catch {
+    // Fallback: direct API call with user-provided key
+    if (!apiKey) throw new Error("נדרש מפתח API (הפרוקסי לא זמין)");
+    response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true",
+      },
+      body,
+    });
+  }
 
   if (!response.ok) {
     let errBody: ClaudeAPIError = {};
