@@ -6,12 +6,16 @@ Built as a mobile-first PWA with Hebrew RTL support so it works directly from a 
 
 ## Features
 
-- **Patient import** -- Scan a physical ward sheet with the camera (OCR via tesseract.js), pick an image from the gallery, or paste/type text manually
-- **Section tabs** -- Patients organized into Side A, Side B, Side C, and Rehabilitation
+- **Patient import** -- Scan a physical ward sheet with the camera (OCR via Claude Vision), pick an image from the gallery, or paste/type text manually
+- **Section tabs** -- Patients organized into Side A, Side B, Side C, Rehabilitation, and Monitor
 - **Task extraction** -- Tasks, urgency levels, and medical flags (DNR, NPO, ISO, FALL, etc.) are parsed automatically from the input text
 - **Rule engine** -- Generates additional tasks based on detected conditions (discharge, pre-surgery, blood transfusion, diabetes, isolation, catheter, fall risk, and more)
 - **Smart rescan** -- Re-importing a section preserves manually added tasks and completion state; detects patient transfers between sections
-- **Urgency color coding** -- Tasks are color-coded by urgency: stat, urgent, morning, routine
+- **Urgency color coding** -- Tasks are color-coded by urgency: stat, urgent, morning, routine, extra
+- **Dark mode** -- Toggle between light and dark themes for comfortable viewing
+- **Task timers** -- Set countdown timers with notifications for time-sensitive tasks
+- **Shift history** -- Save and restore previous shift snapshots, import/export backups
+- **WhatsApp integration** -- Share shift summaries via WhatsApp in IPASS format
 
 ## Getting Started
 
@@ -113,10 +117,10 @@ You can rescan a section at any time. The merge logic will:
 |-------|------------|
 | UI | React 19, Tailwind CSS 4 |
 | Language | TypeScript (strict) |
-| OCR | tesseract.js |
+| OCR | Claude Vision API |
 | Build | Vite 7 |
 | Tests | Vitest |
-| Deploy | GitHub Pages |
+| Deploy | Netlify |
 
 ## Project Structure
 
