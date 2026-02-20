@@ -145,10 +145,9 @@ export function detectSectionFromHeader(headerText: string): Section | null {
  * This function returns null for all cases since we cannot infer
  * section from room alone. Section must come from explicit headers.
  */
-export function detectSectionFromRoom(room: string | null): Section | null {
-  if (!room) return null;
-  const r = room.trim().toLowerCase();
-  // Detect monitor rooms: ניטור1, ניטור-3, מוניטור 2, monitor1, etc.
-  if (/^(ניטור|מוניטור|monitor)/i.test(r)) return "MONITOR";
+export function detectSectionFromRoom(_room: string | null): Section | null {
+  // Rooms NEVER determine sections. Section comes ONLY from explicit headers.
+  // A room like "ניטור 1" can be under צד א, צד ב, or ניטור depending on
+  // which section header it appears under in the patient list.
   return null;
 }

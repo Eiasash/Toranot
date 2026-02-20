@@ -154,7 +154,7 @@ export function TaskItem({
                 placeholder="הערה / תוצאה (למשל: BS 250ml)"
                 dir="auto"
                 style={{ unicodeBidi: "plaintext" }}
-                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-400 outline-none"
+                className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-400 outline-none"
               />
               <button
                 type="button"
@@ -225,8 +225,8 @@ export function TaskItem({
                 className={[
                   "text-xs px-2 py-0.5 rounded-lg border",
                   task.dueAt
-                    ? "bg-amber-100 border-amber-300 text-amber-700"
-                    : "bg-white border-gray-200 text-gray-700",
+                    ? "bg-amber-100 border-amber-300 text-amber-700 dark:bg-amber-900/40 dark:border-amber-700 dark:text-amber-300"
+                    : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300",
                 ].join(" ")}
               >
                 ⏱
@@ -242,7 +242,7 @@ export function TaskItem({
                 e.stopPropagation();
                 setEditing((v) => !v);
               }}
-              className="text-xs px-2 py-0.5 rounded-lg bg-white border border-gray-200 text-gray-700"
+              className="text-xs px-2 py-0.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300"
             >
               ✎
             </button>

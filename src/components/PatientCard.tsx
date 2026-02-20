@@ -15,7 +15,7 @@ function FlagBadge({ flag }: { flag: string }) {
         "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold",
         flag.toUpperCase().includes("DNR") || flag.toUpperCase().includes("DNI")
           ? "bg-red-600 text-white"
-          : "bg-gray-200 text-gray-800",
+          : "bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200",
       ].join(" ")}
     >
       {flag}
@@ -241,7 +241,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
                 <span
                   key={i}
                   dir="auto"
-                  className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded"
+                  className="text-xs bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 px-2 py-0.5 rounded"
                   style={{ unicodeBidi: "plaintext" }}
                 >
                   {s}
@@ -256,7 +256,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
                 <span
                   key={i}
                   dir="auto"
-                  className="text-xs bg-green-50 text-green-900 px-2 py-0.5 rounded border border-green-200"
+                  className="text-xs bg-green-50 text-green-900 dark:bg-green-900/30 dark:text-green-300 px-2 py-0.5 rounded border border-green-200 dark:border-green-800"
                   style={{ unicodeBidi: "plaintext" }}
                   title="מחר (לא תורן)"
                 >
@@ -272,7 +272,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
                 <span
                   key={idx}
                   dir="auto"
-                  className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-900 px-2 py-0.5 rounded border border-blue-200"
+                  className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-900 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800"
                   style={{ unicodeBidi: "plaintext" }}
                   title="הערת תורן"
                 >
@@ -587,7 +587,7 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
                     <span
                       key={i}
                       dir="auto"
-                      className="text-xs bg-green-50 text-green-900 px-2 py-0.5 rounded border border-green-200"
+                      className="text-xs bg-green-50 text-green-900 dark:bg-green-900/30 dark:text-green-300 px-2 py-0.5 rounded border border-green-200 dark:border-green-800"
                       style={{ unicodeBidi: "plaintext" }}
                       title="מחר (לא תורן)"
                     >
@@ -603,7 +603,7 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
                     <span
                       key={idx}
                       dir="auto"
-                      className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-900 px-2 py-0.5 rounded border border-blue-200"
+                      className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-900 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800"
                       style={{ unicodeBidi: "plaintext" }}
                       title="הערת תורן"
                     >
@@ -617,7 +617,7 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
                             index: idx,
                           })
                         }
-                        className="ml-1 text-blue-700 hover:text-blue-900"
+                        className="ml-1 text-blue-700 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
                         aria-label="מחק הערה"
                         title="מחק"
                       >
