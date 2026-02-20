@@ -44,33 +44,25 @@ function generatedSources(tasks: Task[]): string[] {
 // ─── Individual rule trigger tests ───
 
 describe("rules engine — all rules", () => {
-  // 1. Discharge
+  // 1. Discharge — rule matches but generates NO on-call tasks
+  //    Discharge is morning team work. On-call only does what's explicitly written.
   describe("Discharge", () => {
-    it("triggers on 'משתחרר'", () => {
+    it("generates 0 tasks (discharge is morning team work)", () => {
       const tasks = applyRules(makePatient({ status: ["משתחרר היום"] }));
-      expect(generatedSources(tasks)).toContain("שחרור");
+      const dischargeTasks = tasks.filter((t) => t.generatedFrom === "שחרור");
+      expect(dischargeTasks).toHaveLength(0);
     });
 
-    it("triggers on 'D/C'", () => {
+    it("generates 0 tasks for D/C variant", () => {
       const tasks = applyRules(makePatient({ status: ["D/C today"] }));
-      expect(generatedSources(tasks)).toContain("שחרור");
+      const dischargeTasks = tasks.filter((t) => t.generatedFrom === "שחרור");
+      expect(dischargeTasks).toHaveLength(0);
     });
 
-    it("triggers on 'discharge'", () => {
+    it("generates 0 tasks for discharge variant", () => {
       const tasks = applyRules(makePatient({ status: ["discharge planned"] }));
-      expect(generatedSources(tasks)).toContain("שחרור");
-    });
-
-    it("generates 2 discharge tasks (on-call relevant only)", () => {
-      const tasks = applyRules(makePatient({ status: ["משתחרר"] }));
       const dischargeTasks = tasks.filter((t) => t.generatedFrom === "שחרור");
-      expect(dischargeTasks).toHaveLength(2);
-    });
-
-    it("discharge tasks have correct categories", () => {
-      const tasks = applyRules(makePatient({ status: ["משתחרר"] }));
-      const dischargeTasks = tasks.filter((t) => t.generatedFrom === "שחרור");
-      expect(dischargeTasks.every((t) => t.category === "discharge")).toBe(true);
+      expect(dischargeTasks).toHaveLength(0);
     });
   });
 
@@ -158,10 +150,10 @@ describe("rules engine — all rules", () => {
       expect(generatedSources(tasks)).not.toContain("סוכרת");
     });
 
-    it("generates 3 diabetes tasks", () => {
+    it("generates 1 diabetes task (BS monitoring only)", () => {
       const tasks = applyRules(makePatient({ status: ["סוכרת"] }));
       const dmTasks = tasks.filter((t) => t.generatedFrom === "סוכרת");
-      expect(dmTasks).toHaveLength(3);
+      expect(dmTasks).toHaveLength(1);
     });
   });
 
@@ -177,10 +169,10 @@ describe("rules engine — all rules", () => {
       expect(generatedSources(tasks)).toContain("סיכון נפילה");
     });
 
-    it("generates 3 fall tasks", () => {
+    it("generates 1 fall task (CT head only)", () => {
       const tasks = applyRules(makePatient({ flags: ["FALL"] }));
       const fallTasks = tasks.filter((t) => t.generatedFrom === "סיכון נפילה");
-      expect(fallTasks).toHaveLength(3);
+      expect(fallTasks).toHaveLength(1);
     });
   });
 
@@ -226,34 +218,30 @@ describe("rules engine — all rules", () => {
       expect(generatedSources(tasks)).toContain("בידוד");
     });
 
-    it("generates 3 isolation tasks", () => {
+    it("generates 1 isolation task (culture only)", () => {
       const tasks = applyRules(makePatient({ status: ["בידוד"] }));
       const isoTasks = tasks.filter((t) => t.generatedFrom === "בידוד");
-      expect(isoTasks).toHaveLength(3);
+      expect(isoTasks).toHaveLength(1);
     });
   });
 
-  // 9. Catheter
+  // 9. Catheter — rule matches but generates NO on-call tasks
   describe("Catheter", () => {
-    it("triggers on 'קטטר'", () => {
+    it("generates 0 tasks (I/O only if explicitly asked)", () => {
       const tasks = applyRules(makePatient({ status: ["קטטר שתן"] }));
-      expect(generatedSources(tasks)).toContain("קטטר שתן");
+      const catTasks = tasks.filter((t) => t.generatedFrom === "קטטר שתן");
+      expect(catTasks).toHaveLength(0);
     });
 
-    it("triggers on 'foley'", () => {
+    it("generates 0 tasks for foley variant", () => {
       const tasks = applyRules(makePatient({ status: ["foley catheter"] }));
-      expect(generatedSources(tasks)).toContain("קטטר שתן");
+      const catTasks = tasks.filter((t) => t.generatedFrom === "קטטר שתן");
+      expect(catTasks).toHaveLength(0);
     });
 
     it("does NOT trigger on 'קטטר חד' (one-time catheter)", () => {
       const tasks = applyRules(makePatient({ status: ["קטטר חד פעמי"] }));
       expect(generatedSources(tasks)).not.toContain("קטטר שתן");
-    });
-
-    it("generates 1 catheter task (I/O tracking, assessment is morning team)", () => {
-      const tasks = applyRules(makePatient({ status: ["foley"] }));
-      const catTasks = tasks.filter((t) => t.generatedFrom === "קטטר שתן");
-      expect(catTasks).toHaveLength(1);
     });
   });
 
@@ -627,10 +615,10 @@ describe("rules engine — all rules", () => {
       expect(generatedSources(tasks)).toContain("קבלה חדשה");
     });
 
-    it("generates 6 new admission tasks", () => {
+    it("generates 3 admission tasks (labs+ECG+CXR only)", () => {
       const tasks = applyRules(makePatient({ status: ["קבלה חדשה"] }));
       const admTasks = tasks.filter((t) => t.generatedFrom === "קבלה חדשה");
-      expect(admTasks).toHaveLength(6);
+      expect(admTasks).toHaveLength(3);
     });
   });
 

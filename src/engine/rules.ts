@@ -30,11 +30,9 @@ const RULES: Rule[] = [
     trigger: /משתחרר|שחרור|לשחרר|D\/C|discharge/i,
     source: "שחרור",
     group: "discharge",
-    tasks: [
-      // Only tasks relevant to on-call. Discharge summary & letter = morning team work.
-      { text: "ודא תרופות שחרור מוכנות", urgency: "routine", category: "discharge" },
-      { text: "ודא שאין בדיקות ממתינות לפני שחרור", urgency: "routine", category: "discharge" },
-    ],
+    // No auto-generated tasks. Discharge is morning team work.
+    // On-call only does what's explicitly written on the list.
+    tasks: [],
   },
 
   // ═══ NPO ═══
@@ -82,9 +80,8 @@ const RULES: Rule[] = [
     group: "diabetes",
     triggerField: "tasks",
     tasks: [
+      // Only BS monitoring — the rest is morning team work unless explicitly asked.
       { text: "מדידת סוכר לפני ארוחות + לפני שינה", urgency: "routine", category: "labs" },
-      { text: "בדיקת HbA1c אם חסר", urgency: "routine", category: "labs" },
-      { text: "סולם אינסולין מהיר (Sliding Scale) - לוודא תקינות", urgency: "routine", category: "meds" },
     ],
   },
 
@@ -95,8 +92,7 @@ const RULES: Rule[] = [
     group: "fall",
     triggerField: "tasks",
     tasks: [
-      { text: "מעקה מיטה מורם", urgency: "stat", category: "other" },
-      { text: "פעמון בהישג יד", urgency: "stat", category: "other" },
+      // Bed rails + bell = nursing, not doctor tasks
       { text: "CT ראש אם חבלה / טיפול נוגד קרישה", urgency: "urgent", category: "imaging" },
     ],
   },
@@ -118,8 +114,7 @@ const RULES: Rule[] = [
     group: "isolation",
     triggerField: "tasks",
     tasks: [
-      { text: "שילוט בידוד על הדלת", urgency: "stat", category: "other" },
-      { text: "ציוד מגן אישי בכניסה", urgency: "stat", category: "other" },
+      // Signage + PPE = nursing tasks, not doctor
       { text: "תרבית מעקב לפי פרוטוקול", urgency: "routine", category: "labs" },
     ],
   },
@@ -130,9 +125,8 @@ const RULES: Rule[] = [
     source: "קטטר שתן",
     group: "catheter",
     triggerField: "tasks",
-    tasks: [
-      { text: "תיעוד כמות שתן (I/O)", urgency: "routine", category: "other" },
-    ],
+    // No auto-generated tasks. I/O monitoring is done only if explicitly requested.
+    tasks: [],
   },
 
   // ═══ PNEUMONIA — DAG: Ceftriaxone ± Azithromycin ═══
@@ -404,9 +398,7 @@ const RULES: Rule[] = [
       { text: "מעבדה: CBC, CMP, Mg, PO4, PT/INR, CRP", urgency: "urgent", category: "labs" },
       { text: "ECG (>50y / רקע קרדיאלי)", urgency: "urgent", category: "labs" },
       { text: "CXR (אם אין מהשבוע האחרון)", urgency: "routine", category: "imaging" },
-      { text: "Medication Reconciliation", urgency: "urgent", category: "meds" },
-      { text: "הערכת סיכון נפילה + לחץ", urgency: "routine", category: "other" },
-      { text: "מניעת DVT: Enoxaparin 40mg SC daily", urgency: "routine", category: "meds" },
+      // Med rec, fall risk, DVT prophylaxis = admitting doctor / morning team
     ],
   },
 
