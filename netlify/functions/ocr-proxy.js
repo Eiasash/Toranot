@@ -5,9 +5,7 @@
  * Set ANTHROPIC_API_KEY in Netlify environment variables.
  */
 
-import type { Context } from "@netlify/functions";
-
-export default async (request: Request, _context: Context) => {
+exports.handler = async (event, context) => {
   // CORS headers
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -15,27 +13,35 @@ export default async (request: Request, _context: Context) => {
     "Access-Control-Allow-Headers": "Content-Type",
   };
 
-  if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+  // Handle preflight
+  if (event.httpMethod === "OPTIONS") {
+    return {
+      statusCode: 204,
+      headers: corsHeaders,
+      body: "",
+    };
   }
 
-  if (request.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
+  if (event.httpMethod !== "POST") {
+    return {
+      statusCode: 405,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+      body: JSON.stringify({ error: "Method not allowed" }),
+    };
   }
 
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+  const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return new Response(
-      JSON.stringify({ error: "ANTHROPIC_API_KEY not configured on server" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    console.error("ANTHROPIC_API_KEY not configured");
+    return {
+      statusCode: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "ANTHROPIC_API_KEY not configured on server" }),
+    };
   }
 
   try {
-    const body = await request.json();
+    const body = JSON.parse(event.body || "{}");
 
     // Forward to Anthropic API
     const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -50,15 +56,18 @@ export default async (request: Request, _context: Context) => {
 
     const data = await response.json();
 
-    return new Response(JSON.stringify(data), {
-      status: response.status,
+    return {
+      statusCode: response.status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+      body: JSON.stringify(data),
+    };
   } catch (err) {
+    console.error("Proxy error:", err);
     const message = err instanceof Error ? err.message : "Unknown error";
-    return new Response(
-      JSON.stringify({ error: `Proxy error: ${message}` }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return {
+      statusCode: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      body: JSON.stringify({ error: `Proxy error: ${message}` }),
+    };
   }
 };
