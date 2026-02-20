@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { usePatientsState } from "../context/PatientsContext";
 import { SECTION_LABEL, type PatientEntry, type Task } from "../types";
+import { formatLabsForHandoff } from "./LabChart";
 
 function urgencyLabel(u: Task["urgency"]) {
   return u === "stat" ? "🔴" : u === "urgent" ? "🟡" : u === "extra" ? "🟣" : "";
@@ -24,6 +25,11 @@ function formatPatient(p: PatientEntry): string {
 
   if (p.status.length > 0) {
     lines.push(`  מצב: ${p.status.join(", ")}`);
+  }
+
+  const labSummary = formatLabsForHandoff(p);
+  if (labSummary) {
+    lines.push(`  🔬 ${labSummary}`);
   }
 
   if (pending.length > 0) {

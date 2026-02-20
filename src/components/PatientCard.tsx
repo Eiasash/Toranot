@@ -4,6 +4,7 @@ import { SECTIONS, SECTION_LABEL } from "../types";
 import { TaskItem } from "./TaskItem";
 import { usePatientsDispatch, usePatientsState } from "../context/PatientsContext";
 import { LabBadges, AddLabForm } from "./LabTracker";
+import { LabChart } from "./LabChart";
 import { QuickScenario } from "./QuickScenario";
 import { MedFlagBadges } from "./MedFlags";
 import { generateHints } from "../engine/hints";
@@ -122,6 +123,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
   const [showScenario, setShowScenario] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showLabForm, setShowLabForm] = useState(false);
+  const [showLabChart, setShowLabChart] = useState(false);
   const [showHints, setShowHints] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(patient.name ?? "");
@@ -444,10 +446,27 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
         >
           📊 Lab
         </button>
+        {(patient.labs?.length ?? 0) >= 2 && (
+          <button
+            onClick={() => setShowLabChart(!showLabChart)}
+            className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${
+              showLabChart
+                ? "bg-purple-600 text-white border-purple-600"
+                : "border-purple-200 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300"
+            } active:bg-purple-100`}
+          >
+            📈 תרשים
+          </button>
+        )}
       </div>
 
       {showLabForm && (
         <AddLabForm patient={patient} onClose={() => setShowLabForm(false)} />
+      )}
+
+      {/* Lab trend charts */}
+      {showLabChart && (
+        <LabChart patient={patient} />
       )}
 
       {/* Tasks */}
