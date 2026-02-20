@@ -137,42 +137,16 @@ export function detectSectionFromHeader(headerText: string): Section | null {
 
 /**
  * Infer section from a room string.
- * Helps when the pasted list does NOT include explicit headers.
- * Room patterns:
- * - ניטור 1, ניטור 3 -> MONITOR
- * - 40-49 range -> SIDE_A
- * - 50-59 range -> SIDE_B
- * - 60-69 range -> SIDE_C
- * - שיקום rooms -> REHAB
+ * NOTE: Room numbers do NOT determine sections!
+ * - Regular rooms (49/1, 52/2, etc.) can belong to ANY section
+ * - ניטור rooms can belong to צד א, צד ב, or צד ג
+ * - שיקום is its own section but uses regular room numbers
+ * 
+ * This function returns null for all cases since we cannot infer
+ * section from room alone. Section must come from explicit headers.
  */
 export function detectSectionFromRoom(room: string | null): Section | null {
-  if (!room) return null;
-  const t = room.replace(/\s+/g, "").toLowerCase();
-
-  // Monitor rooms: "ניטור 1", "ניטור 3", etc.
-  if (t.startsWith("ניטור") || t.startsWith("מוניטור") || t.startsWith("monitor")) {
-    return "MONITOR";
-  }
-
-  // Rehab rooms
-  if (t.startsWith("שיקום") || t.startsWith("rehab")) {
-    return "REHAB";
-  }
-
-  // Extract the first number from room patterns like "49/1", "52-2", "49", etc.
-  const roomNumberMatch = room.match(/^(\d+)/);;
-  if (roomNumberMatch) {
-    const roomNum = parseInt(roomNumberMatch[1], 10);
-    
-    // Common hospital ward room number ranges
-    if (roomNum >= 40 && roomNum <= 49) return "SIDE_A";
-    if (roomNum >= 50 && roomNum <= 59) return "SIDE_B";
-    if (roomNum >= 60 && roomNum <= 69) return "SIDE_C";
-    
-    // Alternative ranges if needed
-    if (roomNum >= 1 && roomNum <= 19) return "SIDE_A";
-    if (roomNum >= 20 && roomNum <= 39) return "SIDE_B";
-  }
-
+  // We cannot reliably determine section from room numbers
+  // Sections must be explicitly specified by headers in the document
   return null;
 }
