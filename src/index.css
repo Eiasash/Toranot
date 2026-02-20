@@ -144,3 +144,52 @@ body {
 .dark .quick-ref tr {
   border-color: #1a1a2e !important;
 }
+/* Severity / colored cards */
+.dark .quick-ref .bg-yellow-50 {
+  background-color: rgba(234, 179, 8, 0.12) !important;
+  color: #fde047 !important;
+}
+.dark .quick-ref .bg-yellow-100 {
+  background-color: rgba(234, 179, 8, 0.18) !important;
+}
+.dark .quick-ref .text-yellow-800 {
+  color: #fde047 !important;
+}
+.dark .quick-ref .bg-red-50 {
+  background-color: rgba(239, 68, 68, 0.12) !important;
+  color: #fca5a5 !important;
+}
+.dark .quick-ref .bg-red-100 {
+  background-color: rgba(239, 68, 68, 0.18) !important;
+}
+.dark .quick-ref .text-red-800 {
+  color: #fca5a5 !important;
+}
+.dark .quick-ref .bg-green-100 {
+  background-color: rgba(34, 197, 94, 0.18) !important;
+}
+.dark .quick-ref .text-green-800 {
+  color: #86efac !important;
+}
+.dark .quick-ref .bg-orange-100 {
+  background-color: rgba(249, 115, 22, 0.18) !important;
+}
+.dark .quick-ref .text-orange-800 {
+  color: #fdba74 !important;
+}
+.dark .quick-ref .border-orange-300 {
+  border-color: rgba(249, 115, 22, 0.4) !important;
+}
+.dark .quick-ref .border-yellow-300 {
+  border-color: rgba(234, 179, 8, 0.4) !important;
+}
+.dark .quick-ref .border-green-300 {
+  border-color: rgba(34, 197, 94, 0.4) !important;
+}
+/* Insulin table rows */
+.dark .quick-ref tr.bg-yellow-50 {
+  background-color: rgba(234, 179, 8, 0.1) !important;
+}
+.dark .quick-ref tr.bg-red-50 {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+}
