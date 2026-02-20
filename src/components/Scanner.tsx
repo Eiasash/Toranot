@@ -1,5 +1,18 @@
 import { useState, useRef } from "react";
+import { safeGetItem, safeSetItem } from "../utils/storage";
 
+// -----------------------------
+// Constants
+// -----------------------------
+const API_KEY_STORAGE_KEY = "toranot_anthropic_key";
+const OCR_MODEL = "claude-opus-4-5";
+const OCR_MAX_TOKENS = 2048;
+const IMAGE_MAX_EDGE = 2400;
+const IMAGE_JPEG_QUALITY = 0.82;
+
+// -----------------------------
+// Types
+// -----------------------------
 interface ScannerProps {
   onTextExtracted: (text: string) => void;
   onCancel: () => void;
@@ -12,8 +25,6 @@ type ScanState =
   | { step: "scanning"; imageUrl: string; progress?: { current: number; total: number } }
   | { step: "done"; imageUrl: string; text: string }
   | { step: "error"; message: string };
-
-const STORAGE_KEY = "toranot_anthropic_key";
 
 const OCR_PROMPT = `You are reading a Hebrew geriatrics ward shift sheet (דף תורן גריאטריה).
 The sheet is a table with columns: room/bed (חדר), patient name (שם), age (גיל), diagnosis (אבחנה), status (סטטוס), TOREN (תורן), and MACHAR (מחר).
@@ -33,13 +44,21 @@ Rules:
 - Output section headers exactly as: צד א / צד ב / צד ג / שיקום / ניטור
 - Output ONLY the structured text, no explanations, no markdown
 `;
+interface ClaudeAPIResponse {
+  content: Array<{ type: string; text?: string }>;
+}
+
+interface ClaudeAPIError {
+  error?: { message?: string };
+}
+
 async function runClaudeOCR(file: File, apiKey: string): Promise<string> {
   const base64 = await fileToBase64(file);
-  const mediaType = (file.type?.startsWith("image/") ? file.type : "image/jpeg") as
-    | "image/jpeg"
-    | "image/png"
-    | "image/webp"
-    | "image/gif";
+  const VALID_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
+  type ImageMediaType = (typeof VALID_TYPES)[number];
+  const mediaType: ImageMediaType = VALID_TYPES.includes(file.type as ImageMediaType)
+    ? (file.type as ImageMediaType)
+    : "image/jpeg";
 
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -47,11 +66,13 @@ async function runClaudeOCR(file: File, apiKey: string): Promise<string> {
       "Content-Type": "application/json",
       "x-api-key": apiKey,
       "anthropic-version": "2023-06-01",
+      // NOTE: Direct browser access is required because this is a client-side PWA
+      // without a backend server. The API key is user-provided and stored locally.
       "anthropic-dangerous-direct-browser-access": "true",
     },
     body: JSON.stringify({
-      model: "claude-opus-4-5",
-      max_tokens: 2048,
+      model: OCR_MODEL,
+      max_tokens: OCR_MAX_TOKENS,
       messages: [
         {
           role: "user",
@@ -65,11 +86,16 @@ async function runClaudeOCR(file: File, apiKey: string): Promise<string> {
   });
 
   if (!response.ok) {
-    const err = await response.json().catch(() => ({})) as { error?: { message?: string } };
-    throw new Error(err.error?.message || `API error ${response.status}`);
+    let errBody: ClaudeAPIError = {};
+    try {
+      errBody = (await response.json()) as ClaudeAPIError;
+    } catch (parseErr) {
+      console.warn("Failed to parse API error response:", parseErr);
+    }
+    throw new Error(errBody.error?.message || `API error ${response.status}`);
   }
 
-  const data = await response.json() as { content: Array<{ type: string; text?: string }> };
+  const data = (await response.json()) as ClaudeAPIResponse;
   return data.content
     .filter((b) => b.type === "text")
     .map((b) => b.text ?? "")
@@ -77,25 +103,24 @@ async function runClaudeOCR(file: File, apiKey: string): Promise<string> {
 }
 
 // Resize + compress image to stay under Anthropic's 5MB base64 limit
-// Max long edge 2400px, JPEG quality 0.82 — enough for OCR, well under limit
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
-      const MAX = 2400;
       let { width, height } = img;
-      if (width > MAX || height > MAX) {
-        if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
-        else { width = Math.round(width * MAX / height); height = MAX; }
+      if (width > IMAGE_MAX_EDGE || height > IMAGE_MAX_EDGE) {
+        if (width > height) { height = Math.round(height * IMAGE_MAX_EDGE / width); width = IMAGE_MAX_EDGE; }
+        else { width = Math.round(width * IMAGE_MAX_EDGE / height); height = IMAGE_MAX_EDGE; }
       }
       const canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
-      const ctx = canvas.getContext("2d")!;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { reject(new Error("Failed to get canvas 2D context")); return; }
       ctx.drawImage(img, 0, 0, width, height);
       URL.revokeObjectURL(url);
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+      const dataUrl = canvas.toDataURL("image/jpeg", IMAGE_JPEG_QUALITY);
       resolve(dataUrl.split(",")[1]);
     };
     img.onerror = reject;
@@ -104,10 +129,10 @@ function fileToBase64(file: File): Promise<string> {
 }
 
 function getStoredKey(): string {
-  try { return localStorage.getItem(STORAGE_KEY) || ""; } catch { return ""; }
+  return safeGetItem(API_KEY_STORAGE_KEY) || "";
 }
 function saveKey(key: string) {
-  try { localStorage.setItem(STORAGE_KEY, key); } catch { /* ignore */ }
+  safeSetItem(API_KEY_STORAGE_KEY, key);
 }
 
 function ApiKeySetup({ onSaved }: { onSaved: () => void }) {
@@ -185,6 +210,13 @@ export function Scanner({ onTextExtracted, onCancel }: ScannerProps) {
     setState({ step: "batchPreview", items });
   }
 
+  function formatOcrError(err: unknown): string {
+    const raw = err instanceof Error ? err.message : String(err);
+    return raw === "Failed to fetch"
+      ? "חיבור נכשל. בדוק חיבור לאינטרנט ושה-API Key תקין."
+      : raw;
+  }
+
   async function runOcr(file: File, imageUrl: string, progress?: { current: number; total: number }) {
     const apiKey = getStoredKey();
     if (!apiKey) { setShowKeySetup(true); return; }
@@ -194,11 +226,7 @@ export function Scanner({ onTextExtracted, onCancel }: ScannerProps) {
       setState({ step: "done", imageUrl, text });
     } catch (err) {
       URL.revokeObjectURL(imageUrl);
-      const raw = err instanceof Error ? err.message : String(err);
-      const msg = raw === "Failed to fetch"
-        ? "חיבור נכשל. בדוק חיבור לאינטרנט ושה-API Key תקין."
-        : raw;
-      setState({ step: "error", message: msg });
+      setState({ step: "error", message: formatOcrError(err) });
     }
   }
 
@@ -256,6 +284,7 @@ export function Scanner({ onTextExtracted, onCancel }: ScannerProps) {
     if (!apiKey) { setShowKeySetup(true); return; }
 
     const texts: string[] = [];
+    const errors: string[] = [];
     for (let i = 0; i < items.length; i++) {
       const { file, imageUrl } = items[i];
       setState({ step: "scanning", imageUrl, progress: { current: i + 1, total: items.length } });
@@ -263,23 +292,26 @@ export function Scanner({ onTextExtracted, onCancel }: ScannerProps) {
         const text = await runClaudeOCR(file, apiKey);
         texts.push(text);
       } catch (err) {
-        // Clean up URLs before showing error
-        for (const it of items) URL.revokeObjectURL(it.imageUrl);
-        const raw = err instanceof Error ? err.message : String(err);
-        const msg = raw === "Failed to fetch"
-          ? "חיבור נכשל. בדוק חיבור לאינטרנט ושה-API Key תקין."
-          : raw;
-        setState({ step: "error", message: msg });
-        return;
+        console.warn(`OCR failed for page ${i + 1}:`, err);
+        errors.push(`דף ${i + 1}: ${formatOcrError(err)}`);
       }
       URL.revokeObjectURL(imageUrl);
     }
 
+    // If all pages failed, show error
+    if (texts.length === 0) {
+      setState({ step: "error", message: errors.join("\n") });
+      return;
+    }
+
     const merged = normalizeAndGroupBySection(texts.join("\n"));
+    const warningPrefix = errors.length > 0
+      ? `⚠️ ${errors.length} דפים נכשלו:\n${errors.join("\n")}\n\n`
+      : "";
     // Show merged text for optional editing before import
     // Use the first image as thumbnail
     const thumb = items[0]?.imageUrl ?? "";
-    setState({ step: "done", imageUrl: thumb, text: merged });
+    setState({ step: "done", imageUrl: thumb, text: warningPrefix + merged });
   }
 
   function handleUseText(text: string) {
@@ -289,7 +321,7 @@ export function Scanner({ onTextExtracted, onCancel }: ScannerProps) {
 
   function cleanup() {
     if (state.step === "preview" || state.step === "scanning" || state.step === "done") {
-      if ("imageUrl" in state) URL.revokeObjectURL((state as any).imageUrl);
+      URL.revokeObjectURL(state.imageUrl);
     }
     if (state.step === "batchPreview") {
       for (const it of state.items) URL.revokeObjectURL(it.imageUrl);
@@ -400,27 +432,28 @@ export function Scanner({ onTextExtracted, onCancel }: ScannerProps) {
     );
   }
 
-  // done
+  // done — state is narrowed to { step: "done"; imageUrl: string; text: string }
+  const doneState = state;
   return (
     <div className="flex flex-col gap-3">
       <div className="flex gap-3">
-        <img src={(state as { imageUrl: string }).imageUrl} alt="תוצאה" className="w-20 h-20 rounded-lg border border-gray-200 object-cover shrink-0" />
+        <img src={doneState.imageUrl} alt="תוצאה" className="w-20 h-20 rounded-lg border border-gray-200 object-cover shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-gray-700 mb-1">טקסט שזוהה:</p>
           <p className="text-xs text-gray-400">ניתן לערוך לפני הייבוא</p>
         </div>
       </div>
       <textarea
-        value={(state as { text: string }).text}
-        onChange={(e) => setState({ ...(state as Extract<ScanState, { step: "done" }>), text: e.target.value })}
+        value={doneState.text}
+        onChange={(e) => setState({ ...doneState, text: e.target.value })}
         dir="auto"
         rows={8}
         style={{ unicodeBidi: "plaintext" }}
         className="w-full p-3 border border-gray-300 rounded-xl text-base leading-relaxed resize-y focus:ring-2 focus:ring-blue-400 outline-none whitespace-pre-wrap break-words font-mono max-h-[40vh]"
       />
       <button
-        onClick={() => handleUseText((state as { text: string }).text)}
-        disabled={!(state as { text: string }).text.trim()}
+        onClick={() => handleUseText(doneState.text)}
+        disabled={!doneState.text.trim()}
         className="w-full py-4 bg-blue-600 text-white rounded-xl text-lg font-medium active:bg-blue-700 active:scale-[0.98] transition-transform disabled:opacity-40 disabled:pointer-events-none"
       >
         ייבוא רשימה
