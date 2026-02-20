@@ -8,6 +8,8 @@ import { QuickScenario } from "./QuickScenario";
 import { MedFlagBadges } from "./MedFlags";
 import { generateHints } from "../engine/hints";
 import { showUndoToast } from "./UndoToast";
+import { TaskTemplates } from "./TaskTemplates";
+import { VoiceButton } from "./VoiceInput";
 
 function FlagBadge({ flag }: { flag: string }) {
   return (
@@ -117,6 +119,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
   const [addType, setAddType] = useState<"task" | "note">("task");
   const [draft, setDraft] = useState("");
   const [showScenario, setShowScenario] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
   const [showLabForm, setShowLabForm] = useState(false);
   const [showHints, setShowHints] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -428,6 +431,12 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
           ⚡ תרחיש
         </button>
         <button
+          onClick={() => setShowTemplates(true)}
+          className="text-xs px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300 active:bg-indigo-100"
+        >
+          📋 תבנית
+        </button>
+        <button
           onClick={() => setShowLabForm(!showLabForm)}
           className="text-xs px-2.5 py-1 rounded-lg border border-purple-200 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 active:bg-purple-100"
         >
@@ -537,6 +546,9 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
                 }
                 className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-400 outline-none"
               />
+              {addType === "task" && (
+                <VoiceButton onResult={(text) => { setDraft(text); }} />
+              )}
               <button
                 type="button"
                 onClick={add}
@@ -555,6 +567,9 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
 
       {showScenario && (
         <QuickScenario patient={patient} onClose={() => setShowScenario(false)} />
+      )}
+      {showTemplates && (
+        <TaskTemplates patient={patient} onClose={() => setShowTemplates(false)} />
       )}
     </div>
   );

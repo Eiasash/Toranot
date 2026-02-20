@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { usePatientsDispatch } from "../context/PatientsContext";
 import type { PatientEntry, LabEntry } from "../types";
 import { generateId } from "../utils/id";
@@ -80,9 +80,68 @@ function MiniSparkline({ values }: { values: number[] }) {
   );
 }
 
+/** Inline quick entry input that appears when tapping a lab chip */
+function InlineLabInput({
+  label,
+  patientId,
+  onClose,
+}: {
+  label: string;
+  patientId: string;
+  onClose: () => void;
+}) {
+  const dispatch = usePatientsDispatch();
+  const [value, setValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const submit = () => {
+    const v = parseFloat(value);
+    if (isNaN(v)) return;
+    const lab: LabEntry = {
+      id: generateId("lab-"),
+      label,
+      value: v,
+      time: new Date().toISOString(),
+    };
+    dispatch({ type: "ADD_LAB", patientId, lab });
+    onClose();
+  };
+
+  return (
+    <div className="inline-flex items-center gap-1 mr-1">
+      <span className="text-xs font-semibold text-purple-700 dark:text-purple-300">{label}:</span>
+      <input
+        ref={inputRef}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") submit();
+          if (e.key === "Escape") onClose();
+        }}
+        onBlur={() => { if (!value.trim()) onClose(); }}
+        type="number"
+        step="any"
+        inputMode="decimal"
+        placeholder="ערך"
+        className="w-16 px-1.5 py-0.5 text-xs border border-purple-300 dark:border-purple-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 tabular-nums"
+      />
+      <button
+        onClick={submit}
+        className="text-xs px-1.5 py-0.5 bg-purple-600 text-white rounded"
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
 export function LabBadges({ patient }: { patient: PatientEntry }) {
   const labs = patient.labs ?? [];
-  if (labs.length === 0) return null;
+  const [editingLabel, setEditingLabel] = useState<string | null>(null);
 
   // Group by label, sorted by time
   const grouped = useMemo(() => {
@@ -98,16 +157,31 @@ export function LabBadges({ patient }: { patient: PatientEntry }) {
     return map;
   }, [labs]);
 
+  if (labs.length === 0) return null;
+
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className="flex flex-wrap gap-1.5 items-center">
       {[...grouped].map(([label, entries]) => {
         const latest = entries[entries.length - 1];
         const values = entries.map((e) => e.value);
         const severity = getLabSeverity(label, latest.value);
+
+        if (editingLabel === label) {
+          return (
+            <InlineLabInput
+              key={label}
+              label={label}
+              patientId={patient.id}
+              onClose={() => setEditingLabel(null)}
+            />
+          );
+        }
+
         return (
           <span
             key={label}
-            className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded border ${SEVERITY_STYLES[severity]}`}
+            onClick={() => setEditingLabel(label)}
+            className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded border cursor-pointer active:opacity-70 ${SEVERITY_STYLES[severity]}`}
             title={
               (severity === "critical" ? "⚠️ ערך קריטי!\n" : severity === "warning" ? "⚠ חריג\n" : "") +
               entries
@@ -115,7 +189,8 @@ export function LabBadges({ patient }: { patient: PatientEntry }) {
                 (e) =>
                   `${new Date(e.time).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })}: ${e.value}`,
               )
-              .join("\n")
+              .join("\n") +
+              "\nלחץ להוספת ערך חדש"
             }
           >
             {severity === "critical" && <span className="text-red-600 dark:text-red-400">🔴</span>}
