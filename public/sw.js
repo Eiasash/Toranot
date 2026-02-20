@@ -1,12 +1,12 @@
 /**
- * Service Worker v6 — Proper cache versioning + update strategy
+ * Service Worker v7 — Improved offline support + asset precaching
  * 
- * Strategy: Network-first with cache fallback.
+ * Strategy: Cache-first for hashed assets (immutable), network-first for HTML.
  * On new version: auto-update and notify user via postMessage.
  * Cross-Origin Isolation headers for SharedArrayBuffer support.
  */
 
-const CACHE_VERSION = 6;
+const CACHE_VERSION = 7;
 const CACHE_NAME = `toranot-v${CACHE_VERSION}`;
 
 const PRECACHE_ASSETS = [
@@ -53,7 +53,7 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Fetch: network-first, cache fallback, inject COOP/COEP headers
+// Fetch: smart strategy based on request type
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   if (event.request.url.startsWith("chrome-extension://")) return;
@@ -68,33 +68,41 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  const url = new URL(event.request.url);
+  const isSameOrigin = url.origin === self.location.origin;
+
+  // Hashed assets (JS/CSS with fingerprint) → cache-first (immutable)
+  const isHashedAsset = isSameOrigin && /\/assets\/.*-[a-zA-Z0-9]{8,}\.(js|css|woff2?)$/.test(url.pathname);
+
+  if (isHashedAsset) {
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        if (cached) return addCOIHeaders(cached);
+        return fetch(event.request).then((response) => {
+          if (response.status === 200) {
+            const toCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, toCache));
+          }
+          return addCOIHeaders(response);
+        }).catch(() => caches.match(event.request).then(r => r || new Response("Offline", { status: 503 })));
+      })
+    );
+    return;
+  }
+
+  // Everything else → network-first with cache fallback
   event.respondWith(
     fetch(event.request)
       .then((response) => {
         if (!response || response.status === 0 || response.type === "error")
           return response;
 
-        // Inject COOP/COEP headers for SharedArrayBuffer support
-        const newHeaders = new Headers(response.headers);
-        newHeaders.set("Cross-Origin-Opener-Policy", "same-origin");
-        newHeaders.set("Cross-Origin-Embedder-Policy", "require-corp");
-        newHeaders.set("Cross-Origin-Resource-Policy", "cross-origin");
-
-        const coiResponse = new Response(response.body, {
-          status: response.status,
-          statusText: response.statusText,
-          headers: newHeaders,
-        });
+        const coiResponse = addCOIHeaders(response);
 
         // Cache successful same-origin responses
-        if (
-          response.status === 200 &&
-          event.request.url.startsWith(self.location.origin)
-        ) {
+        if (response.status === 200 && isSameOrigin) {
           const toCache = coiResponse.clone();
-          caches
-            .open(CACHE_NAME)
-            .then((cache) => cache.put(event.request, toCache));
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, toCache));
         }
 
         return coiResponse;
@@ -102,3 +110,16 @@ self.addEventListener("fetch", (event) => {
       .catch(() => caches.match(event.request)),
   );
 });
+
+function addCOIHeaders(response) {
+  const newHeaders = new Headers(response.headers);
+  newHeaders.set("Cross-Origin-Opener-Policy", "same-origin");
+  newHeaders.set("Cross-Origin-Embedder-Policy", "require-corp");
+  newHeaders.set("Cross-Origin-Resource-Policy", "cross-origin");
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: newHeaders,
+  });
+}

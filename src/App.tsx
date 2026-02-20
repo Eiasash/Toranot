@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { PatientsProvider } from "./context/PatientsContext";
 import { SectionTabs } from "./components/SectionTabs";
 import { InputArea } from "./components/InputArea";
@@ -7,6 +7,7 @@ import { QuickReference } from "./components/QuickReference";
 import { HandoffSheet } from "./components/HandoffSheet";
 import { TaskDashboard } from "./components/TaskDashboard";
 import { ShiftHistory } from "./components/ShiftHistory";
+import { GlobalSearch } from "./components/GlobalSearch";
 import { usePatientsDispatch, usePatientsState } from "./context/PatientsContext";
 
 // ─── Header buttons ────────────────────────────────────────
@@ -125,14 +126,91 @@ function ArchiveButton() {
   );
 }
 
+// ─── Shake-to-open Quick Reference ─────────────────────────
+// Detects phone shake via accelerometer to open clinical reference hands-free
+
+function useShakeDetector(onShake: () => void) {
+  useEffect(() => {
+    let lastX = 0, lastY = 0, lastZ = 0;
+    let lastTime = 0;
+    let shakeCount = 0;
+    let shakeResetTimer: ReturnType<typeof setTimeout> | null = null;
+    const THRESHOLD = 15; // acceleration threshold
+    const SHAKE_COOLDOWN = 300; // ms between shakes
+    const SHAKES_NEEDED = 3; // shakes to trigger
+
+    const handler = (e: DeviceMotionEvent) => {
+      const acc = e.accelerationIncludingGravity;
+      if (!acc || acc.x == null || acc.y == null || acc.z == null) return;
+
+      const now = Date.now();
+      if (now - lastTime < 100) return; // throttle to 10Hz
+
+      const dx = Math.abs(acc.x - lastX);
+      const dy = Math.abs(acc.y - lastY);
+      const dz = Math.abs(acc.z - lastZ);
+      const delta = dx + dy + dz;
+
+      lastX = acc.x; lastY = acc.y; lastZ = acc.z; lastTime = now;
+
+      if (delta > THRESHOLD) {
+        shakeCount++;
+        if (shakeResetTimer) clearTimeout(shakeResetTimer);
+        shakeResetTimer = setTimeout(() => { shakeCount = 0; }, SHAKE_COOLDOWN * SHAKES_NEEDED);
+
+        if (shakeCount >= SHAKES_NEEDED) {
+          shakeCount = 0;
+          onShake();
+        }
+      }
+    };
+
+    // Request permission on iOS 13+
+    const addListener = () => {
+      window.addEventListener("devicemotion", handler);
+    };
+
+    if (typeof (DeviceMotionEvent as any).requestPermission === "function") {
+      // Don't auto-request — permission will be requested on first tap of the app
+      // For now, just try adding the listener
+      addListener();
+    } else {
+      addListener();
+    }
+
+    return () => {
+      window.removeEventListener("devicemotion", handler);
+      if (shakeResetTimer) clearTimeout(shakeResetTimer);
+    };
+  }, [onShake]);
+}
+
 // ─── Main App ──────────────────────────────────────────────
 
-type Modal = "none" | "reference" | "handoff" | "dashboard" | "history";
+type Modal = "none" | "reference" | "handoff" | "dashboard" | "history" | "search";
 
 function AppInner() {
   const [modal, setModal] = useState<Modal>("none");
   const { patients } = usePatientsState();
   const dispatch = usePatientsDispatch();
+
+  // Shake-to-open Quick Reference
+  const openRef = useCallback(() => {
+    setModal((prev) => (prev === "reference" ? "none" : "reference"));
+  }, []);
+  useShakeDetector(openRef);
+
+  // Keyboard shortcut: Ctrl+K or Cmd+K → Global Search
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        setModal((prev) => (prev === "search" ? "none" : "search"));
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   // Global pending count for dashboard button badge
   const pendingStat = patients
@@ -144,6 +222,15 @@ function AppInner() {
       <header className="bg-slate-800 text-white px-4 py-3 safe-top border-b border-slate-700">
         <div className="w-full lg:max-w-6xl lg:mx-auto flex items-baseline gap-3">
           <div className="ml-auto flex items-center gap-1.5 flex-wrap">
+            {/* Global Search */}
+            <button
+              onClick={() => setModal("search")}
+              className="text-xs px-2 py-1 rounded-lg border bg-violet-700 text-violet-100 border-violet-600 active:bg-violet-600 transition-colors"
+              title="חיפוש מהיר (Ctrl+K)"
+            >
+              🔍
+            </button>
+
             {/* Dashboard */}
             <button
               onClick={() => setModal("dashboard")}
@@ -228,6 +315,7 @@ function AppInner() {
       {modal === "handoff" && <HandoffSheet onClose={() => setModal("none")} />}
       {modal === "dashboard" && <TaskDashboard onClose={() => setModal("none")} />}
       {modal === "history" && <ShiftHistory onClose={() => setModal("none")} />}
+      {modal === "search" && <GlobalSearch onClose={() => setModal("none")} />}
     </div>
   );
 }

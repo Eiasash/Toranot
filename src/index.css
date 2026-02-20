@@ -32,9 +32,28 @@ body {
 }
 
 .dark body {
-  background-color: #111827;
+  background-color: #000000;
   color: #f3f4f6;
 }
+
+/* True OLED black overrides — saves battery on AMOLED, better for 3am */
+@media (prefers-color-scheme: dark) {
+  .dark .bg-gray-50 { background-color: #000000; }
+}
+.dark .dark\:bg-gray-900 { background-color: #000000 !important; }
+.dark .dark\:bg-gray-800 { background-color: #0a0a0a !important; }
+.dark .dark\:border-gray-700 { border-color: #1a1a1a !important; }
+
+/* ─── OLED Night Mode overrides ─── */
+/* True black for OLED screens — saves battery, reduces eye strain at 3am */
+.dark .bg-gray-900 { background-color: #000000 !important; }
+.dark .bg-gray-800 { background-color: #0a0a0a !important; }
+.dark .bg-slate-800 { background-color: #050510 !important; }
+.dark .bg-slate-700 { background-color: #0f0f1a !important; }
+.dark .bg-gray-50 { background-color: #000000 !important; }
+.dark .border-gray-700 { border-color: #1a1a2e !important; }
+.dark .border-gray-200 { border-color: #1a1a2e !important; }
+.dark .border-slate-700 { border-color: #1a1a2e !important; }
 
 /* Fix task text overflow on narrow devices */
 .break-anywhere {
