@@ -339,6 +339,14 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
                   taskId: task.id,
                 })
               }
+              onSetDue={(dueAt) =>
+                dispatch({
+                  type: "SET_TASK_DUE",
+                  patientId: patient.id,
+                  taskId: task.id,
+                  dueAt,
+                })
+              }
               onSetNote={(note) =>
                 dispatch({
                   type: "SET_TASK_NOTE",
@@ -586,7 +594,15 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
                           taskId: task.id,
                         })
                       }
-                      onSetNote={(note) =>
+                      onSetDue={(dueAt) =>
+                dispatch({
+                  type: "SET_TASK_DUE",
+                  patientId: patient.id,
+                  taskId: task.id,
+                  dueAt,
+                })
+              }
+              onSetNote={(note) =>
                         dispatch({
                           type: "SET_TASK_NOTE",
                           patientId: patient.id,
