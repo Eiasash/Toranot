@@ -209,6 +209,81 @@ const HINT_RULES: HintRule[] = [
       ],
     },
   },
+
+  // ═══ PARKINSON'S ═══
+  {
+    trigger: /פרקינסון|parkinson|PD\b|levodopa|סינמט|sinemet/i,
+    hint: {
+      emoji: "🤲",
+      title: "פרקינסון — הנחיות רקע",
+      tips: [
+        "🔴 אל תדלג על מינוני levodopa — תן בדיוק בזמן!",
+        "אסור metoclopramide — מחמיר פרקינסון (שקול domperidone)",
+        "הימנע haloperidol — שקול quetiapine low-dose לאגיטציה",
+        "סיכון גבוה לנפילות, דליריום, dysphagia",
+      ],
+    },
+  },
+
+  // ═══ HIP FRACTURE / POST-OP ═══
+  {
+    trigger: /שבר ירך|hip fracture|שבר צוואר ירך|ORIF|post.?op.*orthoped/i,
+    hint: {
+      emoji: "🦴",
+      title: "שבר ירך — הנחיות רקע",
+      tips: [
+        "DVT prophylaxis — ודא enoxaparin / mechanical compression",
+        "ניהול כאב — paracetamol קבוע + opioids PRN במינון נמוך",
+        "הימנע NSAIDs (סיכון כלייתי + דימום)",
+        "מוביליזציה מוקדמת — פיזיותרפיה ביום הראשון אם אפשר",
+        "דליריום — שכיח מאוד post-op, בדוק כל משמרת",
+      ],
+    },
+  },
+
+  // ═══ PRESSURE ULCERS ═══
+  {
+    trigger: /פצע לחץ|pressure ulcer|decubitus|פצעי לחץ/i,
+    hint: {
+      emoji: "🛏️",
+      title: "פצעי לחץ — הנחיות רקע",
+      tips: [
+        "הפיכות כל 2 שעות — ודא שהצוות מתעד",
+        "מזרן מתאים — ודא מזרן אוויר/לחץ משתנה",
+        "תזונה — חלבון מספיק? שקול ייעוץ תזונאית",
+        "אם stage 3-4 — ייעוץ פלסטיקה / wound care",
+      ],
+    },
+  },
+
+  // ═══ TUBE FEEDING ═══
+  {
+    trigger: /הזנה.*צינור|tube feed|PEG|NG feed|NGT|סונדה/i,
+    hint: {
+      emoji: "🥤",
+      title: "הזנה צינורית — הנחיות רקע",
+      tips: [
+        "ראש מיטה >30° בזמן הזנה + 30 דקות אחרי",
+        "בדוק residual כל 4-6 שעות — אם >500ml → עצור",
+        "אם שלשול — בדוק C.diff, שקול הפחתת קצב",
+        "NPO אם intubation / procedure — זכור לחדש!",
+      ],
+    },
+  },
+
+  // ═══ CHRONIC LIVER DISEASE ═══ (supplement existing)
+  {
+    trigger: /ascites|מיימת/i,
+    hint: {
+      emoji: "💧",
+      title: "מיימת — הנחיות רקע",
+      tips: [
+        "אם חום / כאב בטן → ניקור דיאגנוסטי SBP (PMN>250 = SBP)",
+        "הגבלת מלח <2g/day + spironolactone/furosemide",
+        "אם ניקור טיפולי >5L → albumin 6-8g/L שהוצא",
+      ],
+    },
+  },
 ];
 
 /**

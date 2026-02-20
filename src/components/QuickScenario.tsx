@@ -58,6 +58,46 @@ const SCENARIOS = [
     { text: "סקירת תרופות נפרוטוקסיות — הפסק!", urgency: "stat" as const, category: "meds" as const },
     { text: "מאזן נוזלים + Foley אם צריך", urgency: "urgent" as const, category: "other" as const },
   ]},
+  { emoji: "📉", label: "לחץ דם נמוך", status: "hypotension", tasks: [
+    { text: "Trendelenburg + NS 500ml bolus", urgency: "stat" as const, category: "meds" as const },
+    { text: "CBC, BMP, Lactate, Coag", urgency: "stat" as const, category: "labs" as const },
+    { text: "תרביות דם x2 + שתן", urgency: "stat" as const, category: "labs" as const },
+    { text: "ECG — שלול ACS / arrhythmia", urgency: "stat" as const, category: "labs" as const },
+    { text: "אם לא מגיב לנוזלים → vasopressors → ICU", urgency: "stat" as const, category: "consult" as const },
+  ]},
+  { emoji: "💓", label: "טכיקרדיה", status: "טכיקרדיה", tasks: [
+    { text: "ECG 12 leads — narrow vs wide QRS", urgency: "stat" as const, category: "labs" as const },
+    { text: "בדוק: חום, כאב, היפוולמיה, PE, ספסיס", urgency: "stat" as const, category: "other" as const },
+    { text: "SVT narrow → vagal maneuvers → Adenosine 6mg IV push", urgency: "stat" as const, category: "meds" as const },
+    { text: "AF rapid → Metoprolol 5mg IV / Diltiazem 0.25mg/kg IV", urgency: "stat" as const, category: "meds" as const },
+    { text: "Unstable → synchronized cardioversion!", urgency: "stat" as const, category: "other" as const },
+  ]},
+  { emoji: "😡", label: "אגיטציה", status: "אגיטציה", tasks: [
+    { text: "בדוק סיבה: כאב, שימור שתן, עצירות, תרופות, דליריום", urgency: "stat" as const, category: "other" as const },
+    { text: "הערכת דליריום (CAM / 4AT)", urgency: "stat" as const, category: "other" as const },
+    { text: "De-escalation — verbal first!", urgency: "stat" as const, category: "other" as const },
+    { text: "Haloperidol 0.5-1mg PO/IV (❌ לא בפרקינסון!)", urgency: "urgent" as const, category: "meds" as const },
+    { text: "שקול Quetiapine 12.5-25mg PO אם פרקינסון/LBD", urgency: "urgent" as const, category: "meds" as const },
+  ]},
+  { emoji: "🔻", label: "היפוגליקמיה", status: "היפוגליקמיה", tasks: [
+    { text: "סוכר נימי — אם <70 → טפל מיד", urgency: "stat" as const, category: "labs" as const },
+    { text: "אם בהכרה → 15-20g גלוקוז PO (חצי כוס מיץ)", urgency: "stat" as const, category: "meds" as const },
+    { text: "אם ללא הכרה → D50W 25ml IV (50% דקסטרוז)", urgency: "stat" as const, category: "meds" as const },
+    { text: "בדוק מחדש סוכר אחרי 15 דקות", urgency: "stat" as const, category: "labs" as const },
+    { text: "סקור סיבה: מינון אינסולין, ארוחה דילגה, כליות", urgency: "urgent" as const, category: "other" as const },
+  ]},
+  { emoji: "📈", label: "לחץ דם גבוה", status: "יתר לחץ דם", tasks: [
+    { text: "בדוק end-organ: כאב ראש, ראיה, כאב חזה, קוצר נשימה", urgency: "stat" as const, category: "other" as const },
+    { text: "ללא end-organ → Captopril 25mg PO / Amlodipine 5mg PO", urgency: "urgent" as const, category: "meds" as const },
+    { text: "עם end-organ → IV labetalol 20mg → שקול ICU", urgency: "stat" as const, category: "meds" as const },
+    { text: "BP חוזר כל 15-30 דקות", urgency: "stat" as const, category: "other" as const },
+  ]},
+  { emoji: "🚨", label: "אנפילקסיס", status: "אנפילקסיס", tasks: [
+    { text: "🔴 Epinephrine 0.3mg IM ירך — חזור כל 5-15 דקות", urgency: "stat" as const, category: "meds" as const },
+    { text: "NS 1L bolus IV", urgency: "stat" as const, category: "meds" as const },
+    { text: "Diphenhydramine 50mg IV + Methylprednisolone 125mg IV", urgency: "stat" as const, category: "meds" as const },
+    { text: "ניטור 6-24 שעות — biphasic reaction!", urgency: "stat" as const, category: "other" as const },
+  ]},
 ] as const;
 
 export function QuickScenario({

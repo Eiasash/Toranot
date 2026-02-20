@@ -443,6 +443,117 @@ const RULES: Rule[] = [
       { text: "NPO (עד הערכת בליעה)", urgency: "stat", category: "other" },
     ],
   },
+
+  // ═══ HYPERTENSIVE URGENCY / EMERGENCY ═══
+  {
+    trigger: /hypertensive\s*(urgency|emergency|crisis)|לחץ דם גבוה|BP\s*>\s*18\d|SBP\s*>\s*18\d|יתר לחץ דם חד/i,
+    source: "משבר יתר לחץ דם",
+    group: "htnemergency",
+    triggerField: "tasks",
+    tasks: [
+      { text: "בדוק סימני end-organ damage: כאב ראש, הפרעות ראיה, כאב חזה, קוצר נשימה", urgency: "stat", category: "other" },
+      { text: "אם ללא end-organ → PO: captopril 25mg / amlodipine 5mg", urgency: "urgent", category: "meds" },
+      { text: "אם end-organ → IV labetalol 20mg / nicardipine gtt → שקול ICU", urgency: "stat", category: "meds" },
+      { text: "BP חוזר כל 15-30 דקות — יעד ירידה 10-20% בשעה הראשונה", urgency: "stat", category: "other" },
+    ],
+  },
+
+  // ═══ SYNCOPE ═══
+  {
+    trigger: /syncope|עילפון|סינקופה|LOC|אובדן הכרה/i,
+    source: "סינקופה",
+    group: "syncope",
+    triggerField: "tasks",
+    tasks: [
+      { text: "ECG 12 leads — בדוק QT, Brugada, AV block, arrhythmia", urgency: "stat", category: "labs" },
+      { text: "BP שכיבה + עמידה (orthostatic)", urgency: "stat", category: "other" },
+      { text: "CBC, glucose, troponin, BMP", urgency: "stat", category: "labs" },
+      { text: "אם cardiac syncope → telemetry + קרדיולוג", urgency: "stat", category: "consult" },
+    ],
+  },
+
+  // ═══ DESATURATION ═══
+  {
+    trigger: /דסטורציה|desaturation|SpO2\s*<\s*9[0-3]|היפוקסיה|hypoxia|חמצן נמוך/i,
+    source: "דסטורציה",
+    group: "desat",
+    triggerField: "tasks",
+    tasks: [
+      { text: "🔴 O2 — NC / mask / NRB — יעד SpO2 >92% (COPD: 88-92%)", urgency: "stat", category: "meds" },
+      { text: "ABG / VBG", urgency: "stat", category: "labs" },
+      { text: "CXR — בדוק pneumothorax, effusion, edema, pneumonia", urgency: "stat", category: "imaging" },
+      { text: "אם לא מגיב → שקול BiPAP / intubation → ICU", urgency: "stat", category: "consult" },
+    ],
+  },
+
+  // ═══ ACUTE ABDOMEN ═══
+  {
+    trigger: /כאב בטן חד|acute abdomen|בטן חריפה|ileus|אילאוס|חסימת מעי|bowel obstruct/i,
+    source: "בטן חריפה",
+    group: "abdomen",
+    triggerField: "tasks",
+    tasks: [
+      { text: "בדיקה גופנית: סימני פריטונאליים, אוושות מעי, נפיחות", urgency: "stat", category: "other" },
+      { text: "מעבדה: CBC, CRP, lactate, lipase, LFTs", urgency: "stat", category: "labs" },
+      { text: "צילום בטן עמידה / CT בטן אם חשד ניתוחי", urgency: "stat", category: "imaging" },
+      { text: "NPO + IV fluids + שקול ייעוץ כירורגי", urgency: "stat", category: "consult" },
+    ],
+  },
+
+  // ═══ ALCOHOL / BENZO WITHDRAWAL ═══
+  {
+    trigger: /גמילה מאלכוהול|alcohol withdrawal|CIWA|DT\b|delirium tremens|גמילה מבנזו/i,
+    source: "גמילה",
+    group: "withdrawal",
+    triggerField: "tasks",
+    tasks: [
+      { text: "CIWA score q1-2h — אם >8 → טפל", urgency: "stat", category: "other" },
+      { text: "Diazepam 5-10mg PO/IV PRN (or lorazepam 1-2mg אם כבד)", urgency: "stat", category: "meds" },
+      { text: "Thiamine 100mg IV לפני גלוקוז!", urgency: "stat", category: "meds" },
+      { text: "אם seizure / DTs → ICU + benzo gtt", urgency: "stat", category: "consult" },
+    ],
+  },
+
+  // ═══ ANAPHYLAXIS ═══
+  {
+    trigger: /אנפילקסיס|anaphylaxis|תגובה אלרגית חמורה|angioedema|אנגיואדמה/i,
+    source: "אנפילקסיס",
+    group: "anaphylaxis",
+    triggerField: "tasks",
+    tasks: [
+      { text: "🔴 Epinephrine 0.3mg IM (ירך חיצונית) — חזור כל 5-15 דקות", urgency: "stat", category: "meds" },
+      { text: "NS 1L bolus IV", urgency: "stat", category: "meds" },
+      { text: "Diphenhydramine 50mg IV + Ranitidine 50mg IV + Methylprednisolone 125mg IV", urgency: "stat", category: "meds" },
+      { text: "ניטור 6-24 שעות (biphasic reaction)", urgency: "stat", category: "other" },
+    ],
+  },
+
+  // ═══ ACUTE URINARY RETENTION ═══
+  {
+    trigger: /עצירת שתן|urinary retention|גלובוס|אצירת שתן|retention.*urine/i,
+    source: "עצירת שתן",
+    group: "retention",
+    triggerField: "tasks",
+    tasks: [
+      { text: "Bladder Scan — אם >300ml → הכנס קטטר", urgency: "stat", category: "procedure" },
+      { text: "אם >1L → שחרור איטי (500ml כל 30 דק) — סכנת post-obstructive diuresis", urgency: "urgent", category: "other" },
+      { text: "בדוק סיבה: anticholinergics, opioids, BPH, constipation", urgency: "urgent", category: "other" },
+    ],
+  },
+
+  // ═══ ACUTE ANEMIA / DROPPING HB ═══
+  {
+    trigger: /ירידה בהמוגלובין|Hb drop|אנמיה חדה|acute anemia|Hb\s*<\s*[78]/i,
+    source: "ירידת המוגלובין",
+    group: "anemia",
+    triggerField: "tasks",
+    tasks: [
+      { text: "Type & Screen / Cross 2U", urgency: "stat", category: "labs" },
+      { text: "בדוק מקור דימום: GI, wound, retroperitoneal, fracture", urgency: "stat", category: "other" },
+      { text: "CBC, retic, LDH, haptoglobin, coags", urgency: "stat", category: "labs" },
+      { text: "אם Hb<7 סימפטומטי → עירוי PRBC (Hb<8 אם cardiac)", urgency: "stat", category: "meds" },
+    ],
+  },
 ];
 
 export function applyRules(patient: PatientEntry): Task[] {
