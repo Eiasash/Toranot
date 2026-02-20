@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { usePatientsDispatch } from "../context/PatientsContext";
 import type { PatientEntry, LabEntry } from "../types";
 import { generateId } from "../utils/id";
+import { hapticWarning } from "../utils/haptics";
 
 const COMMON_LABS = ["Cr", "K+", "Na", "WBC", "Hb", "PLT", "CRP", "Glucose", "INR", "Lactate"] as const;
 
@@ -108,6 +109,8 @@ function InlineLabInput({
       time: new Date().toISOString(),
     };
     dispatch({ type: "ADD_LAB", patientId, lab });
+    const severity = getLabSeverity(label, v);
+    if (severity === "critical" || severity === "warning") hapticWarning();
     onClose();
   };
 

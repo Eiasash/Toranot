@@ -10,6 +10,7 @@ import { generateHints } from "../engine/hints";
 import { showUndoToast } from "./UndoToast";
 import { TaskTemplates } from "./TaskTemplates";
 import { VoiceButton } from "./VoiceInput";
+import { hapticSuccess } from "../utils/haptics";
 
 function FlagBadge({ flag }: { flag: string }) {
   return (
@@ -151,6 +152,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
   const toggleTask = useCallback((task: Task) => {
     dispatch({ type: "TOGGLE_TASK", patientId: patient.id, taskId: task.id });
     if (!task.done) {
+      hapticSuccess();
       showUndoToast({
         id: task.id,
         message: `✅ ${task.text.slice(0, 40)}${task.text.length > 40 ? "..." : ""}`,
@@ -173,7 +175,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 space-y-3 animate-card-in">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           {editing ? (
@@ -593,6 +595,7 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
   const toggleTask = useCallback((task: Task) => {
     dispatch({ type: "TOGGLE_TASK", patientId: patient.id, taskId: task.id });
     if (!task.done) {
+      hapticSuccess();
       showUndoToast({
         id: task.id,
         message: `✅ ${task.text.slice(0, 40)}${task.text.length > 40 ? "..." : ""}`,
