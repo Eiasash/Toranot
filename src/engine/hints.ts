@@ -196,21 +196,6 @@ const HINT_RULES: HintRule[] = [
     },
   },
 
-  // ═══ PALLIATIVE / DNR ═══
-  {
-    trigger: /פליאטיבי|palliative|DNR|DNI|comfort\s*(care|measures)|נוחות/i,
-    hint: {
-      emoji: "🕊️",
-      title: "טיפול תומך / DNR — הנחיות רקע",
-      tips: [
-        "ודא הוראות ברורות — DNR? DNI? comfort measures only?",
-        "ניהול כאב — ודא שיש PRN אנלגזיה",
-        "אם שינוי במצב — עדכן משפחה, אל תבצע CPR/intubation אם DNR/DNI",
-        "שמור על כבוד ונוחות — antiemetics, mouth care, positioning",
-      ],
-    },
-  },
-
   // ═══ ANTICOAGULATION ═══
   {
     trigger: /warfarin|קומדין|coumadin|eliquis|apixaban|xarelto|rivaroxaban|pradaxa|dabigatran|אנטיקואגולציה/i,
@@ -234,14 +219,11 @@ export function generateHints(patient: PatientEntry): ClinicalHint[] {
   const diagnosis = patient.diagnosis ?? "";
   if (!diagnosis.trim()) return [];
 
-  // Also check flags for things like DNR/DNI
-  const searchText = [diagnosis, ...patient.flags].join(" ");
-
   const hints: ClinicalHint[] = [];
   const seen = new Set<string>();
 
   for (const rule of HINT_RULES) {
-    if (rule.trigger.test(searchText) && !seen.has(rule.hint.title)) {
+    if (rule.trigger.test(diagnosis) && !seen.has(rule.hint.title)) {
       seen.add(rule.hint.title);
       hints.push(rule.hint);
     }
