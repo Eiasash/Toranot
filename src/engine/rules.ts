@@ -265,6 +265,7 @@ const RULES: Rule[] = [
     trigger: /כאב.*חזה|chest\s*pain|ACS|STEMI|NSTEMI|אוטם|MI\b|טרופונין.*גבוה|תסמונת כלילית/i,
     source: "כאב חזה / ACS",
     group: "acs",
+    triggerField: "tasks",  // Known CAD/MI shouldn't trigger acute workup
     tasks: [
       { text: "🔴 א.ק.ג תוך 10 דקות!", urgency: "stat", category: "labs" },
       { text: "🔴 טרופונין x3 (T0, T3h, T6h)", urgency: "stat", category: "labs" },
@@ -311,6 +312,7 @@ const RULES: Rule[] = [
     trigger: /דליריום|delirium|בלבול חריף|agitat|ערפול.*הכרה|acute\s*confusion/i,
     source: "דליריום",
     group: "delirium",
+    triggerField: "tasks",  // Chronic confusion vs acute delirium
     tasks: [
       { text: "בירור: זיהום? תרופות? מטבולי? היפוקסיה? עצירות? אצירה?", urgency: "stat", category: "other" },
       { text: "הפסקת anticholinergics, benzos, opioids", urgency: "stat", category: "meds" },
@@ -327,6 +329,7 @@ const RULES: Rule[] = [
     trigger: /דימום.*GI|GI\s*bleed|מלנה|melena|המטמזיס|hematemesis|הקאת דם|דם.*צואה/i,
     source: "דימום GI",
     group: "gibleed",
+    triggerField: "tasks",  // History of GI bleed vs active bleeding
     tasks: [
       { text: "🔴 סוג ושתלב + הזמנת 2 מנות דם", urgency: "stat", category: "labs" },
       { text: "🔴 2 גישות ורידיות רחבות (18G+)", urgency: "stat", category: "procedure" },
@@ -413,6 +416,7 @@ const RULES: Rule[] = [
     trigger: /שבץ|CVA|stroke|TIA|חולשה חד צדדית|אפזיה|NIHSS/i,
     source: "שבץ / TIA",
     group: "stroke",
+    triggerField: "tasks",  // Old CVA vs new neurological event
     tasks: [
       { text: "🔴 CT ראש דחוף (שלילת דימום)", urgency: "stat", category: "imaging" },
       { text: "🔴 זמן תחילת סימפטומים (חלון tPA: 4.5h)", urgency: "stat", category: "other" },
