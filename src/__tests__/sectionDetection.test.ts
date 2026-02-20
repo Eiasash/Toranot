@@ -92,20 +92,22 @@ describe("detectSectionFromHeader", () => {
 });
 
 describe("detectSectionFromRoom", () => {
-  it('returns MONITOR for "ניטור1"', () => {
-    expect(detectSectionFromRoom("ניטור1")).toBe("MONITOR");
+  // Rooms NEVER assign sections (Design Rule #2).
+  // Section comes ONLY from explicit headers in the patient list.
+  it('returns null for "ניטור1" — rooms never assign sections', () => {
+    expect(detectSectionFromRoom("ניטור1")).toBeNull();
   });
 
-  it('returns MONITOR for "ניטור-3"', () => {
-    expect(detectSectionFromRoom("ניטור-3")).toBe("MONITOR");
+  it('returns null for "ניטור-3"', () => {
+    expect(detectSectionFromRoom("ניטור-3")).toBeNull();
   });
 
-  it('returns MONITOR for "מוניטור 2"', () => {
-    expect(detectSectionFromRoom("מוניטור 2")).toBe("MONITOR");
+  it('returns null for "מוניטור 2"', () => {
+    expect(detectSectionFromRoom("מוניטור 2")).toBeNull();
   });
 
-  it('returns MONITOR for "monitor1"', () => {
-    expect(detectSectionFromRoom("monitor1")).toBe("MONITOR");
+  it('returns null for "monitor1"', () => {
+    expect(detectSectionFromRoom("monitor1")).toBeNull();
   });
 
   it("returns null for regular room numbers", () => {

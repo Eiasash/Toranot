@@ -1,87 +1,12 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { usePatientsDispatch } from "../context/PatientsContext";
 import type { PatientEntry, LabEntry } from "../types";
 import { generateId } from "../utils/id";
+import { hapticWarning } from "../utils/haptics";
 
 const COMMON_LABS = ["Cr", "K+", "Na", "WBC", "Hb", "PLT", "CRP", "Glucose", "INR", "Lactate"] as const;
 
 // ── Critical value thresholds ──────────────────────────────
-// Returns "critical" (red), "warning" (yellow), or "normal"
-type LabSeverity = "critical" | "warning" | "normal";
-
-function labSeverity(label: string, value: number): LabSeverity {
-  const l = label.toLowerCase().replace(/[+\s]/g, "");
-  switch (l) {
-    case "k":
-      if (value > 6.0 || value < 2.5) return "critical";
-      if (value > 5.5 || value < 3.0) return "warning";
-      return "normal";
-    case "na":
-      if (value < 120 || value > 160) return "critical";
-      if (value < 125 || value > 150) return "warning";
-      return "normal";
-    case "cr":
-      if (value > 4.0) return "critical";
-      if (value > 2.0) return "warning";
-      return "normal";
-    case "hb":
-      if (value < 7) return "critical";
-      if (value < 8) return "warning";
-      return "normal";
-    case "plt":
-      if (value < 20) return "critical";
-      if (value < 50) return "warning";
-      return "normal";
-    case "wbc":
-      if (value > 30 || value < 1) return "critical";
-      if (value > 20 || value < 2) return "warning";
-      return "normal";
-    case "glucose":
-      if (value < 50 || value > 500) return "critical";
-      if (value < 70 || value > 400) return "warning";
-      return "normal";
-    case "inr":
-      if (value > 5) return "critical";
-      if (value > 3.5) return "warning";
-      return "normal";
-    case "lactate":
-      if (value > 4) return "critical";
-      if (value > 2) return "warning";
-      return "normal";
-    case "crp":
-      if (value > 200) return "critical";
-      if (value > 100) return "warning";
-      return "normal";
-    case "ph":
-      if (value < 7.2 || value > 7.55) return "critical";
-      if (value < 7.3 || value > 7.5) return "warning";
-      return "normal";
-    case "ca":
-    case "calcium":
-      if (value > 14 || value < 6.5) return "critical";
-      if (value > 12 || value < 7.5) return "warning";
-      return "normal";
-    case "mg":
-    case "magnesium":
-      if (value < 1.0) return "critical";
-      if (value < 1.5) return "warning";
-      return "normal";
-    case "phos":
-    case "po4":
-    case "phosphate":
-      if (value < 1.0) return "critical";
-      if (value < 1.5) return "warning";
-      return "normal";
-    default:
-      return "normal";
-  }
-}
-
-const SEVERITY_STYLE: Record<LabSeverity, string> = {
-  critical: "bg-red-100 dark:bg-red-900/40 text-red-900 dark:text-red-200 border-red-400 dark:border-red-600 ring-1 ring-red-400 animate-pulse",
-  warning: "bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-200 border-amber-400 dark:border-amber-600",
-  normal: "bg-purple-50 dark:bg-purple-900/30 text-purple-900 dark:text-purple-200 border-purple-200 dark:border-purple-700",
-};
 
 // ─── Critical value ranges for geriatric patients ───
 type CritRange = { critical: [number, number]; warning: [number, number] };
@@ -156,9 +81,70 @@ function MiniSparkline({ values }: { values: number[] }) {
   );
 }
 
+/** Inline quick entry input that appears when tapping a lab chip */
+function InlineLabInput({
+  label,
+  patientId,
+  onClose,
+}: {
+  label: string;
+  patientId: string;
+  onClose: () => void;
+}) {
+  const dispatch = usePatientsDispatch();
+  const [value, setValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const submit = () => {
+    const v = parseFloat(value);
+    if (isNaN(v)) return;
+    const lab: LabEntry = {
+      id: generateId("lab-"),
+      label,
+      value: v,
+      time: new Date().toISOString(),
+    };
+    dispatch({ type: "ADD_LAB", patientId, lab });
+    const severity = getLabSeverity(label, v);
+    if (severity === "critical" || severity === "warning") hapticWarning();
+    onClose();
+  };
+
+  return (
+    <div className="inline-flex items-center gap-1 mr-1">
+      <span className="text-xs font-semibold text-purple-700 dark:text-purple-300">{label}:</span>
+      <input
+        ref={inputRef}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") submit();
+          if (e.key === "Escape") onClose();
+        }}
+        onBlur={() => { if (!value.trim()) onClose(); }}
+        type="number"
+        step="any"
+        inputMode="decimal"
+        placeholder="ערך"
+        className="w-16 px-1.5 py-0.5 text-xs border border-purple-300 dark:border-purple-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 tabular-nums"
+      />
+      <button
+        onClick={submit}
+        className="text-xs px-1.5 py-0.5 bg-purple-600 text-white rounded"
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
 export function LabBadges({ patient }: { patient: PatientEntry }) {
   const labs = patient.labs ?? [];
-  if (labs.length === 0) return null;
+  const [editingLabel, setEditingLabel] = useState<string | null>(null);
 
   // Group by label, sorted by time
   const grouped = useMemo(() => {
@@ -174,16 +160,31 @@ export function LabBadges({ patient }: { patient: PatientEntry }) {
     return map;
   }, [labs]);
 
+  if (labs.length === 0) return null;
+
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className="flex flex-wrap gap-1.5 items-center">
       {[...grouped].map(([label, entries]) => {
         const latest = entries[entries.length - 1];
         const values = entries.map((e) => e.value);
         const severity = getLabSeverity(label, latest.value);
+
+        if (editingLabel === label) {
+          return (
+            <InlineLabInput
+              key={label}
+              label={label}
+              patientId={patient.id}
+              onClose={() => setEditingLabel(null)}
+            />
+          );
+        }
+
         return (
           <span
             key={label}
-            className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded border ${SEVERITY_STYLES[severity]}`}
+            onClick={() => setEditingLabel(label)}
+            className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded border cursor-pointer active:opacity-70 ${SEVERITY_STYLES[severity]}`}
             title={
               (severity === "critical" ? "⚠️ ערך קריטי!\n" : severity === "warning" ? "⚠ חריג\n" : "") +
               entries
@@ -191,7 +192,8 @@ export function LabBadges({ patient }: { patient: PatientEntry }) {
                 (e) =>
                   `${new Date(e.time).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })}: ${e.value}`,
               )
-              .join("\n")
+              .join("\n") +
+              "\nלחץ להוספת ערך חדש"
             }
           >
             {severity === "critical" && <span className="text-red-600 dark:text-red-400">🔴</span>}

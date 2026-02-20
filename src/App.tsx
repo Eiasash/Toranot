@@ -8,6 +8,8 @@ import { HandoffSheet } from "./components/HandoffSheet";
 import { TaskDashboard } from "./components/TaskDashboard";
 import { ShiftHistory } from "./components/ShiftHistory";
 import { GlobalSearch } from "./components/GlobalSearch";
+import { UndoToastContainer } from "./components/UndoToast";
+import { ShiftTimer } from "./components/ShiftTimer";
 import { usePatientsDispatch, usePatientsState } from "./context/PatientsContext";
 
 // ─── Header buttons ────────────────────────────────────────
@@ -222,6 +224,9 @@ function AppInner() {
       <header className="bg-slate-800 text-white px-4 py-3 safe-top border-b border-slate-700">
         <div className="w-full lg:max-w-6xl lg:mx-auto flex items-baseline gap-3">
           <div className="ml-auto flex items-center gap-1.5 flex-wrap">
+            {/* Shift Timer */}
+            <ShiftTimer />
+
             {/* Global Search */}
             <button
               onClick={() => setModal("search")}
@@ -324,6 +329,7 @@ export function App() {
   return (
     <PatientsProvider>
       <AppInner />
+      <UndoToastContainer />
     </PatientsProvider>
   );
 }

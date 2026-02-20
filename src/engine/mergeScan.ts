@@ -42,6 +42,7 @@ function mergePatient(oldP: PatientEntry, newP: PatientEntry): PatientEntry {
     tasks: [...mergedExtracted, ...manualKeep],
     generatedTasks: mergedGenerated,
     notes: Array.from(new Set([...(oldP.notes ?? []), ...(newP.notes ?? [])])),
+    labs: oldP.labs ?? [],
   };
 }
 

@@ -9,6 +9,7 @@ import {
 import type { PatientEntry, Section, Task, Urgency, LabEntry } from "../types";
 import { parsePatientList } from "../parser/parsePatientList";
 import { mergeScan } from "../engine/mergeScan";
+import { applyRules } from "../engine/rules";
 import { generateId } from "../utils/id";
 import { safeGetItem, safeSetItem } from "../utils/storage";
 
@@ -132,6 +133,7 @@ export type Action =
   | { type: "TOGGLE_DARK_MODE" }
   | { type: "CLEAR_ALL" }
   | { type: "TOGGLE_SHOW_TOMORROW" }
+  | { type: "REAPPLY_RULES" }
   | { type: "IMPORT_BACKUP"; patients: PatientEntry[] };
 
 export function inferUrgencyFromText(text: string): Urgency {
@@ -373,6 +375,15 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
 
     case "CLEAR_ALL":
       return { ...state, patients: [] };
+
+    case "REAPPLY_RULES":
+      return {
+        ...state,
+        patients: state.patients.map((p) => ({
+          ...p,
+          generatedTasks: applyRules(p),
+        })),
+      };
 
     case "IMPORT_BACKUP":
       return { ...state, patients: action.patients.map(normalizePatient) };

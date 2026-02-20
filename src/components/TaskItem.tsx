@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import type { Task } from "../types";
 import { TaskCountdown, getQuickDueOptions, dueAtFromMinutes } from "./TaskCountdown";
+
+const SWIPE_THRESHOLD = 80; // px to trigger completion
 
 function urgencyBadge(urgency: Task["urgency"]) {
   switch (urgency) {
@@ -67,6 +69,12 @@ export function TaskItem({
   const [editing, setEditing] = useState(false);
   const [showTimer, setShowTimer] = useState(false);
   const [draft, setDraft] = useState(task.note ?? "");
+  const [swipeX, setSwipeX] = useState(0);
+
+  // Swipe tracking refs
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const isSwiping = useRef(false);
 
   useEffect(() => {
     setDraft(task.note ?? "");
@@ -82,27 +90,84 @@ export function TaskItem({
     setEditing(false);
   };
 
+  // Swipe handlers for mobile gesture
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    if (editing || showTimer || task.done) return;
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    isSwiping.current = false;
+  }, [editing, showTimer, task.done]);
+
+  const onTouchMove = useCallback((e: React.TouchEvent) => {
+    if (editing || showTimer || task.done) return;
+    const dx = e.touches[0].clientX - touchStartX.current;
+    const dy = e.touches[0].clientY - touchStartY.current;
+
+    // Only start swiping if horizontal movement > vertical (prevents scroll interference)
+    if (!isSwiping.current && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      isSwiping.current = true;
+    }
+
+    if (isSwiping.current) {
+      // Only allow rightward swipe (positive dx) — clamp between 0 and 120
+      setSwipeX(Math.max(0, Math.min(dx, 120)));
+      if (dx > 10) e.preventDefault();
+    }
+  }, [editing, showTimer, task.done]);
+
+  const onTouchEnd = useCallback(() => {
+    if (swipeX >= SWIPE_THRESHOLD) {
+      onToggle();
+    }
+    setSwipeX(0);
+    isSwiping.current = false;
+  }, [swipeX, onToggle]);
+
   const noteExists = !!(task.note && task.note.trim());
+  const swipeProgress = Math.min(swipeX / SWIPE_THRESHOLD, 1);
 
   return (
-    <div className="w-full">
+    <div className="w-full relative overflow-hidden rounded-lg">
+      {/* Swipe background indicator */}
+      {swipeX > 0 && (
+        <div
+          className="absolute inset-y-0 left-0 flex items-center justify-end px-4"
+          style={{
+            width: `${swipeX}px`,
+            backgroundColor: swipeProgress >= 1 ? '#16a34a' : '#86efac',
+            transition: 'background-color 0.15s',
+          }}
+        >
+          <span className="text-white text-lg" style={{ opacity: swipeProgress }}>
+            ✓
+          </span>
+        </div>
+      )}
+
       <div
         className={[
-          "flex items-start gap-2 p-2 rounded-lg border",
+          "flex items-start gap-2 p-2 rounded-lg border relative",
           backgroundFromUrgency(task),
           task.done ? "opacity-60" : "",
         ].join(" ")}
+        style={{
+          transform: swipeX > 0 ? `translateX(${swipeX}px)` : undefined,
+          transition: swipeX === 0 ? 'transform 0.2s ease-out' : undefined,
+        }}
         role="button"
         tabIndex={0}
         aria-label={`${task.done ? "בוצע: " : ""}${task.text}`}
         onClick={() => {
-          if (editing || showTimer) return;
+          if (editing || showTimer || isSwiping.current) return;
           onToggle();
         }}
         onKeyDown={(e) => {
           if (editing || showTimer) return;
           if (e.key === "Enter" || e.key === " ") onToggle();
         }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
       >
         <input
           type="checkbox"
@@ -154,7 +219,7 @@ export function TaskItem({
                 placeholder="הערה / תוצאה (למשל: BS 250ml)"
                 dir="auto"
                 style={{ unicodeBidi: "plaintext" }}
-                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-400 outline-none"
+                className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-400 outline-none"
               />
               <button
                 type="button"
@@ -225,8 +290,8 @@ export function TaskItem({
                 className={[
                   "text-xs px-2 py-0.5 rounded-lg border",
                   task.dueAt
-                    ? "bg-amber-100 border-amber-300 text-amber-700"
-                    : "bg-white border-gray-200 text-gray-700",
+                    ? "bg-amber-100 border-amber-300 text-amber-700 dark:bg-amber-900/40 dark:border-amber-700 dark:text-amber-300"
+                    : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300",
                 ].join(" ")}
               >
                 ⏱
@@ -242,7 +307,7 @@ export function TaskItem({
                 e.stopPropagation();
                 setEditing((v) => !v);
               }}
-              className="text-xs px-2 py-0.5 rounded-lg bg-white border border-gray-200 text-gray-700"
+              className="text-xs px-2 py-0.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300"
             >
               ✎
             </button>

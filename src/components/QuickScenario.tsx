@@ -115,7 +115,7 @@ export function QuickScenario({
         type: "ADD_TASK",
         patientId: patient.id,
         text: t.text,
-        urgency: "extra",
+        urgency: t.urgency,
       });
     }
     onClose();

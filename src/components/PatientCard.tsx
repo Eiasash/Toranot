@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import type { PatientEntry, Task } from "../types";
 import { SECTIONS, SECTION_LABEL } from "../types";
 import { TaskItem } from "./TaskItem";
@@ -7,6 +7,10 @@ import { LabBadges, AddLabForm } from "./LabTracker";
 import { QuickScenario } from "./QuickScenario";
 import { MedFlagBadges } from "./MedFlags";
 import { generateHints } from "../engine/hints";
+import { showUndoToast } from "./UndoToast";
+import { TaskTemplates } from "./TaskTemplates";
+import { VoiceButton } from "./VoiceInput";
+import { hapticSuccess } from "../utils/haptics";
 
 function FlagBadge({ flag }: { flag: string }) {
   return (
@@ -15,7 +19,7 @@ function FlagBadge({ flag }: { flag: string }) {
         "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold",
         flag.toUpperCase().includes("DNR") || flag.toUpperCase().includes("DNI")
           ? "bg-red-600 text-white"
-          : "bg-gray-200 text-gray-800",
+          : "bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200",
       ].join(" ")}
     >
       {flag}
@@ -31,7 +35,63 @@ function sortTasks(tasks: Task[]) {
     extra: 3,
     routine: 4,
   };
-  return [...tasks].sort((a, b) => weight[a.urgency] - weight[b.urgency]);
+  const now = Date.now();
+  return [...tasks].sort((a, b) => {
+    // 1. Undone before done
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    // 2. Urgency
+    const uDiff = weight[a.urgency] - weight[b.urgency];
+    if (uDiff !== 0) return uDiff;
+    // 3. Tasks with approaching deadlines first
+    const aDue = a.dueAt ? new Date(a.dueAt).getTime() - now : Infinity;
+    const bDue = b.dueAt ? new Date(b.dueAt).getTime() - now : Infinity;
+    return aDue - bDue;
+  });
+}
+
+/** Calculate patient acuity score based on task urgency, lab flags, and clinical flags */
+function calcAcuity(patient: PatientEntry): number {
+  let score = 0;
+  const allTasks = [...patient.tasks, ...patient.generatedTasks];
+  for (const t of allTasks) {
+    if (t.done) continue;
+    if (t.urgency === "stat") score += 3;
+    else if (t.urgency === "urgent") score += 2;
+  }
+  // Critical flags
+  const flagUpper = patient.flags.map((f) => f.toUpperCase());
+  if (flagUpper.some((f) => f.includes("ISO") || f.includes("ISOLATION"))) score += 2;
+  if (flagUpper.some((f) => f.includes("NPO"))) score += 1;
+  if (flagUpper.some((f) => f.includes("FALL"))) score += 1;
+  // Critical labs
+  for (const lab of patient.labs ?? []) {
+    const l = lab.label.toLowerCase().replace(/[+\s]/g, "");
+    const v = lab.value;
+    if (
+      (l === "k" && (v > 6 || v < 2.5)) ||
+      (l === "na" && (v < 120 || v > 160)) ||
+      (l === "hb" && v < 7) ||
+      (l === "lactate" && v > 4)
+    ) score += 3;
+  }
+  return score;
+}
+
+function AcuityBadge({ patient }: { patient: PatientEntry }) {
+  const score = calcAcuity(patient);
+  if (score === 0) return null;
+  let colorClass: string;
+  if (score >= 8) colorClass = "bg-red-600 text-white";
+  else if (score >= 4) colorClass = "bg-orange-500 text-white";
+  else colorClass = "bg-amber-400 text-amber-900";
+  return (
+    <span
+      className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${colorClass}`}
+      title={`ציון חומרה: ${score}`}
+    >
+      {score}
+    </span>
+  );
 }
 
 function TaskProgress({ done, total }: { done: number; total: number }) {
@@ -60,6 +120,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
   const [addType, setAddType] = useState<"task" | "note">("task");
   const [draft, setDraft] = useState("");
   const [showScenario, setShowScenario] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
   const [showLabForm, setShowLabForm] = useState(false);
   const [showHints, setShowHints] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -88,6 +149,18 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
     setEditing(true);
   };
 
+  const toggleTask = useCallback((task: Task) => {
+    dispatch({ type: "TOGGLE_TASK", patientId: patient.id, taskId: task.id });
+    if (!task.done) {
+      hapticSuccess();
+      showUndoToast({
+        id: task.id,
+        message: `✅ ${task.text.slice(0, 40)}${task.text.length > 40 ? "..." : ""}`,
+        onUndo: () => dispatch({ type: "TOGGLE_TASK", patientId: patient.id, taskId: task.id }),
+      });
+    }
+  }, [dispatch, patient.id]);
+
   const add = () => {
     const text = draft.trim();
     if (!text) return;
@@ -102,7 +175,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 space-y-3 animate-card-in">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           {editing ? (
@@ -157,6 +230,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
           ) : (
             <>
               <div className="flex items-center gap-2">
+                <AcuityBadge patient={patient} />
                 <span className="text-lg font-semibold truncate dark:text-gray-100">
                   {patient.name ?? "לא ידוע"}
                 </span>
@@ -241,7 +315,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
                 <span
                   key={i}
                   dir="auto"
-                  className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded"
+                  className="text-xs bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 px-2 py-0.5 rounded"
                   style={{ unicodeBidi: "plaintext" }}
                 >
                   {s}
@@ -256,7 +330,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
                 <span
                   key={i}
                   dir="auto"
-                  className="text-xs bg-green-50 text-green-900 px-2 py-0.5 rounded border border-green-200"
+                  className="text-xs bg-green-50 text-green-900 dark:bg-green-900/30 dark:text-green-300 px-2 py-0.5 rounded border border-green-200 dark:border-green-800"
                   style={{ unicodeBidi: "plaintext" }}
                   title="מחר (לא תורן)"
                 >
@@ -272,7 +346,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
                 <span
                   key={idx}
                   dir="auto"
-                  className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-900 px-2 py-0.5 rounded border border-blue-200"
+                  className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-900 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800"
                   style={{ unicodeBidi: "plaintext" }}
                   title="הערת תורן"
                 >
@@ -359,6 +433,12 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
           ⚡ תרחיש
         </button>
         <button
+          onClick={() => setShowTemplates(true)}
+          className="text-xs px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300 active:bg-indigo-100"
+        >
+          📋 תבנית
+        </button>
+        <button
           onClick={() => setShowLabForm(!showLabForm)}
           className="text-xs px-2.5 py-1 rounded-lg border border-purple-200 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 active:bg-purple-100"
         >
@@ -379,13 +459,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
             <TaskItem
               key={task.id}
               task={task}
-              onToggle={() =>
-                dispatch({
-                  type: "TOGGLE_TASK",
-                  patientId: patient.id,
-                  taskId: task.id,
-                })
-              }
+              onToggle={() => toggleTask(task)}
               onSetDue={(dueAt) =>
                 dispatch({
                   type: "SET_TASK_DUE",
@@ -474,6 +548,9 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
                 }
                 className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-400 outline-none"
               />
+              {addType === "task" && (
+                <VoiceButton onResult={(text) => { setDraft(text); }} />
+              )}
               <button
                 type="button"
                 onClick={add}
@@ -493,6 +570,9 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
       {showScenario && (
         <QuickScenario patient={patient} onClose={() => setShowScenario(false)} />
       )}
+      {showTemplates && (
+        <TaskTemplates patient={patient} onClose={() => setShowTemplates(false)} />
+      )}
     </div>
   );
 }
@@ -511,6 +591,18 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
   const allTasks = sortTasks([...patient.tasks, ...patient.generatedTasks]);
   const doneCount = allTasks.filter((t) => t.done).length;
   const totalCount = allTasks.length;
+
+  const toggleTask = useCallback((task: Task) => {
+    dispatch({ type: "TOGGLE_TASK", patientId: patient.id, taskId: task.id });
+    if (!task.done) {
+      hapticSuccess();
+      showUndoToast({
+        id: task.id,
+        message: `✅ ${task.text.slice(0, 40)}${task.text.length > 40 ? "..." : ""}`,
+        onUndo: () => dispatch({ type: "TOGGLE_TASK", patientId: patient.id, taskId: task.id }),
+      });
+    }
+  }, [dispatch, patient.id]);
 
   const add = () => {
     const text = draft.trim();
@@ -587,7 +679,7 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
                     <span
                       key={i}
                       dir="auto"
-                      className="text-xs bg-green-50 text-green-900 px-2 py-0.5 rounded border border-green-200"
+                      className="text-xs bg-green-50 text-green-900 dark:bg-green-900/30 dark:text-green-300 px-2 py-0.5 rounded border border-green-200 dark:border-green-800"
                       style={{ unicodeBidi: "plaintext" }}
                       title="מחר (לא תורן)"
                     >
@@ -603,7 +695,7 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
                     <span
                       key={idx}
                       dir="auto"
-                      className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-900 px-2 py-0.5 rounded border border-blue-200"
+                      className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-900 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800"
                       style={{ unicodeBidi: "plaintext" }}
                       title="הערת תורן"
                     >
@@ -617,7 +709,7 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
                             index: idx,
                           })
                         }
-                        className="ml-1 text-blue-700 hover:text-blue-900"
+                        className="ml-1 text-blue-700 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
                         aria-label="מחק הערה"
                         title="מחק"
                       >
@@ -634,13 +726,7 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
                     <TaskItem
                       key={task.id}
                       task={task}
-                      onToggle={() =>
-                        dispatch({
-                          type: "TOGGLE_TASK",
-                          patientId: patient.id,
-                          taskId: task.id,
-                        })
-                      }
+                      onToggle={() => toggleTask(task)}
                       onSetDue={(dueAt) =>
                 dispatch({
                   type: "SET_TASK_DUE",

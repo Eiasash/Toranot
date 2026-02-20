@@ -192,7 +192,7 @@ function ApiKeySetup({ onSaved }: { onSaved: () => void }) {
     <div className="flex flex-col gap-4 p-1">
       <div className="text-center space-y-1">
         <div className="text-3xl">🔑</div>
-        <p className="font-medium text-gray-800">נדרש מפתח Anthropic API</p>
+        <p className="font-medium text-gray-800 dark:text-gray-200">נדרש מפתח Anthropic API</p>
         <p className="text-xs text-gray-500 leading-relaxed">
           הסריקה משתמשת ב-Claude Vision לדיוק מקסימלי בעברית.<br />
           המפתח נשמר רק על המכשיר שלך.
@@ -204,7 +204,7 @@ function ApiKeySetup({ onSaved }: { onSaved: () => void }) {
         onChange={(e) => { setKey(e.target.value); setError(""); }}
         placeholder="sk-ant-api03-..."
         dir="ltr"
-        className="w-full p-3 border border-gray-300 rounded-xl bg-white text-gray-900 placeholder:text-gray-400 text-sm font-mono whitespace-pre-wrap break-words focus:ring-2 focus:ring-blue-400 outline-none"
+        className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 text-sm font-mono whitespace-pre-wrap break-words focus:ring-2 focus:ring-blue-400 outline-none"
       />
       {error && <p className="text-xs text-red-500 text-center">{error}</p>}
       <a
@@ -384,7 +384,7 @@ export function Scanner({ onTextExtracted, onCancel }: ScannerProps) {
         <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={handleFileChange} className="hidden" />
 
         <button onClick={() => galleryRef.current?.click()}
-          className="flex items-center justify-center gap-3 w-full py-4 bg-gray-100 text-gray-700 rounded-xl text-base font-medium active:bg-gray-200 active:scale-[0.98] transition-transform">
+          className="flex items-center justify-center gap-3 w-full py-4 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl text-base font-medium active:bg-gray-200 dark:active:bg-gray-700 active:scale-[0.98] transition-transform">
           <GalleryIcon size={22} /> בחר תמונה מהגלריה
         </button>
         <input ref={galleryRef} type="file" accept="image/*" multiple onChange={handleFileChange} className="hidden" />
