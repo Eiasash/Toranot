@@ -32,7 +32,63 @@ function sortTasks(tasks: Task[]) {
     extra: 3,
     routine: 4,
   };
-  return [...tasks].sort((a, b) => weight[a.urgency] - weight[b.urgency]);
+  const now = Date.now();
+  return [...tasks].sort((a, b) => {
+    // 1. Undone before done
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    // 2. Urgency
+    const uDiff = weight[a.urgency] - weight[b.urgency];
+    if (uDiff !== 0) return uDiff;
+    // 3. Tasks with approaching deadlines first
+    const aDue = a.dueAt ? new Date(a.dueAt).getTime() - now : Infinity;
+    const bDue = b.dueAt ? new Date(b.dueAt).getTime() - now : Infinity;
+    return aDue - bDue;
+  });
+}
+
+/** Calculate patient acuity score based on task urgency, lab flags, and clinical flags */
+function calcAcuity(patient: PatientEntry): number {
+  let score = 0;
+  const allTasks = [...patient.tasks, ...patient.generatedTasks];
+  for (const t of allTasks) {
+    if (t.done) continue;
+    if (t.urgency === "stat") score += 3;
+    else if (t.urgency === "urgent") score += 2;
+  }
+  // Critical flags
+  const flagUpper = patient.flags.map((f) => f.toUpperCase());
+  if (flagUpper.some((f) => f.includes("ISO") || f.includes("ISOLATION"))) score += 2;
+  if (flagUpper.some((f) => f.includes("NPO"))) score += 1;
+  if (flagUpper.some((f) => f.includes("FALL"))) score += 1;
+  // Critical labs
+  for (const lab of patient.labs ?? []) {
+    const l = lab.label.toLowerCase().replace(/[+\s]/g, "");
+    const v = lab.value;
+    if (
+      (l === "k" && (v > 6 || v < 2.5)) ||
+      (l === "na" && (v < 120 || v > 160)) ||
+      (l === "hb" && v < 7) ||
+      (l === "lactate" && v > 4)
+    ) score += 3;
+  }
+  return score;
+}
+
+function AcuityBadge({ patient }: { patient: PatientEntry }) {
+  const score = calcAcuity(patient);
+  if (score === 0) return null;
+  let colorClass: string;
+  if (score >= 8) colorClass = "bg-red-600 text-white";
+  else if (score >= 4) colorClass = "bg-orange-500 text-white";
+  else colorClass = "bg-amber-400 text-amber-900";
+  return (
+    <span
+      className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${colorClass}`}
+      title={`ציון חומרה: ${score}`}
+    >
+      {score}
+    </span>
+  );
 }
 
 function TaskProgress({ done, total }: { done: number; total: number }) {
@@ -169,6 +225,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
           ) : (
             <>
               <div className="flex items-center gap-2">
+                <AcuityBadge patient={patient} />
                 <span className="text-lg font-semibold truncate dark:text-gray-100">
                   {patient.name ?? "לא ידוע"}
                 </span>
