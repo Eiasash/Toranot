@@ -54,6 +54,7 @@ const RULES: Rule[] = [
     trigger: /ניתוח|טרום ניתוח|לפני ניתוח|pre.?op/i,
     source: "טרום ניתוח",
     group: "preop",
+    triggerField: "tasks",
     tasks: [
       { text: "בדיקות דם טרום ניתוח (CBC, CMP, PT/INR, סוג ושתלב)", urgency: "stat", category: "labs" },
       { text: "חתימת הסכמה לניתוח", urgency: "urgent", category: "other" },
@@ -80,6 +81,7 @@ const RULES: Rule[] = [
     trigger: /סוכרת|אינסולין|DM[12]?(?!\w)|insulin|היפרגליקמיה/i,
     source: "סוכרת",
     group: "diabetes",
+    triggerField: "tasks",
     tasks: [
       { text: "מדידת סוכר לפני ארוחות + לפני שינה", urgency: "morning", category: "labs" },
       { text: "בדיקת HbA1c אם חסר", urgency: "routine", category: "labs" },
@@ -92,6 +94,7 @@ const RULES: Rule[] = [
     trigger: /נפילה|FALL|סיכון ליפול|סכנת נפילה/i,
     source: "סיכון נפילה",
     group: "fall",
+    triggerField: "tasks",
     tasks: [
       { text: "מעקה מיטה מורם", urgency: "stat", category: "other" },
       { text: "פעמון בהישג יד", urgency: "stat", category: "other" },
@@ -114,6 +117,7 @@ const RULES: Rule[] = [
     trigger: /בידוד|ISO(?:lation)?|MRSA|VRE|ESBL|CRE|CPE|C\.?\s*diff/i,
     source: "בידוד",
     group: "isolation",
+    triggerField: "tasks",
     tasks: [
       { text: "שילוט בידוד על הדלת", urgency: "stat", category: "other" },
       { text: "ציוד מגן אישי בכניסה", urgency: "stat", category: "other" },
@@ -126,6 +130,7 @@ const RULES: Rule[] = [
     trigger: /קטטר(?!\s*חד)|catheter|פולי|foley/i,
     source: "קטטר שתן",
     group: "catheter",
+    triggerField: "tasks",
     tasks: [
       { text: "בדיקת צורך בהמשך קטטר (הוצאה מוקדמת)", urgency: "morning", category: "other" },
       { text: "תיעוד כמות שתן (I/O)", urgency: "routine", category: "other" },
@@ -137,6 +142,7 @@ const RULES: Rule[] = [
     trigger: /דלקת ריאות|pneumonia|CAP|HAP|VAP|פנאומוניה|זיהום ריאתי/i,
     source: "דלקת ריאות",
     group: "pneumonia",
+    triggerField: "tasks",
     tasks: [
       { text: "תרביות דם x2 (לפני ABx!)", urgency: "stat", category: "labs" },
       { text: "צילום חזה (CXR)", urgency: "stat", category: "imaging" },
@@ -152,6 +158,7 @@ const RULES: Rule[] = [
     trigger: /UTI|דלקת.*שתן|זיהום.*שתן|פיאלונפריטיס|pyelonephritis/i,
     source: "זיהום בדרכי השתן",
     group: "uti",
+    triggerField: "tasks",
     tasks: [
       { text: "תרבית שתן + בדיקת שתן כללית (לפני ABx!)", urgency: "stat", category: "labs" },
       { text: "תרביות דם x2 (אם חום/ספסיס)", urgency: "stat", category: "labs" },
@@ -165,6 +172,7 @@ const RULES: Rule[] = [
     trigger: /ספסיס|sepsis|ספטי|septic|bacteremia|בקטרמיה/i,
     source: "ספסיס",
     group: "sepsis",
+    triggerField: "tasks",
     tasks: [
       { text: "🔴 תרביות דם x2 משני אתרים (לפני ABx!)", urgency: "stat", category: "labs" },
       { text: "🔴 לקטט סרום (Lactate)", urgency: "stat", category: "labs" },
@@ -181,6 +189,7 @@ const RULES: Rule[] = [
     trigger: /צלוליטיס|cellulitis|דלקת.*עור|erysipelas|ארסיפלס/i,
     source: "צלוליטיס",
     group: "cellulitis",
+    triggerField: "tasks",
     tasks: [
       { text: "סימון גבולות בעט (+ תאריך+שעה)", urgency: "stat", category: "other" },
       { text: "תיעוד צילום", urgency: "urgent", category: "other" },
@@ -194,6 +203,7 @@ const RULES: Rule[] = [
     trigger: /C\.?\s*diff|קלוסטרידיום|clostridium|שלשול.*אנטיביוטיקה/i,
     source: "חשד C. difficile",
     group: "cdiff",
+    triggerField: "tasks",
     tasks: [
       { text: "שליחת צואה ל-C.diff PCR/Toxin", urgency: "stat", category: "labs" },
       { text: "בידוד מגע!", urgency: "stat", category: "other" },
@@ -221,6 +231,7 @@ const RULES: Rule[] = [
     trigger: /AKI|אי.?ספיקת כליות חדה|acute kidney|עליית קראטינין|כליות.*חדה/i,
     source: "AKI",
     group: "aki",
+    triggerField: "tasks",
     tasks: [
       { text: "US כליות (שלילת חסימה)", urgency: "urgent", category: "imaging" },
       { text: "הפסקת נפרוטוקסיים: NSAIDs, ACEi, ARB, Aminoglycosides", urgency: "stat", category: "meds" },
@@ -282,6 +293,7 @@ const RULES: Rule[] = [
     trigger: /אי.?ספיקת לב|CHF|heart\s*failure|בצקת ריאות|pulmonary\s*edema|HFrEF|HFpEF/i,
     source: "אי-ספיקת לב",
     group: "chf",
+    triggerField: "tasks",
     tasks: [
       { text: "Furosemide IV 40-80mg", urgency: "stat", category: "meds" },
       { text: "I/O קפדני + משקל יומי", urgency: "stat", category: "other" },
@@ -347,6 +359,7 @@ const RULES: Rule[] = [
     trigger: /warfarin|קומדין|coumadin|INR\s*גבוה|INR\s*>\s*[3-9]/i,
     source: "Warfarin / INR",
     group: "warfarin",
+    triggerField: "tasks",
     tasks: [
       { text: "בדיקת INR", urgency: "stat", category: "labs" },
       { text: "INR 3-5 (ללא דימום) → דלג מנה, הפחת מינון", urgency: "urgent", category: "meds" },
@@ -360,6 +373,7 @@ const RULES: Rule[] = [
     trigger: /COPD.*החמרה|החמרת.*COPD|AECOPD|COPD\s*exacerb/i,
     source: "החמרת COPD",
     group: "copd",
+    triggerField: "tasks",
     tasks: [
       { text: "Ventolin + Atrovent Nebulizer", urgency: "stat", category: "meds" },
       { text: "Prednisone 40mg PO x5d", urgency: "urgent", category: "meds" },
@@ -387,6 +401,7 @@ const RULES: Rule[] = [
     trigger: /קבלה חדשה|new\s*admission|אשפוז חדש/i,
     source: "קבלה חדשה",
     group: "newadmit",
+    triggerField: "tasks",
     tasks: [
       { text: "מעבדה: CBC, CMP, Mg, PO4, PT/INR, CRP", urgency: "urgent", category: "labs" },
       { text: "ECG (>50y / רקע קרדיאלי)", urgency: "urgent", category: "labs" },
@@ -402,6 +417,7 @@ const RULES: Rule[] = [
     trigger: /היפונתרמיה|hyponatremia|Na\+?\s*<\s*1[23]\d|נתרן\s*נמוך/i,
     source: "היפונתרמיה",
     group: "hypoNa",
+    triggerField: "tasks",
     tasks: [
       { text: "מעבדה: Na+, Serum Osm, Urine Na+Osm, TSH, Cortisol", urgency: "stat", category: "labs" },
       { text: "הערכת מצב נפחי", urgency: "stat", category: "other" },
