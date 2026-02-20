@@ -6,6 +6,7 @@ import { usePatientsDispatch, usePatientsState } from "../context/PatientsContex
 import { LabBadges, AddLabForm } from "./LabTracker";
 import { QuickScenario } from "./QuickScenario";
 import { MedFlagBadges } from "./MedFlags";
+import { generateHints } from "../engine/hints";
 
 function FlagBadge({ flag }: { flag: string }) {
   return (
@@ -60,6 +61,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
   const [draft, setDraft] = useState("");
   const [showScenario, setShowScenario] = useState(false);
   const [showLabForm, setShowLabForm] = useState(false);
+  const [showHints, setShowHints] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(patient.name ?? "");
   const [editRoom, setEditRoom] = useState(patient.room ?? "");
@@ -302,6 +304,51 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
 
       {/* Medication safety flags */}
       <MedFlagBadges patient={patient} />
+
+      {/* Clinical hints — diagnosis-based FYI, NOT tasks */}
+      {(() => {
+        const hints = generateHints(patient);
+        if (hints.length === 0) return null;
+        return (
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowHints((v) => !v)}
+              className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 active:bg-gray-100"
+              aria-expanded={showHints}
+              aria-label="הנחיות רקע קליניות"
+            >
+              💡 הנחיות רקע ({hints.length}) {showHints ? "▴" : "▾"}
+            </button>
+            {showHints && (
+              <div className="mt-2 space-y-2">
+                {hints.map((h, i) => (
+                  <div
+                    key={i}
+                    className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
+                  >
+                    <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      {h.emoji} {h.title}
+                    </div>
+                    <ul className="space-y-0.5">
+                      {h.tips.map((tip, j) => (
+                        <li
+                          key={j}
+                          className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed pr-3"
+                          dir="auto"
+                          style={{ unicodeBidi: "plaintext" }}
+                        >
+                          • {tip}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Quick action buttons */}
       <div className="flex gap-1.5">
