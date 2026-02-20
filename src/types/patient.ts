@@ -86,8 +86,9 @@ export type LabEntry = {
  * Strict helper: map a header-only line -> Section.
  *
  * IMPORTANT:
- * - Must NOT match patient rows like "ניטור 3 ..." (room labels contain digits).
+ * - Must NOT match patient rows like "ניטור 3 ..." (room labels contain digits after the section name).
  * - Should tolerate trailing ":" / "-" etc.
+ * - May have spaces in section names like "צד א"
  */
 export function detectSectionFromHeader(headerText: string): Section | null {
   const raw = headerText.trim();
@@ -96,31 +97,40 @@ export function detectSectionFromHeader(headerText: string): Section | null {
   // Strip common separators, keep the core words.
   const cleaned = raw.replace(/[:：\-–—]+/g, " ").trim();
 
-  // If there are digits, it's almost certainly a room/bed label, not a header.
-  if (/\d/.test(cleaned)) return null;
+  // Check if this looks like a patient line (has room number + name pattern)
+  // e.g., "ניטור 3 כהן יוסף" or "49/1 לוי שרה"
+  // If it has both a number AND Hebrew letters after, it's likely a patient line
+  if (/\d+.*[א-ת]/.test(cleaned)) return null;
 
-  const t = cleaned.replace(/\s+/g, "").toLowerCase();
+  // Normalize for comparison (keep spaces between words for "צד א" etc.)
+  const normalized = cleaned.toLowerCase();
+  const compact = normalized.replace(/\s+/g, "");
 
-  if (t === "צדא" || t === "sidea") return "SIDE_A";
-  if (t === "צדב" || t === "sideb") return "SIDE_B";
-  if (t === "צדג" || t === "sidec") return "SIDE_C";
+  // Check with spaces first (for "צד א", "צד ב", "צד ג")
+  if (normalized === "צד א" || compact === "צדא" || compact === "sidea") return "SIDE_A";
+  if (normalized === "צד ב" || compact === "צדב" || compact === "sideb") return "SIDE_B";
+  if (normalized === "צד ג" || compact === "צדג" || compact === "sidec") return "SIDE_C";
 
   if (
-    t === "שיקום" ||
-    t === "שיקומי" ||
-    t === "rehab" ||
-    t === "rehabilitation"
+    compact === "שיקום" ||
+    compact === "שיקומי" ||
+    compact === "rehab" ||
+    compact === "rehabilitation"
   )
     return "REHAB";
 
-  if (
-    t === "ניטור" ||
-    t === "מוניטור" ||
-    t === "מוניטורים" ||
-    t === "monitor" ||
-    t === "monitoring"
-  )
-    return "MONITOR";
+  // For monitor, be careful not to match "ניטור 3" (which is a room)
+  // Only match if it's just "ניטור" without a following number
+  if (!cleaned.match(/ניטור\s+\d/) && !cleaned.match(/monitor\s+\d/)) {
+    if (
+      compact === "ניטור" ||
+      compact === "מוניטור" ||
+      compact === "מוניטורים" ||
+      compact === "monitor" ||
+      compact === "monitoring"
+    )
+      return "MONITOR";
+  }
 
   return null;
 }
@@ -128,13 +138,40 @@ export function detectSectionFromHeader(headerText: string): Section | null {
 /**
  * Infer section from a room string.
  * Helps when the pasted list does NOT include explicit headers.
+ * Room patterns:
+ * - ניטור 1, ניטור 3 -> MONITOR
+ * - 40-49 range -> SIDE_A
+ * - 50-59 range -> SIDE_B
+ * - 60-69 range -> SIDE_C
+ * - שיקום rooms -> REHAB
  */
 export function detectSectionFromRoom(room: string | null): Section | null {
   if (!room) return null;
   const t = room.replace(/\s+/g, "").toLowerCase();
 
+  // Monitor rooms: "ניטור 1", "ניטור 3", etc.
   if (t.startsWith("ניטור") || t.startsWith("מוניטור") || t.startsWith("monitor")) {
     return "MONITOR";
+  }
+
+  // Rehab rooms
+  if (t.startsWith("שיקום") || t.startsWith("rehab")) {
+    return "REHAB";
+  }
+
+  // Extract the first number from room patterns like "49/1", "52-2", "49", etc.
+  const roomNumberMatch = room.match(/^(\d+)/);;
+  if (roomNumberMatch) {
+    const roomNum = parseInt(roomNumberMatch[1], 10);
+    
+    // Common hospital ward room number ranges
+    if (roomNum >= 40 && roomNum <= 49) return "SIDE_A";
+    if (roomNum >= 50 && roomNum <= 59) return "SIDE_B";
+    if (roomNum >= 60 && roomNum <= 69) return "SIDE_C";
+    
+    // Alternative ranges if needed
+    if (roomNum >= 1 && roomNum <= 19) return "SIDE_A";
+    if (roomNum >= 20 && roomNum <= 39) return "SIDE_B";
   }
 
   return null;
