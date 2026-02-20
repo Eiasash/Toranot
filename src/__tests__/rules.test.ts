@@ -96,7 +96,7 @@ describe("rules engine — all rules", () => {
   // 3. Pre-op
   describe("Pre-op", () => {
     it("triggers on 'ניתוח'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "לפני ניתוח" }));
+      const tasks = applyRules(makePatient({ status: ["לפני ניתוח"] }));
       expect(generatedSources(tasks)).toContain("טרום ניתוח");
     });
 
@@ -106,7 +106,7 @@ describe("rules engine — all rules", () => {
     });
 
     it("generates 4 pre-op tasks", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "ניתוח" }));
+      const tasks = applyRules(makePatient({ status: ["ניתוח"] }));
       const preopTasks = tasks.filter((t) => t.generatedFrom === "טרום ניתוח");
       expect(preopTasks).toHaveLength(4);
     });
@@ -139,12 +139,12 @@ describe("rules engine — all rules", () => {
   // 5. Diabetes
   describe("Diabetes", () => {
     it("triggers on 'סוכרת'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "סוכרת סוג 2" }));
+      const tasks = applyRules(makePatient({ status: ["סוכרת סוג 2"] }));
       expect(generatedSources(tasks)).toContain("סוכרת");
     });
 
     it("triggers on 'DM2'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "DM2" }));
+      const tasks = applyRules(makePatient({ status: ["DM2"] }));
       expect(generatedSources(tasks)).toContain("סוכרת");
     });
 
@@ -154,12 +154,12 @@ describe("rules engine — all rules", () => {
     });
 
     it("does NOT trigger on 'DM' followed by a word char (e.g. DMG)", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "DMG test" }));
+      const tasks = applyRules(makePatient({ status: ["DMG test"] }));
       expect(generatedSources(tasks)).not.toContain("סוכרת");
     });
 
     it("generates 3 diabetes tasks", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "סוכרת" }));
+      const tasks = applyRules(makePatient({ status: ["סוכרת"] }));
       const dmTasks = tasks.filter((t) => t.generatedFrom === "סוכרת");
       expect(dmTasks).toHaveLength(3);
     });
@@ -260,22 +260,22 @@ describe("rules engine — all rules", () => {
   // 10. Pneumonia
   describe("Pneumonia", () => {
     it("triggers on 'דלקת ריאות'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "דלקת ריאות" }));
+      const tasks = applyRules(makePatient({ status: ["דלקת ריאות"] }));
       expect(generatedSources(tasks)).toContain("דלקת ריאות");
     });
 
     it("triggers on 'pneumonia'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "pneumonia" }));
+      const tasks = applyRules(makePatient({ status: ["pneumonia"] }));
       expect(generatedSources(tasks)).toContain("דלקת ריאות");
     });
 
     it("triggers on 'CAP'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "CAP" }));
+      const tasks = applyRules(makePatient({ status: ["CAP"] }));
       expect(generatedSources(tasks)).toContain("דלקת ריאות");
     });
 
     it("generates 6 pneumonia tasks", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "דלקת ריאות" }));
+      const tasks = applyRules(makePatient({ status: ["דלקת ריאות"] }));
       const pnTasks = tasks.filter((t) => t.generatedFrom === "דלקת ריאות");
       expect(pnTasks).toHaveLength(6);
     });
@@ -284,17 +284,17 @@ describe("rules engine — all rules", () => {
   // 11. UTI
   describe("UTI", () => {
     it("triggers on 'UTI'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "UTI" }));
+      const tasks = applyRules(makePatient({ status: ["UTI"] }));
       expect(generatedSources(tasks)).toContain("זיהום בדרכי השתן");
     });
 
     it("triggers on 'דלקת בדרכי השתן'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "דלקת בדרכי השתן" }));
+      const tasks = applyRules(makePatient({ status: ["דלקת בדרכי השתן"] }));
       expect(generatedSources(tasks)).toContain("זיהום בדרכי השתן");
     });
 
     it("generates 4 UTI tasks", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "UTI" }));
+      const tasks = applyRules(makePatient({ status: ["UTI"] }));
       const utiTasks = tasks.filter((t) => t.generatedFrom === "זיהום בדרכי השתן");
       expect(utiTasks).toHaveLength(4);
     });
@@ -303,22 +303,22 @@ describe("rules engine — all rules", () => {
   // 12. Sepsis
   describe("Sepsis", () => {
     it("triggers on 'ספסיס'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "ספסיס" }));
+      const tasks = applyRules(makePatient({ status: ["ספסיס"] }));
       expect(generatedSources(tasks)).toContain("ספסיס");
     });
 
     it("triggers on 'sepsis'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "sepsis" }));
+      const tasks = applyRules(makePatient({ status: ["sepsis"] }));
       expect(generatedSources(tasks)).toContain("ספסיס");
     });
 
     it("triggers on 'bacteremia'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "bacteremia" }));
+      const tasks = applyRules(makePatient({ status: ["bacteremia"] }));
       expect(generatedSources(tasks)).toContain("ספסיס");
     });
 
     it("generates 7 sepsis tasks", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "ספסיס" }));
+      const tasks = applyRules(makePatient({ status: ["ספסיס"] }));
       const sepTasks = tasks.filter((t) => t.generatedFrom === "ספסיס");
       expect(sepTasks).toHaveLength(7);
     });
@@ -327,17 +327,17 @@ describe("rules engine — all rules", () => {
   // 13. Cellulitis
   describe("Cellulitis", () => {
     it("triggers on 'צלוליטיס'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "צלוליטיס" }));
+      const tasks = applyRules(makePatient({ status: ["צלוליטיס"] }));
       expect(generatedSources(tasks)).toContain("צלוליטיס");
     });
 
     it("triggers on 'cellulitis'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "cellulitis" }));
+      const tasks = applyRules(makePatient({ status: ["cellulitis"] }));
       expect(generatedSources(tasks)).toContain("צלוליטיס");
     });
 
     it("generates 4 cellulitis tasks", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "צלוליטיס" }));
+      const tasks = applyRules(makePatient({ status: ["צלוליטיס"] }));
       const cellTasks = tasks.filter((t) => t.generatedFrom === "צלוליטיס");
       expect(cellTasks).toHaveLength(4);
     });
@@ -346,17 +346,17 @@ describe("rules engine — all rules", () => {
   // 14. C. difficile
   describe("C. difficile", () => {
     it("triggers on 'C diff'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "C diff infection" }));
+      const tasks = applyRules(makePatient({ status: ["C diff infection"] }));
       expect(generatedSources(tasks)).toContain("חשד C. difficile");
     });
 
     it("triggers on 'קלוסטרידיום'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "קלוסטרידיום" }));
+      const tasks = applyRules(makePatient({ status: ["קלוסטרידיום"] }));
       expect(generatedSources(tasks)).toContain("חשד C. difficile");
     });
 
     it("generates 4 C. diff tasks", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "clostridium" }));
+      const tasks = applyRules(makePatient({ status: ["clostridium"] }));
       const cdTasks = tasks.filter((t) => t.generatedFrom === "חשד C. difficile");
       expect(cdTasks).toHaveLength(4);
     });
@@ -389,17 +389,17 @@ describe("rules engine — all rules", () => {
   // 16. AKI
   describe("AKI", () => {
     it("triggers on 'AKI'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "AKI" }));
+      const tasks = applyRules(makePatient({ status: ["AKI"] }));
       expect(generatedSources(tasks)).toContain("AKI");
     });
 
     it("triggers on 'acute kidney'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "acute kidney injury" }));
+      const tasks = applyRules(makePatient({ status: ["acute kidney injury"] }));
       expect(generatedSources(tasks)).toContain("AKI");
     });
 
     it("generates 6 AKI tasks", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "AKI" }));
+      const tasks = applyRules(makePatient({ status: ["AKI"] }));
       const akiTasks = tasks.filter((t) => t.generatedFrom === "AKI");
       expect(akiTasks).toHaveLength(6);
     });
@@ -451,7 +451,7 @@ describe("rules engine — all rules", () => {
     });
 
     it("triggers on 'STEMI'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "STEMI" }));
+      const tasks = applyRules(makePatient({ status: ["STEMI"] }));
       expect(generatedSources(tasks)).toContain("כאב חזה / ACS");
     });
 
@@ -461,7 +461,7 @@ describe("rules engine — all rules", () => {
     });
 
     it("generates 7 ACS tasks", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "STEMI" }));
+      const tasks = applyRules(makePatient({ status: ["STEMI"] }));
       const acsTasks = tasks.filter((t) => t.generatedFrom === "כאב חזה / ACS");
       expect(acsTasks).toHaveLength(7);
     });
@@ -470,22 +470,22 @@ describe("rules engine — all rules", () => {
   // 20. CHF
   describe("CHF / Heart failure", () => {
     it("triggers on 'אי ספיקת לב'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "אי ספיקת לב" }));
+      const tasks = applyRules(makePatient({ status: ["אי ספיקת לב"] }));
       expect(generatedSources(tasks)).toContain("אי-ספיקת לב");
     });
 
     it("triggers on 'CHF'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "CHF" }));
+      const tasks = applyRules(makePatient({ status: ["CHF"] }));
       expect(generatedSources(tasks)).toContain("אי-ספיקת לב");
     });
 
     it("triggers on 'pulmonary edema'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "pulmonary edema" }));
+      const tasks = applyRules(makePatient({ status: ["pulmonary edema"] }));
       expect(generatedSources(tasks)).toContain("אי-ספיקת לב");
     });
 
     it("generates 6 CHF tasks", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "CHF" }));
+      const tasks = applyRules(makePatient({ status: ["CHF"] }));
       const chfTasks = tasks.filter((t) => t.generatedFrom === "אי-ספיקת לב");
       expect(chfTasks).toHaveLength(6);
     });
@@ -494,17 +494,17 @@ describe("rules engine — all rules", () => {
   // 21. DVT / PE
   describe("DVT / PE", () => {
     it("triggers on 'DVT'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "DVT" }));
+      const tasks = applyRules(makePatient({ status: ["DVT"] }));
       expect(generatedSources(tasks)).toContain("DVT / PE");
     });
 
     it("triggers on 'תסחיף ריאתי'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "תסחיף ריאתי" }));
+      const tasks = applyRules(makePatient({ status: ["תסחיף ריאתי"] }));
       expect(generatedSources(tasks)).toContain("DVT / PE");
     });
 
     it("generates 5 DVT/PE tasks", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "DVT" }));
+      const tasks = applyRules(makePatient({ status: ["DVT"] }));
       const dvtTasks = tasks.filter((t) => t.generatedFrom === "DVT / PE");
       expect(dvtTasks).toHaveLength(5);
     });
@@ -513,12 +513,12 @@ describe("rules engine — all rules", () => {
   // 22. Delirium
   describe("Delirium", () => {
     it("triggers on 'דליריום'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "דליריום" }));
+      const tasks = applyRules(makePatient({ status: ["דליריום"] }));
       expect(generatedSources(tasks)).toContain("דליריום");
     });
 
     it("triggers on 'delirium'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "delirium" }));
+      const tasks = applyRules(makePatient({ status: ["delirium"] }));
       expect(generatedSources(tasks)).toContain("דליריום");
     });
 
@@ -528,7 +528,7 @@ describe("rules engine — all rules", () => {
     });
 
     it("generates 7 delirium tasks", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "דליריום" }));
+      const tasks = applyRules(makePatient({ status: ["דליריום"] }));
       const delTasks = tasks.filter((t) => t.generatedFrom === "דליריום");
       expect(delTasks).toHaveLength(7);
     });
@@ -547,7 +547,7 @@ describe("rules engine — all rules", () => {
     });
 
     it("triggers on 'hematemesis'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "hematemesis" }));
+      const tasks = applyRules(makePatient({ status: ["hematemesis"] }));
       expect(generatedSources(tasks)).toContain("דימום GI");
     });
 
@@ -580,17 +580,17 @@ describe("rules engine — all rules", () => {
   // 25. COPD
   describe("COPD exacerbation", () => {
     it("triggers on 'COPD החמרה'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "COPD החמרה" }));
+      const tasks = applyRules(makePatient({ status: ["COPD החמרה"] }));
       expect(generatedSources(tasks)).toContain("החמרת COPD");
     });
 
     it("triggers on 'AECOPD'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "AECOPD" }));
+      const tasks = applyRules(makePatient({ status: ["AECOPD"] }));
       expect(generatedSources(tasks)).toContain("החמרת COPD");
     });
 
     it("generates 6 COPD tasks", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "COPD החמרה" }));
+      const tasks = applyRules(makePatient({ status: ["COPD החמרה"] }));
       const copdTasks = tasks.filter((t) => t.generatedFrom === "החמרת COPD");
       expect(copdTasks).toHaveLength(6);
     });
@@ -637,17 +637,17 @@ describe("rules engine — all rules", () => {
   // 28. Hyponatremia
   describe("Hyponatremia", () => {
     it("triggers on 'היפונתרמיה'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "היפונתרמיה" }));
+      const tasks = applyRules(makePatient({ status: ["היפונתרמיה"] }));
       expect(generatedSources(tasks)).toContain("היפונתרמיה");
     });
 
     it("triggers on 'hyponatremia'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "hyponatremia" }));
+      const tasks = applyRules(makePatient({ status: ["hyponatremia"] }));
       expect(generatedSources(tasks)).toContain("היפונתרמיה");
     });
 
     it("generates 5 hyponatremia tasks", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "היפונתרמיה" }));
+      const tasks = applyRules(makePatient({ status: ["היפונתרמיה"] }));
       const naTasks = tasks.filter((t) => t.generatedFrom === "היפונתרמיה");
       expect(naTasks).toHaveLength(5);
     });
@@ -656,22 +656,22 @@ describe("rules engine — all rules", () => {
   // 29. Stroke / TIA
   describe("Stroke / TIA", () => {
     it("triggers on 'שבץ'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "שבץ" }));
+      const tasks = applyRules(makePatient({ status: ["שבץ"] }));
       expect(generatedSources(tasks)).toContain("שבץ / TIA");
     });
 
     it("triggers on 'CVA'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "CVA" }));
+      const tasks = applyRules(makePatient({ status: ["CVA"] }));
       expect(generatedSources(tasks)).toContain("שבץ / TIA");
     });
 
     it("triggers on 'TIA'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "TIA" }));
+      const tasks = applyRules(makePatient({ status: ["TIA"] }));
       expect(generatedSources(tasks)).toContain("שבץ / TIA");
     });
 
     it("generates 7 stroke tasks", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "שבץ" }));
+      const tasks = applyRules(makePatient({ status: ["שבץ"] }));
       const strTasks = tasks.filter((t) => t.generatedFrom === "שבץ / TIA");
       expect(strTasks).toHaveLength(7);
     });
@@ -716,7 +716,7 @@ describe("rules engine — cross-cutting behavior", () => {
 
   it("multiple conditions generate tasks from each rule", () => {
     const tasks = applyRules(
-      makePatient({ diagnosis: "סוכרת", flags: ["NPO"] }),
+      makePatient({ status: ["סוכרת"], flags: ["NPO"] }),
     );
     const sources = generatedSources(tasks);
     expect(sources).toContain("סוכרת");
@@ -729,7 +729,7 @@ describe("rules engine — cross-cutting behavior", () => {
   });
 
   it("RULES array has expected number of rules", () => {
-    expect(RULES.length).toBe(29);
+    expect(RULES.length).toBe(37);
   });
 
   it("every rule has a unique group", () => {

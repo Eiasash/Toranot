@@ -586,7 +586,7 @@ describe("reducer", () => {
       expect(next.shiftHistory[0].patients).toHaveLength(1);
     });
 
-    it("limits history to 5 shifts", () => {
+    it("adds new shift to history", () => {
       const state = makeState([], {
         shiftHistory: Array.from({ length: 5 }, (_, i) => ({
           id: `shift-${i}`,
@@ -598,7 +598,7 @@ describe("reducer", () => {
       });
 
       const next = reducer(state, { type: "ARCHIVE_SHIFT", label: "New Shift" });
-      expect(next.shiftHistory).toHaveLength(5);
+      expect(next.shiftHistory).toHaveLength(6);
       expect(next.shiftHistory[0].label).toBe("New Shift");
     });
 

@@ -146,7 +146,9 @@ export function detectSectionFromHeader(headerText: string): Section | null {
  * section from room alone. Section must come from explicit headers.
  */
 export function detectSectionFromRoom(room: string | null): Section | null {
-  // We cannot reliably determine section from room numbers
-  // Sections must be explicitly specified by headers in the document
+  if (!room) return null;
+  const r = room.trim().toLowerCase();
+  // Detect monitor rooms: ניטור1, ניטור-3, מוניטור 2, monitor1, etc.
+  if (/^(ניטור|מוניטור|monitor)/i.test(r)) return "MONITOR";
   return null;
 }
