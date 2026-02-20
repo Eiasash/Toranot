@@ -8,6 +8,7 @@ import { HandoffSheet } from "./components/HandoffSheet";
 import { TaskDashboard } from "./components/TaskDashboard";
 import { ShiftHistory } from "./components/ShiftHistory";
 import { GlobalSearch } from "./components/GlobalSearch";
+import { UndoToastContainer } from "./components/UndoToast";
 import { usePatientsDispatch, usePatientsState } from "./context/PatientsContext";
 
 // ─── Header buttons ────────────────────────────────────────
@@ -324,6 +325,7 @@ export function App() {
   return (
     <PatientsProvider>
       <AppInner />
+      <UndoToastContainer />
     </PatientsProvider>
   );
 }

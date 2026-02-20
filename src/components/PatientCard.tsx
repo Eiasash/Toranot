@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import type { PatientEntry, Task } from "../types";
 import { SECTIONS, SECTION_LABEL } from "../types";
 import { TaskItem } from "./TaskItem";
@@ -7,6 +7,7 @@ import { LabBadges, AddLabForm } from "./LabTracker";
 import { QuickScenario } from "./QuickScenario";
 import { MedFlagBadges } from "./MedFlags";
 import { generateHints } from "../engine/hints";
+import { showUndoToast } from "./UndoToast";
 
 function FlagBadge({ flag }: { flag: string }) {
   return (
@@ -87,6 +88,17 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
     setEditDiagnosis(patient.diagnosis ?? "");
     setEditing(true);
   };
+
+  const toggleTask = useCallback((task: Task) => {
+    dispatch({ type: "TOGGLE_TASK", patientId: patient.id, taskId: task.id });
+    if (!task.done) {
+      showUndoToast({
+        id: task.id,
+        message: `✅ ${task.text.slice(0, 40)}${task.text.length > 40 ? "..." : ""}`,
+        onUndo: () => dispatch({ type: "TOGGLE_TASK", patientId: patient.id, taskId: task.id }),
+      });
+    }
+  }, [dispatch, patient.id]);
 
   const add = () => {
     const text = draft.trim();
@@ -379,13 +391,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
             <TaskItem
               key={task.id}
               task={task}
-              onToggle={() =>
-                dispatch({
-                  type: "TOGGLE_TASK",
-                  patientId: patient.id,
-                  taskId: task.id,
-                })
-              }
+              onToggle={() => toggleTask(task)}
               onSetDue={(dueAt) =>
                 dispatch({
                   type: "SET_TASK_DUE",
@@ -512,6 +518,17 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
   const doneCount = allTasks.filter((t) => t.done).length;
   const totalCount = allTasks.length;
 
+  const toggleTask = useCallback((task: Task) => {
+    dispatch({ type: "TOGGLE_TASK", patientId: patient.id, taskId: task.id });
+    if (!task.done) {
+      showUndoToast({
+        id: task.id,
+        message: `✅ ${task.text.slice(0, 40)}${task.text.length > 40 ? "..." : ""}`,
+        onUndo: () => dispatch({ type: "TOGGLE_TASK", patientId: patient.id, taskId: task.id }),
+      });
+    }
+  }, [dispatch, patient.id]);
+
   const add = () => {
     const text = draft.trim();
     if (!text) return;
@@ -634,13 +651,7 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
                     <TaskItem
                       key={task.id}
                       task={task}
-                      onToggle={() =>
-                        dispatch({
-                          type: "TOGGLE_TASK",
-                          patientId: patient.id,
-                          taskId: task.id,
-                        })
-                      }
+                      onToggle={() => toggleTask(task)}
                       onSetDue={(dueAt) =>
                 dispatch({
                   type: "SET_TASK_DUE",

@@ -1,12 +1,19 @@
-import { usePatientsState } from "../context/PatientsContext";
+import { useCallback } from "react";
+import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
 import { SECTION_LABEL } from "../types";
 import { PatientCard, PatientRow } from "./PatientCard";
+import { PullToRefresh } from "./PullToRefresh";
 
 export function PatientList() {
   const { patients, activeSection } = usePatientsState();
+  const dispatch = usePatientsDispatch();
   const filtered = patients
     .filter((p) => p.section === activeSection)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+  const handleRefresh = useCallback(() => {
+    dispatch({ type: "REAPPLY_RULES" });
+  }, [dispatch]);
 
   if (filtered.length === 0) {
     return (
@@ -22,11 +29,15 @@ export function PatientList() {
 
   return (
     <>
-      {/* Mobile: full-width cards */}
-      <div className="lg:hidden space-y-2 p-2 pb-6">
-        {filtered.map((patient) => (
-          <PatientCard key={patient.id} patient={patient} />
-        ))}
+      {/* Mobile: full-width cards with pull-to-refresh */}
+      <div className="lg:hidden">
+        <PullToRefresh onRefresh={handleRefresh}>
+          <div className="space-y-2 p-2 pb-6">
+            {filtered.map((patient) => (
+              <PatientCard key={patient.id} patient={patient} />
+            ))}
+          </div>
+        </PullToRefresh>
       </div>
 
       {/* Desktop: table view */}

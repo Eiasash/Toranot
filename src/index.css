@@ -193,3 +193,12 @@ body {
 .dark .quick-ref tr.bg-red-50 {
   background-color: rgba(239, 68, 68, 0.1) !important;
 }
+
+/* Undo toast slide-up animation */
+@keyframes slide-up {
+  from { transform: translateY(20px) translateX(-50%); opacity: 0; }
+  to   { transform: translateY(0) translateX(-50%); opacity: 1; }
+}
+.animate-slide-up {
+  animation: slide-up 0.25s ease-out;
+}
