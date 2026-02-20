@@ -27,21 +27,40 @@ type ScanState =
   | { step: "error"; message: string };
 
 const OCR_PROMPT = `You are reading a Hebrew geriatrics ward shift sheet (דף תורן גריאטריה).
-The sheet is a table with columns: room/bed (חדר), patient name (שם), age (גיל), diagnosis (אבחנה), status (סטטוס), TOREN (תורן), and MACHAR (מחר).
 
-Extract ALL patients from the image. For each patient output ONE line in this exact format:
-{room} {full_name} {age} {diagnosis} | {status_flags} | תורן: {oncall_tasks} | מחר: {tomorrow_notes}
+CRITICAL: The ward has 5 SECTIONS. Identify the section from the PAGE TITLE at the top:
+- "דף תורן גריאטריה צד א" or "גריאטריה (א)" or "צד א" = צד א (Side A)
+- "גריאטריה (ב)" or "צד ב" = צד ב (Side B)
+- "גריאטריה (ג)" or "צד ג" = צד ג (Side C)
+- "שיקום" = שיקום (Rehab)
+- "ניטור" = ניטור (Monitor/ICU)
+
+IMPORTANT: Room numbers (49-70) appear in MULTIPLE sections! Rooms like "ניטור 1", "ניטור 3" in the table belong to the ניטור sub-section but the regular room numbers (49/2, 53/1, etc.) belong to the section indicated in the page title.
+
+OUTPUT FORMAT:
+1. First, output the main section header based on page title (צד א / צד ב / צד ג / שיקום)
+2. List all regular room patients under that section
+3. If there are ניטור rooms on the page, output "ניטור" header then list those patients
+
+Example - if page title is "גריאטריה (ב) - 16/02/2026":
+צד ב
+49/2 כהן אביבה 64 ... | | תורן: | מחר:
+52/2 גולדנברג צפורה 93 ... | | תורן: | מחר:
+53/1 בן פורת שלום 100 ... | DNR | תורן: | מחר:
+
+ניטור
+ניטור 1 קרצר גרי 85 ... | | תורן: תרביות דם בערב | מחר:
+ניטור 3 קין מרדכי 79 ... | | תורן: | מחר:
 
 Rules:
 - room: e.g. 57/1, 49-3, ניטור 1, ניטור 3
 - full_name: Hebrew name as written
 - age: number only
-- diagnosis: as written, keep English medical terms (PNEUMONIA, CHF, AKI, SEPTIC SHOCK, BIPAP, etc.)
-- status_flags: DNR, DNI, NPO, BIPAP, ISOLATION, DNR/DNI etc. if present; if none leave empty (but keep the segment only if you have any flags)
-- תורן: ONLY tasks that the on-call doctor should do tonight (orders, labs, imaging, consults, follow-ups). If the תורן cell is empty, output "תורן:" with nothing after it.
-- מחר: plans for the morning/team (general plan), NOT tasks for the on-call doctor. If empty, output "מחר:" with nothing after it.
-- Use | to separate segments.
-- Output section headers exactly as: צד א / צד ב / צד ג / שיקום / ניטור
+- diagnosis: as written, keep English medical terms
+- status_flags: DNR, DNI, NPO, BIPAP, ISOLATION, etc. if present
+- תורן: ONLY tasks for the on-call doctor tonight
+- מחר: plans for morning team
+- Use | to separate segments
 - Output ONLY the structured text, no explanations, no markdown
 `;
 interface ClaudeAPIResponse {

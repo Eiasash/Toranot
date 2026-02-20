@@ -33,7 +33,7 @@ export function PatientList() {
       <div className="hidden lg:block">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-200 text-gray-500 text-xs bg-gray-50">
+            <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 text-xs bg-gray-50 dark:bg-gray-800">
               <th className="py-2.5 px-4 text-right font-medium w-20">חדר</th>
               <th className="py-2.5 px-4 text-right font-medium">שם</th>
               <th className="py-2.5 px-4 text-right font-medium w-16">גיל</th>

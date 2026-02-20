@@ -530,21 +530,21 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
       <tr
         onClick={() => setExpanded(!expanded)}
         className={`
-          border-b border-gray-100 transition-colors
+          border-b border-gray-100 dark:border-gray-700 transition-colors
           cursor-pointer
-          ${expanded ? "bg-blue-50/30" : "hover:bg-gray-50"}
+          ${expanded ? "bg-blue-50/30 dark:bg-blue-900/20" : "hover:bg-gray-50 dark:hover:bg-gray-800"}
         `}
       >
-        <td className="py-2.5 px-4 font-mono font-bold text-blue-700 text-sm whitespace-nowrap">
+        <td className="py-2.5 px-4 font-mono font-bold text-blue-600 dark:text-blue-400 text-sm whitespace-nowrap">
           {patient.room ?? "—"}
         </td>
-        <td className="py-2.5 px-4 font-semibold text-gray-900 text-sm whitespace-nowrap">
+        <td className="py-2.5 px-4 font-semibold text-gray-900 dark:text-gray-100 text-sm whitespace-nowrap">
           {patient.name ?? "לא ידוע"}
         </td>
-        <td className="py-2.5 px-4 text-gray-500 text-sm tabular-nums">
+        <td className="py-2.5 px-4 text-gray-500 dark:text-gray-400 text-sm tabular-nums">
           {patient.age ?? "—"}
         </td>
-        <td className="py-2.5 px-4 text-gray-600 text-sm max-w-xs truncate" dir="auto">
+        <td className="py-2.5 px-4 text-gray-600 dark:text-gray-300 text-sm max-w-xs truncate" dir="auto">
           {patient.diagnosis ?? "—"}
         </td>
         <td className="py-2.5 px-4">
@@ -563,7 +563,7 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
       </tr>
 
       {expanded && (
-        <tr className="border-b border-gray-100 bg-gray-50/50">
+        <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
           <td colSpan={6} className="px-8 py-3">
             <div className="space-y-3 max-w-3xl">
               {patient.status.length > 0 && (
@@ -572,7 +572,7 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
                     <span
                       key={i}
                       dir="auto"
-                      className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded"
+                      className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded"
                       style={{ unicodeBidi: "plaintext" }}
                     >
                       {s}
@@ -663,12 +663,12 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
               )}
 
               {/* Add manual task / note */}
-              <div className="pt-2 border-t border-gray-200 space-y-2">
+              <div className="pt-2 border-t border-gray-200 dark:border-gray-700 space-y-2">
                 {!addOpen ? (
                   <button
                     type="button"
                     onClick={() => setAddOpen(true)}
-                    className="w-full py-2 rounded-xl border border-gray-300 text-sm text-gray-700 bg-white"
+                    className="w-full py-2 rounded-xl border border-gray-300 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800"
                   >
                     + הוסף משימה / הערה
                   </button>
@@ -682,7 +682,7 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
                           "px-3 py-1 rounded-lg text-sm border",
                           addType === "task"
                             ? "bg-blue-600 text-white border-blue-600"
-                            : "bg-white text-gray-700 border-gray-200",
+                            : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600",
                         ].join(" ")}
                       >
                         משימה
@@ -694,7 +694,7 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
                           "px-3 py-1 rounded-lg text-sm border",
                           addType === "note"
                             ? "bg-blue-600 text-white border-blue-600"
-                            : "bg-white text-gray-700 border-gray-200",
+                            : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600",
                         ].join(" ")}
                       >
                         הערה
@@ -706,7 +706,7 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
                           setAddOpen(false);
                           setDraft("");
                         }}
-                        className="ml-auto px-3 py-1 rounded-lg text-sm border border-gray-200 text-gray-700"
+                        className="ml-auto px-3 py-1 rounded-lg text-sm border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300"
                       >
                         סגור
                       </button>
@@ -727,7 +727,7 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
                             ? "משימה חדשה"
                             : "הערה (תורן)"
                         }
-                        className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-xl bg-white text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-400 outline-none"
+                        className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-400 outline-none"
                       />
                       <button
                         type="button"
@@ -738,7 +738,7 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
                       </button>
                     </div>
 
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
                       הערה נשמרת אצל המטופל, משימה נספרת במונה תורן.
                     </div>
                   </div>
