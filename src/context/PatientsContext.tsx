@@ -10,6 +10,15 @@ import type { PatientEntry, Section, Task, Urgency, LabEntry } from "../types";
 import { parsePatientList } from "../parser/parsePatientList";
 import { mergeScan } from "../engine/mergeScan";
 import { generateId } from "../utils/id";
+import { safeGetItem, safeSetItem } from "../utils/storage";
+
+// -----------------------------
+// Constants
+// -----------------------------
+const STORAGE_KEY_PATIENTS = "toranot-patients";
+const STORAGE_KEY_SHIFT_HISTORY = "toranot-shift-history";
+const STORAGE_KEY_DARK_MODE = "toranot-dark";
+const MAX_SHIFT_HISTORY = 5;
 
 // -----------------------------
 // State
@@ -30,7 +39,12 @@ interface PatientsState {
   shiftHistory: ShiftSnapshot[];
 }
 
-export function normalizeTask(t: any): Task {
+// Data loaded from localStorage or external sources may have missing/wrong-typed fields.
+// These types represent the raw shape before normalization.
+type RawTask = Record<string, unknown>;
+type RawPatient = Record<string, unknown>;
+
+export function normalizeTask(t: RawTask): Task {
   return {
     ...t,
     done: !!t.done,
@@ -42,7 +56,7 @@ export function normalizeTask(t: any): Task {
   } as Task;
 }
 
-export function normalizePatient(p: any): PatientEntry {
+export function normalizePatient(p: RawPatient): PatientEntry {
   return {
     ...p,
     flags: Array.isArray(p.flags) ? p.flags : [],
@@ -60,27 +74,30 @@ export function normalizePatient(p: any): PatientEntry {
 
 function loadSavedPatients(): PatientEntry[] {
   try {
-    const raw = localStorage.getItem("toranot-patients");
-    const parsed = raw ? (JSON.parse(raw) as any[]) : [];
-    return Array.isArray(parsed) ? parsed.map(normalizePatient) : [];
-  } catch {
+    const raw = safeGetItem(STORAGE_KEY_PATIENTS);
+    const parsed: unknown[] = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.map((p) => normalizePatient(p as RawPatient)) : [];
+  } catch (err) {
+    console.warn("Failed to load saved patients:", err);
     return [];
   }
 }
 
 function loadShiftHistory(): ShiftSnapshot[] {
   try {
-    const raw = localStorage.getItem("toranot-shift-history");
+    const raw = safeGetItem(STORAGE_KEY_SHIFT_HISTORY);
     return raw ? JSON.parse(raw) : [];
-  } catch {
+  } catch (err) {
+    console.warn("Failed to load shift history:", err);
     return [];
   }
 }
 
 function loadDarkMode(): boolean {
   try {
-    return localStorage.getItem("toranot-dark") === "true";
-  } catch {
+    return safeGetItem(STORAGE_KEY_DARK_MODE) === "true";
+  } catch (err) {
+    console.warn("Failed to load dark mode preference:", err);
     return false;
   }
 }
@@ -330,8 +347,7 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
         patients: state.patients,
         archivedAt: new Date().toISOString(),
       };
-      // Keep last 5 shifts
-      const history = [snapshot, ...state.shiftHistory].slice(0, 5);
+      const history = [snapshot, ...state.shiftHistory].slice(0, MAX_SHIFT_HISTORY);
       return { ...state, shiftHistory: history };
     }
 
@@ -373,28 +389,17 @@ export function PatientsProvider({ children }: { children: ReactNode }) {
 
   // Persist patients to localStorage so data survives Android tab kills
   useEffect(() => {
-    try {
-      localStorage.setItem("toranot-patients", JSON.stringify(state.patients));
-    } catch {
-      // Storage quota exceeded — ignore
-    }
+    safeSetItem(STORAGE_KEY_PATIENTS, JSON.stringify(state.patients));
   }, [state.patients]);
 
   // Persist shift history
   useEffect(() => {
-    try {
-      localStorage.setItem(
-        "toranot-shift-history",
-        JSON.stringify(state.shiftHistory),
-      );
-    } catch {}
+    safeSetItem(STORAGE_KEY_SHIFT_HISTORY, JSON.stringify(state.shiftHistory));
   }, [state.shiftHistory]);
 
   // Persist dark mode + apply class
   useEffect(() => {
-    try {
-      localStorage.setItem("toranot-dark", state.darkMode ? "true" : "false");
-    } catch {}
+    safeSetItem(STORAGE_KEY_DARK_MODE, state.darkMode ? "true" : "false");
     document.documentElement.classList.toggle("dark", state.darkMode);
   }, [state.darkMode]);
 

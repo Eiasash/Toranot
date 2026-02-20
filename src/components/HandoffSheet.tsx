@@ -127,15 +127,9 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
     try {
       await navigator.clipboard.writeText(text);
       alert("הועתק!");
-    } catch {
-      // Fallback
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
-      alert("הועתק!");
+    } catch (err) {
+      console.warn("Clipboard write failed:", err);
+      alert("לא ניתן להעתיק. נסה לסמן ולהעתיק ידנית.");
     }
   };
 
@@ -143,9 +137,15 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
     if (navigator.share) {
       try {
         await navigator.share({ text });
-      } catch {}
+      } catch (err) {
+        // User cancelled or share failed — fall back to copy
+        if (err instanceof Error && err.name !== "AbortError") {
+          console.warn("Share failed, falling back to copy:", err);
+        }
+        await handleCopy();
+      }
     } else {
-      handleCopy();
+      await handleCopy();
     }
   };
 
