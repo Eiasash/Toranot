@@ -181,6 +181,28 @@ function parsePatientLine(
       continue;
     }
 
+    // ── Morning staff / plan / assessment → NOT on-call tasks ──
+    // These are plans for the morning team, not for the overnight on-call doctor.
+    const planPrefix = part.match(/^(?:תוכנית|תכנון|הערכה|סטאף|staff|plan)\s*[:\-]\s*(.*)$/i);
+    if (planPrefix) {
+      const body = planPrefix[1].trim();
+      if (body) {
+        for (const chunk of body.split(/\s*[;\n•]+\s*/).map((c) => c.trim()).filter(Boolean)) {
+          tomorrowNotes.push(chunk);
+        }
+      } else {
+        tomorrowNotes.push(part);
+      }
+      continue;
+    }
+
+    // Content referencing morning team activities → tomorrowNotes, not tasks
+    const isMorningStaff = /\bסטאף\b|\bstaff\b|\bביקור רופא\b|\bביקור בוקר\b|\bהערכת בוקר\b|\bתוכנית\s+(?:טיפול|עבודה|יום)\b|\bplan\b/i.test(part);
+    if (isMorningStaff) {
+      tomorrowNotes.push(part);
+      continue;
+    }
+
     // Heuristic: if it contains an action verb, time, or known shorthand, treat as task
     const isTask =
       /(?:בדיק|ב"ד|CT|US|\bBS\b|Bladder\s*Scan|תור |לתת |להזמין|לבצע|למדוד|לשלוח|טיפול|ניקוז|עירוי|צילום|דימות|ייעוץ|שיחה|א\.?ק\.?ג)/i.test(

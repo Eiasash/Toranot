@@ -31,10 +31,9 @@ const RULES: Rule[] = [
     source: "שחרור",
     group: "discharge",
     tasks: [
-      { text: "סיכום מחלה", urgency: "morning", category: "discharge" },
-      { text: "מכתב שחרור", urgency: "morning", category: "discharge" },
-      { text: "הסבר תרופות לשחרור", urgency: "routine", category: "discharge" },
-      { text: "סידור תורים למעקב", urgency: "routine", category: "discharge" },
+      // Only tasks relevant to on-call. Discharge summary & letter = morning team work.
+      { text: "ודא תרופות שחרור מוכנות", urgency: "routine", category: "discharge" },
+      { text: "ודא שאין בדיקות ממתינות לפני שחרור", urgency: "routine", category: "discharge" },
     ],
   },
 
@@ -83,7 +82,7 @@ const RULES: Rule[] = [
     group: "diabetes",
     triggerField: "tasks",
     tasks: [
-      { text: "מדידת סוכר לפני ארוחות + לפני שינה", urgency: "morning", category: "labs" },
+      { text: "מדידת סוכר לפני ארוחות + לפני שינה", urgency: "routine", category: "labs" },
       { text: "בדיקת HbA1c אם חסר", urgency: "routine", category: "labs" },
       { text: "סולם אינסולין מהיר (Sliding Scale) - לוודא תקינות", urgency: "routine", category: "meds" },
     ],
@@ -132,7 +131,6 @@ const RULES: Rule[] = [
     group: "catheter",
     triggerField: "tasks",
     tasks: [
-      { text: "בדיקת צורך בהמשך קטטר (הוצאה מוקדמת)", urgency: "morning", category: "other" },
       { text: "תיעוד כמות שתן (I/O)", urgency: "routine", category: "other" },
     ],
   },

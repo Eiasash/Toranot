@@ -61,10 +61,10 @@ describe("rules engine — all rules", () => {
       expect(generatedSources(tasks)).toContain("שחרור");
     });
 
-    it("generates 4 discharge tasks", () => {
+    it("generates 2 discharge tasks (on-call relevant only)", () => {
       const tasks = applyRules(makePatient({ status: ["משתחרר"] }));
       const dischargeTasks = tasks.filter((t) => t.generatedFrom === "שחרור");
-      expect(dischargeTasks).toHaveLength(4);
+      expect(dischargeTasks).toHaveLength(2);
     });
 
     it("discharge tasks have correct categories", () => {
@@ -250,10 +250,10 @@ describe("rules engine — all rules", () => {
       expect(generatedSources(tasks)).not.toContain("קטטר שתן");
     });
 
-    it("generates 2 catheter tasks", () => {
+    it("generates 1 catheter task (I/O tracking, assessment is morning team)", () => {
       const tasks = applyRules(makePatient({ status: ["foley"] }));
       const catTasks = tasks.filter((t) => t.generatedFrom === "קטטר שתן");
-      expect(catTasks).toHaveLength(2);
+      expect(catTasks).toHaveLength(1);
     });
   });
 
