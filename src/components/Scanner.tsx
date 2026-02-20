@@ -5,7 +5,7 @@ import { safeGetItem, safeSetItem } from "../utils/storage";
 // Constants
 // -----------------------------
 const API_KEY_STORAGE_KEY = "toranot_anthropic_key";
-const OCR_MODEL = "claude-opus-4-5";
+const OCR_MODEL = "claude-sonnet-4-6";
 const OCR_MAX_TOKENS = 2048;
 const IMAGE_MAX_EDGE = 2400;
 const IMAGE_JPEG_QUALITY = 0.82;
