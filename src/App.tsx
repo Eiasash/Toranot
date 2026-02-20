@@ -11,6 +11,7 @@ import { GlobalSearch } from "./components/GlobalSearch";
 import { UndoToastContainer } from "./components/UndoToast";
 import { ShiftTimer } from "./components/ShiftTimer";
 import { usePatientsDispatch, usePatientsState } from "./context/PatientsContext";
+import { requestNotificationPermission, syncReminders } from "./utils/taskReminders";
 
 // ─── Header buttons ────────────────────────────────────────
 
@@ -195,6 +196,16 @@ function AppInner() {
   const [modal, setModal] = useState<Modal>("none");
   const { patients } = usePatientsState();
   const dispatch = usePatientsDispatch();
+
+  // Request notification permission on mount
+  useEffect(() => {
+    requestNotificationPermission();
+  }, []);
+
+  // Sync task reminders when patients change
+  useEffect(() => {
+    syncReminders(patients);
+  }, [patients]);
 
   // Shake-to-open Quick Reference
   const openRef = useCallback(() => {

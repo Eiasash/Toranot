@@ -13,4 +13,5 @@ export type {
   Task,
   PatientEntry,
   LabEntry,
+  PatientPhoto,
 } from "./patient";

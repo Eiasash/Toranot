@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
-import type { Task, PatientEntry, Urgency } from "../types";
+import type { Task, PatientEntry, Urgency, Section } from "../types";
+import { SectionDashboard } from "./SectionDashboard";
 
 interface DashTask {
   task: Task;
@@ -37,6 +38,7 @@ export function TaskDashboard({ onClose }: { onClose: () => void }) {
   const { patients } = usePatientsState();
   const dispatch = usePatientsDispatch();
   const [filter, setFilter] = useState<FilterMode>("all");
+  const [tab, setTab] = useState<"tasks" | "sections">("tasks");
 
   const allDashTasks = useMemo(() => {
     const items: DashTask[] = [];
@@ -102,6 +104,36 @@ export function TaskDashboard({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
+        {/* Tab switcher */}
+        <div className="flex border-b border-gray-200 dark:border-gray-700">
+          <button
+            onClick={() => setTab("tasks")}
+            className={`flex-1 py-2 text-xs font-medium transition-colors ${
+              tab === "tasks"
+                ? "text-red-600 dark:text-red-400 border-b-2 border-red-600"
+                : "text-gray-500 dark:text-gray-400"
+            }`}
+          >
+            📋 משימות
+          </button>
+          <button
+            onClick={() => setTab("sections")}
+            className={`flex-1 py-2 text-xs font-medium transition-colors ${
+              tab === "sections"
+                ? "text-red-600 dark:text-red-400 border-b-2 border-red-600"
+                : "text-gray-500 dark:text-gray-400"
+            }`}
+          >
+            🏥 סקירת מדורים
+          </button>
+        </div>
+
+        {tab === "sections" ? (
+          <div className="flex-1 overflow-y-auto p-4">
+            <SectionDashboard patients={patients} onSelectSection={() => { onClose(); }} />
+          </div>
+        ) : (
+        <>
         {/* Filters */}
         <div className="flex gap-1.5 px-4 py-2 border-b border-gray-200 dark:border-gray-700 overflow-x-auto scrollbar-hide">
           {(
@@ -189,6 +221,8 @@ export function TaskDashboard({ onClose }: { onClose: () => void }) {
             ))
           )}
         </div>
+        </>
+        )}
       </div>
     </div>
   );

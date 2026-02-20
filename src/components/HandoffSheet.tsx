@@ -59,6 +59,10 @@ function formatPatient(p: PatientEntry): string {
     lines.push(`  מחר: ${p.tomorrowNotes.join(", ")}`);
   }
 
+  if (p.handoverNote) {
+    lines.push(`  📌 ${p.handoverNote}`);
+  }
+
   return lines.join("\n");
 }
 

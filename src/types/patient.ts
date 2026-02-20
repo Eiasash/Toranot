@@ -70,8 +70,21 @@ export type PatientEntry = {
   // Lab values for tracking trends (manual entry)
   labs?: LabEntry[];
 
+  // Sticky handover note — persists across shift archives
+  handoverNote?: string;
+
+  // Photo attachments (base64 data URLs, stored in localStorage)
+  photos?: PatientPhoto[];
+
   // Display order within section (lower = higher on list)
   order?: number;
+};
+
+export type PatientPhoto = {
+  id: string;
+  dataUrl: string;      // base64 data URL
+  caption?: string;
+  time: string;          // ISO string
 };
 
 export type LabEntry = {

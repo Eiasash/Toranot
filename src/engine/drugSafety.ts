@@ -1,0 +1,365 @@
+/**
+ * Drug Safety Engine
+ * 
+ * Two safety layers:
+ * 1. Drug interaction checker — flags dangerous combos in task text
+ * 2. Renal dose adjustment — flags drugs needing dose adjustment when CrCl is low
+ * 
+ * These are NOT comprehensive databases — they cover the 30-40 most dangerous
+ * combinations and renal-adjusted drugs commonly seen in geriatric wards.
+ */
+
+import type { PatientEntry, LabEntry } from "../types";
+
+// ════════════════════════════════════════════════════════════
+// 1. DRUG INTERACTION CHECKER
+// ════════════════════════════════════════════════════════════
+
+export interface DrugInteraction {
+  drugA: string;       // regex-friendly name
+  drugB: string;
+  severity: "critical" | "major" | "moderate";
+  risk: string;        // short Hebrew description
+  detail: string;      // clinical detail
+}
+
+// Drug name patterns for matching in task text
+const DRUG_PATTERNS: Record<string, RegExp> = {
+  // QT-prolonging
+  amiodarone: /amiodarone|אמיודרון|cordarone|קורדרון/i,
+  ciprofloxacin: /ciprofloxacin|ציפרופלוקסצין|cipro|ציפרו/i,
+  levofloxacin: /levofloxacin|לבופלוקסצין|levaquin/i,
+  azithromycin: /azithromycin|אזיתרומיצין|zithromax/i,
+  haloperidol: /haloperidol|הלופרידול|haldol|האלדול/i,
+  ondansetron: /ondansetron|אונדנסטרון|zofran|זופרן/i,
+  metoclopramide: /metoclopramide|מטוקלופרמיד|pramin|פרמין/i,
+  escitalopram: /escitalopram|אסציטלופרם|cipralex/i,
+  // Bleeding risk
+  warfarin: /warfarin|וורפרין|coumadin|קומדין/i,
+  enoxaparin: /enoxaparin|אנוקספרין|clexane|קלקסן/i,
+  heparin: /heparin|הפרין/i,
+  apixaban: /apixaban|אפיקסבן|eliquis|אליקוויס/i,
+  rivaroxaban: /rivaroxaban|ריברוקסבן|xarelto/i,
+  aspirin: /aspirin|אספירין|cardioaspirin|קרדיואספירין/i,
+  clopidogrel: /clopidogrel|קלופידוגרל|plavix|פלאביקס/i,
+  nsaid: /NSAID|ibuprofen|איבופרופן|diclofenac|דיקלופנק|naproxen|נפרוקסן|voltaren|אדויל|advil|nurofen/i,
+  // Renal/Electrolyte
+  spironolactone: /spironolactone|ספירונולקטון|aldactone/i,
+  amiloride: /amiloride|אמילוריד/i,
+  acei: /enalapril|אנלפריל|ramipril|רמיפריל|lisinopril|captopril|קפטופריל|ACEi/i,
+  arb: /losartan|לוסרטן|valsartan|ולסרטן|candesartan|ARB/i,
+  potassium: /KCl|אשלגן|potassium/i,
+  // Serotonin
+  ssri: /SSRI|sertraline|סרטרלין|paroxetine|פרוקסטין|fluoxetine|פלואוקסטין|escitalopram|cipralex|ציפרלקס/i,
+  tramadol: /tramadol|טרמדול|tramadex/i,
+  // Sedation
+  benzodiazepine: /benzo|lorazepam|לוראזפם|diazepam|דיאזפם|midazolam|מידזולם|clonazepam|קלונזפם|oxazepam/i,
+  opioid: /morphine|מורפין|oxycodone|אוקסיקודון|fentanyl|פנטניל|tramadol|טרמדול/i,
+  // Other
+  metformin: /metformin|מטפורמין|glucophage/i,
+  digoxin: /digoxin|דיגוקסין|lanoxin/i,
+  lithium: /lithium|ליתיום/i,
+  trimethoprim: /trimethoprim|טרימתופרים|bactrim|באקטרים|septra/i,
+  gentamicin: /gentamicin|גנטמיצין/i,
+  vancomycin: /vancomycin|ונקומיצין/i,
+  fluconazole: /fluconazole|פלוקונזול|diflucan/i,
+  carbamazepine: /carbamazepine|קרבמזפין|tegretol|טגרטול/i,
+  phenytoin: /phenytoin|פניטואין|dilantin/i,
+};
+
+const INTERACTIONS: DrugInteraction[] = [
+  // ── QT prolongation combos ──
+  { drugA: "amiodarone", drugB: "ciprofloxacin", severity: "critical", risk: "QT prolongation → Torsades", detail: "שני התרופות מאריכות QT. סיכון ל-Torsades de Pointes. שקול חלופה ל-Cipro" },
+  { drugA: "amiodarone", drugB: "levofloxacin", severity: "critical", risk: "QT prolongation → Torsades", detail: "שני התרופות מאריכות QT. שקול Ceftriaxone במקום FQ" },
+  { drugA: "amiodarone", drugB: "azithromycin", severity: "critical", risk: "QT prolongation → Torsades", detail: "Azithromycin + Amiodarone = סיכון גבוה ל-arrhythmia" },
+  { drugA: "amiodarone", drugB: "haloperidol", severity: "critical", risk: "QT prolongation → Torsades", detail: "שניהם מאריכים QT. שקול Quetiapine במינון נמוך" },
+  { drugA: "amiodarone", drugB: "ondansetron", severity: "major", risk: "QT prolongation", detail: "שקול Metoclopramide כחלופה לזופרן" },
+  { drugA: "haloperidol", drugB: "ondansetron", severity: "major", risk: "QT prolongation", detail: "שניהם מאריכים QT. עקוב אחרי QTc" },
+  { drugA: "ciprofloxacin", drugB: "haloperidol", severity: "major", risk: "QT prolongation", detail: "שקול חלופה לאחד מהם" },
+  { drugA: "escitalopram", drugB: "ondansetron", severity: "major", risk: "QT prolongation", detail: "שניהם מאריכים QT" },
+  { drugA: "metoclopramide", drugB: "haloperidol", severity: "major", risk: "EPS + QT", detail: "סיכון מוגבר לתסמינים אקסטרה-פירמידליים" },
+
+  // ── Bleeding risk ──
+  { drugA: "warfarin", drugB: "nsaid", severity: "critical", risk: "דימום חמור", detail: "NSAID + Warfarin = סיכון דימום GI x3-5. הימנע!" },
+  { drugA: "apixaban", drugB: "nsaid", severity: "critical", risk: "דימום חמור", detail: "NOAC + NSAID = סיכון דימום מוגבר. הימנע!" },
+  { drugA: "rivaroxaban", drugB: "nsaid", severity: "critical", risk: "דימום חמור", detail: "NOAC + NSAID = סיכון דימום מוגבר. הימנע!" },
+  { drugA: "enoxaparin", drugB: "nsaid", severity: "major", risk: "דימום", detail: "LMWH + NSAID = סיכון דימום מוגבר" },
+  { drugA: "warfarin", drugB: "aspirin", severity: "major", risk: "דימום מוגבר", detail: "Triple therapy? ודא שיש אינדיקציה ברורה לשניהם" },
+  { drugA: "aspirin", drugB: "nsaid", severity: "major", risk: "דימום GI", detail: "Aspirin + NSAID = סיכון כיב ודימום. שקול PPI" },
+  { drugA: "clopidogrel", drugB: "nsaid", severity: "major", risk: "דימום", detail: "שילוב מגביר סיכון דימום" },
+  { drugA: "warfarin", drugB: "ciprofloxacin", severity: "major", risk: "INR ↑↑", detail: "Cipro מעכב CYP1A2 → INR עולה. עקוב INR יומי" },
+  { drugA: "warfarin", drugB: "fluconazole", severity: "critical", risk: "INR ↑↑↑", detail: "Fluconazole מעכב CYP2C9 → INR עולה דרסטית. הפחת מינון Warfarin 50%" },
+  { drugA: "warfarin", drugB: "trimethoprim", severity: "major", risk: "INR ↑↑", detail: "Bactrim מעלה INR. עקוב יומי" },
+
+  // ── Hyperkalemia ──
+  { drugA: "acei", drugB: "spironolactone", severity: "major", risk: "היפרקלמיה", detail: "ACEi + Spironolactone = סיכון K+ ↑↑. עקוב K+ תוך 48-72h" },
+  { drugA: "arb", drugB: "spironolactone", severity: "major", risk: "היפרקלמיה", detail: "ARB + Spironolactone = סיכון K+ ↑↑" },
+  { drugA: "acei", drugB: "potassium", severity: "major", risk: "היפרקלמיה", detail: "ACEi + KCl = סיכון K+ ↑↑. בדוק K+ לפני מתן" },
+  { drugA: "acei", drugB: "trimethoprim", severity: "major", risk: "היפרקלמיה", detail: "Bactrim + ACEi = סיכון K+ ↑↑ בקשישים" },
+  { drugA: "spironolactone", drugB: "potassium", severity: "critical", risk: "היפרקלמיה חמורה", detail: "אין לתת KCl עם Spironolactone! סכנת חיים" },
+
+  // ── Serotonin syndrome ──
+  { drugA: "ssri", drugB: "tramadol", severity: "major", risk: "תסמונת סרוטונין", detail: "SSRI + Tramadol = סיכון Serotonin syndrome. שקול Paracetamol + weak opioid" },
+
+  // ── Sedation / respiratory depression ──
+  { drugA: "benzodiazepine", drugB: "opioid", severity: "critical", risk: "דיכוי נשימתי", detail: "Benzo + Opioid = סיכון דיכוי נשימה ומוות בקשישים. הימנע!" },
+
+  // ── Nephrotoxicity ──
+  { drugA: "gentamicin", drugB: "vancomycin", severity: "major", risk: "נפרוטוקסיות", detail: "שני ABx נפרוטוקסיים. עקוב Cr יומי, שקול חלופה" },
+  { drugA: "nsaid", drugB: "acei", severity: "major", risk: "AKI", detail: "NSAID + ACEi = סיכון AKI. Triple whammy עם diuretic" },
+  { drugA: "nsaid", drugB: "metformin", severity: "major", risk: "AKI + לקטיק אצידוזיס", detail: "NSAID → AKI → הצטברות Metformin → לקטיק אצידוזיס" },
+
+  // ── Digoxin ──
+  { drugA: "digoxin", drugB: "amiodarone", severity: "critical", risk: "טוקסיות דיגוקסין", detail: "Amiodarone מעלה רמת Digoxin x2. הפחת Digoxin 50%!" },
+
+  // ── Seizure threshold ──
+  { drugA: "carbamazepine", drugB: "warfarin", severity: "major", risk: "INR ↓↓", detail: "CBZ inducer CYP → מוריד INR. צריך מינון Warfarin גבוה יותר" },
+];
+
+/**
+ * Scan all task text for a patient and return detected interactions.
+ */
+export function checkDrugInteractions(patient: PatientEntry): DrugInteraction[] {
+  // Combine all text sources where drugs might be mentioned
+  const allText = [
+    ...patient.tasks.map((t) => t.text),
+    ...patient.generatedTasks.map((t) => t.text),
+    ...patient.status,
+    ...patient.flags,
+  ].join(" ");
+
+  // Find all drugs mentioned
+  const detectedDrugs: string[] = [];
+  for (const [drugName, pattern] of Object.entries(DRUG_PATTERNS)) {
+    if (pattern.test(allText)) {
+      detectedDrugs.push(drugName);
+    }
+  }
+
+  // Check for interactions between detected drugs
+  const found: DrugInteraction[] = [];
+  for (const interaction of INTERACTIONS) {
+    if (
+      detectedDrugs.includes(interaction.drugA) &&
+      detectedDrugs.includes(interaction.drugB)
+    ) {
+      found.push(interaction);
+    }
+  }
+
+  // Sort by severity: critical first
+  return found.sort((a, b) => {
+    const order = { critical: 0, major: 1, moderate: 2 };
+    return order[a.severity] - order[b.severity];
+  });
+}
+
+// ════════════════════════════════════════════════════════════
+// 2. RENAL DOSE ADJUSTMENT WARNINGS
+// ════════════════════════════════════════════════════════════
+
+export interface RenalWarning {
+  drug: string;
+  adjustment: string;   // Hebrew guidance
+  crcl: number;
+  severity: "critical" | "warning";
+}
+
+interface RenalDrug {
+  name: string;
+  pattern: RegExp;
+  thresholds: Array<{
+    maxCrCl: number;
+    severity: "critical" | "warning";
+    guidance: string;
+  }>;
+}
+
+const RENAL_DRUGS: RenalDrug[] = [
+  {
+    name: "Enoxaparin",
+    pattern: /enoxaparin|אנוקספרין|clexane|קלקסן/i,
+    thresholds: [
+      { maxCrCl: 30, severity: "critical", guidance: "CrCl <30: הפחת ל-1mg/kg x1/d (לא x2/d)!" },
+      { maxCrCl: 15, severity: "critical", guidance: "CrCl <15: הימנע! שקול UFH" },
+    ],
+  },
+  {
+    name: "Metformin",
+    pattern: /metformin|מטפורמין|glucophage/i,
+    thresholds: [
+      { maxCrCl: 30, severity: "critical", guidance: "CrCl <30: הפסק Metformin! סיכון לקטיק אצידוזיס" },
+      { maxCrCl: 45, severity: "warning", guidance: "CrCl 30-45: הפחת ל-500mg x2/d. עקוב Cr" },
+    ],
+  },
+  {
+    name: "Vancomycin",
+    pattern: /vancomycin|ונקומיצין/i,
+    thresholds: [
+      { maxCrCl: 30, severity: "critical", guidance: "CrCl <30: loading dose רגיל, maintenance q48h. נטר רמות!" },
+      { maxCrCl: 50, severity: "warning", guidance: "CrCl 30-50: q24h. בדוק trough לפני מנה 4" },
+    ],
+  },
+  {
+    name: "Gentamicin",
+    pattern: /gentamicin|גנטמיצין/i,
+    thresholds: [
+      { maxCrCl: 40, severity: "critical", guidance: "CrCl <40: הארך מרווח מתן, נטר רמות. שקול חלופה בקשישים!" },
+    ],
+  },
+  {
+    name: "Apixaban",
+    pattern: /apixaban|אפיקסבן|eliquis/i,
+    thresholds: [
+      { maxCrCl: 25, severity: "critical", guidance: "CrCl <25: הימנע! שקול UFH / Warfarin" },
+      { maxCrCl: 50, severity: "warning", guidance: "CrCl 25-50 + גיל>80 / משקל<60: הפחת ל-2.5mg x2/d" },
+    ],
+  },
+  {
+    name: "Rivaroxaban",
+    pattern: /rivaroxaban|ריברוקסבן|xarelto/i,
+    thresholds: [
+      { maxCrCl: 15, severity: "critical", guidance: "CrCl <15: הימנע!" },
+      { maxCrCl: 50, severity: "warning", guidance: "CrCl 15-50: הפחת ל-15mg x1/d (AF) / 10mg (VTE)" },
+    ],
+  },
+  {
+    name: "Gabapentin",
+    pattern: /gabapentin|גבפנטין|neurontin/i,
+    thresholds: [
+      { maxCrCl: 15, severity: "critical", guidance: "CrCl <15: 100-300mg post-dialysis" },
+      { maxCrCl: 30, severity: "warning", guidance: "CrCl 15-30: max 300mg x1/d" },
+      { maxCrCl: 60, severity: "warning", guidance: "CrCl 30-60: max 300mg x2/d" },
+    ],
+  },
+  {
+    name: "Pregabalin",
+    pattern: /pregabalin|פרגבלין|lyrica/i,
+    thresholds: [
+      { maxCrCl: 30, severity: "warning", guidance: "CrCl <30: הפחת 50-75% מהמינון" },
+      { maxCrCl: 60, severity: "warning", guidance: "CrCl 30-60: הפחת 50% מהמינון" },
+    ],
+  },
+  {
+    name: "Digoxin",
+    pattern: /digoxin|דיגוקסין|lanoxin/i,
+    thresholds: [
+      { maxCrCl: 30, severity: "critical", guidance: "CrCl <30: 0.0625mg/d או כל יומיים. נטר רמות!" },
+      { maxCrCl: 50, severity: "warning", guidance: "CrCl 30-50: 0.125mg/d. Target 0.5-0.9 ng/mL" },
+    ],
+  },
+  {
+    name: "Colchicine",
+    pattern: /colchicine|קולכיצין/i,
+    thresholds: [
+      { maxCrCl: 30, severity: "critical", guidance: "CrCl <30: הימנע! סכנת טוקסיות חמורה" },
+      { maxCrCl: 50, severity: "warning", guidance: "CrCl 30-50: הפחת 50%, מקסימום 0.5mg x1/d" },
+    ],
+  },
+  {
+    name: "Bactrim / TMP-SMX",
+    pattern: /bactrim|באקטרים|trimethoprim|טרימתופרים|TMP.?SMX/i,
+    thresholds: [
+      { maxCrCl: 15, severity: "critical", guidance: "CrCl <15: הימנע!" },
+      { maxCrCl: 30, severity: "warning", guidance: "CrCl 15-30: 50% מהמינון. עקוב K+!" },
+    ],
+  },
+  {
+    name: "Allopurinol",
+    pattern: /allopurinol|אלופורינול/i,
+    thresholds: [
+      { maxCrCl: 30, severity: "warning", guidance: "CrCl <30: max 100mg/d. התחל 50mg" },
+      { maxCrCl: 60, severity: "warning", guidance: "CrCl 30-60: max 200mg/d" },
+    ],
+  },
+  {
+    name: "Ciprofloxacin",
+    pattern: /ciprofloxacin|ציפרופלוקסצין|cipro/i,
+    thresholds: [
+      { maxCrCl: 30, severity: "warning", guidance: "CrCl <30: 250-500mg q18-24h (PO) / 200-400mg q18-24h (IV)" },
+    ],
+  },
+  {
+    name: "Levofloxacin",
+    pattern: /levofloxacin|לבופלוקסצין/i,
+    thresholds: [
+      { maxCrCl: 50, severity: "warning", guidance: "CrCl 20-50: 750mg q48h / 500mg loading then 250mg q24h" },
+      { maxCrCl: 20, severity: "critical", guidance: "CrCl <20: 750mg loading then 500mg q48h" },
+    ],
+  },
+  {
+    name: "Meropenem",
+    pattern: /meropenem|מרופנם/i,
+    thresholds: [
+      { maxCrCl: 26, severity: "warning", guidance: "CrCl 10-26: 1g q12h (standard) / 500mg q12h" },
+      { maxCrCl: 10, severity: "critical", guidance: "CrCl <10: 500mg q24h" },
+    ],
+  },
+];
+
+/**
+ * Calculate CrCl using Cockcroft-Gault formula.
+ * Returns null if insufficient data.
+ */
+export function calculateCrCl(
+  age: number | null,
+  creatinine: number | null,
+  weight?: number,       // kg — optional, default 70 for estimate
+  isFemale?: boolean,    // optional, default false
+): number | null {
+  if (!age || !creatinine || creatinine <= 0) return null;
+  const w = weight ?? 70;
+  const genderFactor = isFemale ? 0.85 : 1.0;
+  return Math.round(((140 - age) * w * genderFactor) / (72 * creatinine));
+}
+
+/**
+ * Get the latest creatinine value from patient labs.
+ */
+function getLatestCr(patient: PatientEntry): number | null {
+  const labs = patient.labs ?? [];
+  const crLabs = labs
+    .filter((l) => /^Cr$/i.test(l.label))
+    .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+  return crLabs.length > 0 ? crLabs[0].value : null;
+}
+
+/**
+ * Check for renal dose adjustments needed based on patient's CrCl and drug mentions.
+ */
+export function checkRenalDoseWarnings(patient: PatientEntry): RenalWarning[] {
+  const cr = getLatestCr(patient);
+  const crcl = calculateCrCl(patient.age, cr);
+  if (crcl === null) return [];
+
+  const allText = [
+    ...patient.tasks.map((t) => t.text),
+    ...patient.generatedTasks.map((t) => t.text),
+    ...patient.status,
+  ].join(" ");
+
+  const warnings: RenalWarning[] = [];
+
+  for (const drug of RENAL_DRUGS) {
+    if (!drug.pattern.test(allText)) continue;
+
+    // Find the most severe applicable threshold
+    const applicable = drug.thresholds
+      .filter((t) => crcl <= t.maxCrCl)
+      .sort((a, b) => {
+        const order = { critical: 0, warning: 1 };
+        return order[a.severity] - order[b.severity];
+      });
+
+    if (applicable.length > 0) {
+      warnings.push({
+        drug: drug.name,
+        adjustment: applicable[0].guidance,
+        crcl,
+        severity: applicable[0].severity,
+      });
+    }
+  }
+
+  return warnings;
+}

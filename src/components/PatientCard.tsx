@@ -5,6 +5,8 @@ import { TaskItem } from "./TaskItem";
 import { usePatientsDispatch, usePatientsState } from "../context/PatientsContext";
 import { LabBadges, AddLabForm } from "./LabTracker";
 import { LabChart } from "./LabChart";
+import { DrugSafetyAlerts } from "./DrugSafetyAlerts";
+import { PhotoAttachments } from "./PhotoAttachments";
 import { QuickScenario } from "./QuickScenario";
 import { MedFlagBadges } from "./MedFlags";
 import { generateHints } from "../engine/hints";
@@ -100,6 +102,79 @@ function TaskProgress({ done, total }: { done: number; total: number }) {
     <span className="inline-flex items-center justify-center px-2 py-1 rounded-lg bg-blue-600 text-white text-sm font-semibold tabular-nums">
       {done}/{total}
     </span>
+  );
+}
+
+/** Inline handover note that persists across shifts */
+function HandoverNoteInline({ patient }: { patient: PatientEntry }) {
+  const dispatch = usePatientsDispatch();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(patient.handoverNote ?? "");
+  const note = patient.handoverNote;
+
+  if (!editing && !note) {
+    return (
+      <button
+        onClick={() => { setDraft(""); setEditing(true); }}
+        className="text-xs text-gray-400 dark:text-gray-500 active:text-gray-600"
+      >
+        + הוסף הערת מסירה
+      </button>
+    );
+  }
+
+  if (editing) {
+    return (
+      <div className="space-y-1">
+        <textarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder="הערה למשמרת הבאה (נשמרת בין משמרות)..."
+          dir="auto"
+          rows={2}
+          autoFocus
+          className="w-full px-2.5 py-1.5 text-xs border border-emerald-300 dark:border-emerald-700 rounded-lg bg-emerald-50/50 dark:bg-emerald-900/20 text-gray-800 dark:text-gray-200 resize-none"
+        />
+        <div className="flex gap-1.5">
+          <button
+            onClick={() => {
+              dispatch({ type: "SET_HANDOVER_NOTE", patientId: patient.id, note: draft.trim() });
+              setEditing(false);
+            }}
+            className="text-xs px-2.5 py-1 rounded-lg bg-emerald-600 text-white"
+          >
+            שמור
+          </button>
+          <button
+            onClick={() => { setDraft(patient.handoverNote ?? ""); setEditing(false); }}
+            className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500"
+          >
+            ביטול
+          </button>
+          {note && (
+            <button
+              onClick={() => {
+                dispatch({ type: "SET_HANDOVER_NOTE", patientId: patient.id, note: "" });
+                setEditing(false);
+              }}
+              className="text-xs px-2.5 py-1 rounded-lg border border-red-200 dark:border-red-700 text-red-500"
+            >
+              מחק
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      onClick={() => { setDraft(note ?? ""); setEditing(true); }}
+      className="text-xs px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 cursor-pointer active:opacity-70"
+      dir="auto"
+    >
+      📌 {note}
+    </div>
   );
 }
 
@@ -381,6 +456,9 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
       {/* Medication safety flags */}
       <MedFlagBadges patient={patient} />
 
+      {/* Drug interaction & renal dose warnings */}
+      <DrugSafetyAlerts patient={patient} />
+
       {/* Clinical hints — diagnosis-based FYI, NOT tasks */}
       {(() => {
         const hints = generateHints(patient);
@@ -468,6 +546,12 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
       {showLabChart && (
         <LabChart patient={patient} />
       )}
+
+      {/* Sticky handover note */}
+      <HandoverNoteInline patient={patient} />
+
+      {/* Photo attachments */}
+      <PhotoAttachments patient={patient} />
 
       {/* Tasks */}
       <div className="space-y-2">

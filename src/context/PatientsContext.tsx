@@ -124,6 +124,9 @@ export type Action =
   | { type: "ADD_NOTE"; patientId: string; text: string }
   | { type: "REMOVE_NOTE"; patientId: string; index: number }
   | { type: "ADD_LAB"; patientId: string; lab: LabEntry }
+  | { type: "SET_HANDOVER_NOTE"; patientId: string; note: string }
+  | { type: "ADD_PHOTO"; patientId: string; photo: import("../types").PatientPhoto }
+  | { type: "REMOVE_PHOTO"; patientId: string; photoId: string }
   | { type: "REORDER_PATIENT"; patientId: string; direction: "up" | "down" }
   | { type: "EDIT_PATIENT"; patientId: string; name?: string; room?: string; section?: Section; diagnosis?: string }
   | { type: "REMOVE_PATIENT"; patientId: string }
@@ -288,6 +291,36 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
         patients: state.patients.map((p) =>
           p.id === action.patientId
             ? { ...p, labs: [...(p.labs ?? []), action.lab] }
+            : p,
+        ),
+      };
+
+    case "SET_HANDOVER_NOTE":
+      return {
+        ...state,
+        patients: state.patients.map((p) =>
+          p.id === action.patientId
+            ? { ...p, handoverNote: action.note || undefined }
+            : p,
+        ),
+      };
+
+    case "ADD_PHOTO":
+      return {
+        ...state,
+        patients: state.patients.map((p) =>
+          p.id === action.patientId
+            ? { ...p, photos: [...(p.photos ?? []), action.photo] }
+            : p,
+        ),
+      };
+
+    case "REMOVE_PHOTO":
+      return {
+        ...state,
+        patients: state.patients.map((p) =>
+          p.id === action.patientId
+            ? { ...p, photos: (p.photos ?? []).filter((ph) => ph.id !== action.photoId) }
             : p,
         ),
       };
