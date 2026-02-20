@@ -408,17 +408,17 @@ describe("rules engine — all rules", () => {
   // 17. Hyperkalemia
   describe("Hyperkalemia", () => {
     it("triggers on 'היפרקלמיה'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "היפרקלמיה" }));
+      const tasks = applyRules(makePatient({ status: ["היפרקלמיה"] }));
       expect(generatedSources(tasks)).toContain("היפרקלמיה");
     });
 
     it("triggers on 'hyperkalemia'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "hyperkalemia" }));
+      const tasks = applyRules(makePatient({ status: ["hyperkalemia"] }));
       expect(generatedSources(tasks)).toContain("היפרקלמיה");
     });
 
     it("generates 6 hyperkalemia tasks", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "היפרקלמיה" }));
+      const tasks = applyRules(makePatient({ status: ["היפרקלמיה"] }));
       const hkTasks = tasks.filter((t) => t.generatedFrom === "היפרקלמיה");
       expect(hkTasks).toHaveLength(6);
     });
@@ -427,17 +427,17 @@ describe("rules engine — all rules", () => {
   // 18. Hypokalemia
   describe("Hypokalemia", () => {
     it("triggers on 'היפוקלמיה'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "היפוקלמיה" }));
+      const tasks = applyRules(makePatient({ status: ["היפוקלמיה"] }));
       expect(generatedSources(tasks)).toContain("היפוקלמיה");
     });
 
     it("triggers on 'hypokalemia'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "hypokalemia" }));
+      const tasks = applyRules(makePatient({ status: ["hypokalemia"] }));
       expect(generatedSources(tasks)).toContain("היפוקלמיה");
     });
 
     it("generates 5 hypokalemia tasks", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "היפוקלמיה" }));
+      const tasks = applyRules(makePatient({ status: ["היפוקלמיה"] }));
       const lkTasks = tasks.filter((t) => t.generatedFrom === "היפוקלמיה");
       expect(lkTasks).toHaveLength(5);
     });
@@ -599,17 +599,17 @@ describe("rules engine — all rules", () => {
   // 26. Hypoglycemia
   describe("Hypoglycemia", () => {
     it("triggers on 'היפוגליקמיה'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "היפוגליקמיה" }));
+      const tasks = applyRules(makePatient({ status: ["היפוגליקמיה"] }));
       expect(generatedSources(tasks)).toContain("היפוגליקמיה");
     });
 
     it("triggers on 'hypoglycemia'", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "hypoglycemia" }));
+      const tasks = applyRules(makePatient({ status: ["hypoglycemia"] }));
       expect(generatedSources(tasks)).toContain("היפוגליקמיה");
     });
 
     it("generates 3 hypoglycemia tasks", () => {
-      const tasks = applyRules(makePatient({ diagnosis: "היפוגליקמיה" }));
+      const tasks = applyRules(makePatient({ status: ["היפוגליקמיה"] }));
       const hypoTasks = tasks.filter((t) => t.generatedFrom === "היפוגליקמיה");
       expect(hypoTasks).toHaveLength(3);
     });
@@ -682,7 +682,7 @@ describe("rules engine — all rules", () => {
 
 describe("rules engine — cross-cutting behavior", () => {
   it("all generated tasks have source='generated'", () => {
-    const tasks = applyRules(makePatient({ diagnosis: "ספסיס", flags: ["NPO", "FALL"] }));
+    const tasks = applyRules(makePatient({ status: ["ספסיס"], flags: ["NPO", "FALL"] }));
     expect(tasks.length).toBeGreaterThan(0);
     for (const t of tasks) {
       expect(t.source).toBe("generated");
@@ -690,7 +690,7 @@ describe("rules engine — cross-cutting behavior", () => {
   });
 
   it("all generated tasks have a generatedFrom field", () => {
-    const tasks = applyRules(makePatient({ diagnosis: "דלקת ריאות" }));
+    const tasks = applyRules(makePatient({ status: ["דלקת ריאות"] }));
     for (const t of tasks) {
       expect(t.generatedFrom).toBeDefined();
       expect(t.generatedFrom!.length).toBeGreaterThan(0);
@@ -698,7 +698,7 @@ describe("rules engine — cross-cutting behavior", () => {
   });
 
   it("all generated tasks have valid urgency", () => {
-    const tasks = applyRules(makePatient({ diagnosis: "ספסיס" }));
+    const tasks = applyRules(makePatient({ status: ["ספסיס"] }));
     const validUrgencies = ["stat", "urgent", "morning", "routine", "extra"];
     for (const t of tasks) {
       expect(validUrgencies).toContain(t.urgency);

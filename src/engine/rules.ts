@@ -9,12 +9,12 @@ interface RuleTask {
 
 /**
  * triggerField controls WHICH patient fields the regex runs against:
- *  - "all"       → diagnosis + status + flags + task text (default, legacy behavior)
- *  - "tasks"     → only status + flags + manual task text (NOT diagnosis)
+ *  - "tasks"     → status + flags + manual task text (DEFAULT — diagnosis never triggers rules)
  *  - "diagnosis" → only the diagnosis field
+ *  - "all"       → diagnosis + status + flags + task text (legacy, avoid)
  *
- * Use "tasks" for acute workup rules (DVT/PE, new seizure) that should NOT
- * fire when the condition is the established/chronic diagnosis.
+ * Default is "tasks" so that chronic diagnoses (DM, CVA, CHF) don't auto-generate
+ * workup tasks unless the condition is explicitly mentioned in the task list.
  */
 interface Rule {
   trigger: RegExp;
@@ -572,17 +572,17 @@ export function applyRules(patient: PatientEntry): Task[] {
   for (const rule of RULES) {
     if (rule.group && matchedGroups.has(rule.group)) continue;
 
-    // Pick which text to match against
+    // Pick which text to match against (default: tasks only, never diagnosis)
     let textToMatch: string;
     switch (rule.triggerField) {
-      case "tasks":
-        textToMatch = tasksText;
+      case "all":
+        textToMatch = allText;
         break;
       case "diagnosis":
         textToMatch = diagnosisText;
         break;
       default:
-        textToMatch = allText;
+        textToMatch = tasksText;
     }
 
     if (rule.trigger.test(textToMatch)) {

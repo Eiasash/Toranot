@@ -278,9 +278,9 @@ describe("parsePatientList", () => {
   });
 
   describe("monitor room section inference", () => {
-    it("ניטור room infers MONITOR section even without header", () => {
+    it("ניטור room does NOT infer section — only headers assign sections", () => {
       const result = parsePatientList("ניטור-1 כהן דני 55");
-      expect(result[0].section).toBe("MONITOR");
+      expect(result[0].section).toBe("SIDE_A"); // default, no header
     });
   });
 });

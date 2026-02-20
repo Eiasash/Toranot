@@ -130,9 +130,7 @@ function parsePatientLine(
   const diagTokens = tokens.slice(idx);
   const diagnosis = diagTokens.length > 0 ? diagTokens.join(" ") : null;
 
-  // If the room itself implies a section (e.g. 'ניטור 3'), prefer that.
-  const inferredSection = detectSectionFromRoom(room);
-  const finalSection: Section = inferredSection ?? section;
+  const finalSection: Section = section;
 
   // Parse extra segments into status and tasks
   const status: string[] = [];
