@@ -1,15 +1,19 @@
 # Toranot (תורנות)
 
-Hospital ward shift management app. Import patient lists via camera OCR or text input, track tasks per patient, and let the rule engine generate follow-up tasks automatically.
+**[Live App](https://toranot.netlify.app)**
+
+Hospital ward shift management app for on-call doctors. Import patient lists via camera OCR or text input, track tasks per patient, and let the rule engine generate follow-up tasks automatically.
 
 Built as a mobile-first PWA with Hebrew RTL support so it works directly from a phone on the ward floor.
 
 ## Features
 
-- **Patient import** -- Scan a physical ward sheet with the camera (OCR via Claude Vision), pick an image from the gallery, or paste/type text manually
+- **Patient import** -- Scan a physical ward sheet with the camera (OCR via Claude Vision), pick an image from the gallery, or paste/type text manually. Parse preview screen lets you verify before committing.
 - **Section tabs** -- Patients organized into Side A, Side B, Side C, Rehabilitation, and Monitor
 - **Task extraction** -- Tasks, urgency levels, and medical flags (DNR, NPO, ISO, FALL, etc.) are parsed automatically from the input text
 - **Rule engine** -- Generates additional tasks based on detected conditions (discharge, pre-surgery, blood transfusion, diabetes, isolation, catheter, fall risk, and more)
+- **Drug safety alerts** -- Checks for dangerous drug interactions (QT prolongation, bleeding risk, hyperkalemia, serotonin syndrome), renal dose adjustments based on Cockcroft-Gault CrCl, and Beers 2023 criteria for geriatric patients
+- **Lab trend monitoring** -- Tracks lab value trajectories with KDIGO AKI staging for creatinine, percentage-based Hb drop alerts, and threshold alerts for K+, Na, WBC, PLT, CRP, Lactate, INR, Glucose
 - **Smart rescan** -- Re-importing a section preserves manually added tasks and completion state; detects patient transfers between sections
 - **Urgency color coding** -- Tasks are color-coded by urgency: stat, urgent, morning, routine, extra
 - **Dark mode** -- Toggle between light and dark themes for comfortable viewing
@@ -36,7 +40,7 @@ npm install
 npm run dev
 ```
 
-Open the URL shown in the terminal (usually `http://localhost:5173/Toranot/`).
+Open the URL shown in the terminal (usually `http://localhost:5173/`).
 
 ### Build for production
 
@@ -128,7 +132,7 @@ You can rescan a section at any time. The merge logic will:
 src/
   components/    UI components (InputArea, Scanner, PatientCard, etc.)
   context/       React context + useReducer state management
-  engine/        Rule engine and rescan merge logic
+  engine/        Rule engine, drug safety, lab deltas, rescan merge
   parser/        Hebrew patient list text parser
   types/         TypeScript type definitions
   utils/         ID generation and patient key helpers
