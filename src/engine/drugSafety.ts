@@ -161,8 +161,13 @@ export function checkDrugInteractions(patient: PatientEntry): DrugInteraction[] 
 export interface RenalWarning {
   drug: string;
   adjustment: string;   // Hebrew guidance
-  crcl: number;
+  crcl: number;         // conservative CrCl used for the decision
   severity: "critical" | "warning";
+  // Flags that the CrCl was estimated without actual patient weight/sex.
+  // The displayed CrCl is the LOWER of two demographic estimates so the
+  // engine errs toward over-alerting rather than under-alerting.
+  weightAssumed: true;
+  crclRange: { female55kg: number; male70kg: number };
 }
 
 interface RenalDrug {
@@ -326,11 +331,36 @@ function getLatestCr(patient: PatientEntry): number | null {
 
 /**
  * Check for renal dose adjustments needed based on patient's CrCl and drug mentions.
+ *
+ * ── DEMOGRAPHIC CORRECTION ──
+ * PatientEntry has no sex or weight fields. The Cockcroft-Gault formula is
+ * highly sensitive to both, and the geriatric ward is predominantly female
+ * and underweight (typical 50-65kg, age 75-95).
+ *
+ * A 70kg male assumption for this population overestimates CrCl by 20-35%,
+ * which means drug dose warnings fire at the wrong thresholds.
+ *
+ * Approach: calculate CrCl for BOTH demographic extremes:
+ *   - Conservative: 55kg female (sex factor 0.85)
+ *   - Liberal:      70kg male   (sex factor 1.0)
+ *
+ * We use the LOWER (conservative) value for threshold decisions, erring
+ * toward over-alerting rather than missing a dose adjustment in a frail
+ * elderly woman. The warning label exposes this assumption so the clinician
+ * can apply clinical judgment.
  */
 export function checkRenalDoseWarnings(patient: PatientEntry): RenalWarning[] {
   const cr = getLatestCr(patient);
-  const crcl = calculateCrCl(patient.age, cr);
-  if (crcl === null) return [];
+  if (cr === null || !patient.age) return [];
+
+  // Calculate both demographic bounds
+  const crclFemale55 = calculateCrCl(patient.age, cr, 55, true)!;
+  const crclMale70   = calculateCrCl(patient.age, cr, 70, false)!;
+
+  // Use the conservative (lower) estimate for threshold decisions.
+  // This protects the typical ward patient — a 55-65kg elderly woman —
+  // from being under-warned because the formula assumed a 70kg man.
+  const conservativeCrCl = Math.min(crclFemale55, crclMale70);
 
   const allText = [
     ...patient.tasks.map((t) => t.text),
@@ -343,9 +373,9 @@ export function checkRenalDoseWarnings(patient: PatientEntry): RenalWarning[] {
   for (const drug of RENAL_DRUGS) {
     if (!drug.pattern.test(allText)) continue;
 
-    // Find the most severe applicable threshold
+    // Find the most severe applicable threshold using the conservative CrCl
     const applicable = drug.thresholds
-      .filter((t) => crcl <= t.maxCrCl)
+      .filter((t) => conservativeCrCl <= t.maxCrCl)
       .sort((a, b) => {
         const order = { critical: 0, warning: 1 };
         return order[a.severity] - order[b.severity];
@@ -355,11 +385,169 @@ export function checkRenalDoseWarnings(patient: PatientEntry): RenalWarning[] {
       warnings.push({
         drug: drug.name,
         adjustment: applicable[0].guidance,
-        crcl,
+        crcl: conservativeCrCl,
         severity: applicable[0].severity,
+        weightAssumed: true,
+        crclRange: { female55kg: crclFemale55, male70kg: crclMale70 },
       });
     }
   }
 
   return warnings;
+}
+
+// ════════════════════════════════════════════════════════════
+// 3. BEERS CRITERIA 2023 — Age-specific alerts
+// ════════════════════════════════════════════════════════════
+//
+// American Geriatrics Society Beers Criteria 2023 update.
+// Applies to patients ≥65yo. The entire geriatric ward qualifies.
+// Focus: drugs with strong evidence of harm in the elderly that
+// may not be flagged by the interaction engine because they're
+// harmful as monotherapy, not just in combination.
+
+export interface BeersCriteria {
+  drug: string;           // display name
+  category: string;       // e.g. "CNS / שינה"
+  concern: string;        // short Hebrew risk description
+  recommendation: string; // what to do
+  severity: "avoid" | "caution"; // avoid = strong recommendation; caution = use with monitoring
+}
+
+interface BeersRule {
+  name: string;
+  pattern: RegExp;
+  category: string;
+  concern: string;
+  recommendation: string;
+  severity: "avoid" | "caution";
+  minAge?: number; // default 65
+}
+
+const BEERS_RULES: BeersRule[] = [
+  // ── Sedative-hypnotics / Sleep ──
+  {
+    name: "Zolpidem / Zopiclone",
+    pattern: /zolpidem|זולפידם|stilnox|סטילנוקס|zopiclone|זופיקלון|imovane/i,
+    category: "CNS / שינה",
+    concern: "נפילות, שברי ירך, דליריום — עד 2× סיכון ב-≥65",
+    recommendation: "הימנע. שקול Melatonin / Mirtazapine 7.5mg. אם חיוני — מינון מחצית",
+    severity: "avoid",
+  },
+  // ── Benzodiazepines (standalone, not just in combo) ──
+  {
+    name: "Benzodiazepine",
+    pattern: /lorazepam|לוראזפם|ativan|diazepam|דיאזפם|valium|ולאום|midazolam|מידזולם|clonazepam|קלונזפם|alprazolam|אלפרזולם|xanax|זנקס|oxazepam|אוקסזפם/i,
+    category: "CNS / שינה",
+    concern: "נפילות, דליריום, שברים, דיכוי נשימה — סיכון גבוה ≥75",
+    recommendation: "הימנע בשימוש כרוני. אם חיוני (Status/Alcohol WD) — השתמש לטווח קצר בלבד",
+    severity: "avoid",
+  },
+  // ── Tramadol ──
+  {
+    name: "Tramadol",
+    pattern: /tramadol|טרמדול|tramadex|tramal|טרמאל/i,
+    category: "משככי כאב",
+    concern: "נפילות, סיזורים, סינדרום סרוטונין (במיוחד עם SSRI), היפוגליקמיה",
+    recommendation: "הימנע ≥75. שקול Paracetamol ± Opioid קצר-טווח במינון מחצית",
+    severity: "avoid",
+  },
+  // ── TCAs ──
+  {
+    name: "Amitriptyline / Nortriptyline (TCA)",
+    pattern: /amitriptyline|אמיטריפטילין|elatrol|אלטרול|nortriptyline|נורטריפטילין|doxepin|דוקספין/i,
+    category: "נוגדי דיכאון",
+    concern: "עומס אנטיכולינרגי, היפוטנציה אורתוסטטית, הפרעות הולכה לבבית, דליריום",
+    recommendation: "הימנע. שקול SSRI / Mirtazapine. אם לנוירופתיה — Pregabalin",
+    severity: "avoid",
+  },
+  // ── First-gen antihistamines ──
+  {
+    name: "Diphenhydramine / Hydroxyzine (אנטי-היסטמין דור-1)",
+    pattern: /diphenhydramine|דיפנהידרמין|benadryl|hydroxyzine|הידרוקסיזין|atarax|אטרקס|promethazine|פרומתזין|phenergan/i,
+    category: "אנטי-היסטמין",
+    concern: "עומס אנטיכולינרגי חמור — דליריום, אצירת שתן, עצירות, בלבול",
+    recommendation: "הימנע. לגרד: Cetirizine / Loratadine. לבחילה: Ondansetron / Metoclopramide",
+    severity: "avoid",
+  },
+  // ── First-gen antipsychotics ──
+  {
+    name: "Haloperidol / Chlorpromazine (אנטי-פסיכוטי I)",
+    pattern: /haloperidol|הלופרידול|haldol|האלדול|chlorpromazine|כלורפרומזין|largactil/i,
+    category: "אנטי-פסיכוטי",
+    concern: "QT הארכה, EPS, נפילות, תמותה מוגברת בדמנציה",
+    recommendation: "שימוש מוגבל. לדליריום הכרחי — מינון מינימלי קצר-טווח. לדמנציה: הימנע",
+    severity: "caution",
+  },
+  // ── Sulfonylureas ──
+  {
+    name: "Glibenclamide / Gliclazide (Sulfonylurea)",
+    pattern: /glibenclamide|גליבנקלמיד|daonil|דאוניל|gliclazide|גליקלזיד|diamicron|דיאמיקרון|glipizide|גליפיזיד/i,
+    category: "סוכרת",
+    concern: "היפוגליקמיה מתמשכת — t½ ארוך, לא ניתנת לניטרול מהיר ≥70",
+    recommendation: "שקול DPP-4 inhibitor (Sitagliptin) או SGLT2i. אם Sulfonylurea — Gliclazide MR בלבד",
+    severity: "avoid",
+  },
+  // ── NSAIDs standalone (age-gated, not just combo) ──
+  {
+    name: "NSAID (כולל Ibuprofen / Diclofenac)",
+    pattern: /NSAID|ibuprofen|איבופרופן|diclofenac|דיקלופנק|naproxen|נפרוקסן|voltaren|אדויל|advil|nurofen/i,
+    category: "משככי כאב",
+    concern: "סיכון גבוה לדימום GI, AKI, החמרת אי-ספיקת לב ≥75",
+    recommendation: "הימנע כברירת מחדל. לכאב: Paracetamol. אם חיוני — מינון קצר-טווח + PPI",
+    severity: "avoid",
+    minAge: 75,
+  },
+  // ── Muscle relaxants ──
+  {
+    name: "Baclofen / Cyclobenzaprine (מרגיעי שריר)",
+    pattern: /baclofen|בקלופן|lioresal|cyclobenzaprine|ציקלובנזפרין|tizanidine|טיזנידין/i,
+    category: "מרגיעי שריר",
+    concern: "רעילות CNS, עוויתות בגמילה, שיתוק שלפוחית, נפילות",
+    recommendation: "הימנע. לספסטיסיטי: Tizanidine מינון נמוך עם ניטור BP",
+    severity: "avoid",
+  },
+  // ── Digoxin high dose (Beers specific threshold) ──
+  {
+    name: "Digoxin >0.125mg/d",
+    pattern: /digoxin|דיגוקסין|lanoxin/i,
+    category: "לב",
+    concern: "חלון תרפויטי צר עם ירידה ב-CrCl — רעילות Digoxin ≥70",
+    recommendation: "מינון מקסימלי 0.125mg/d בגרייטריה. נטר רמות ו-CrCl בכל שינוי",
+    severity: "caution",
+  },
+];
+
+/**
+ * Check for Beers Criteria concerns in patient medication/task text.
+ * Age-gated — only applies to patients ≥65 (minAge per rule, default 65).
+ */
+export function checkBeersCriteria(patient: PatientEntry): BeersCriteria[] {
+  const age = patient.age;
+  if (!age || age < 65) return [];
+
+  const allText = [
+    ...patient.tasks.map((t) => t.text),
+    ...patient.generatedTasks.map((t) => t.text),
+    ...patient.status,
+    ...(patient.notes ?? []),
+  ].join(" ");
+
+  const results: BeersCriteria[] = [];
+
+  for (const rule of BEERS_RULES) {
+    const effectiveMinAge = rule.minAge ?? 65;
+    if (age < effectiveMinAge) continue;
+    if (!rule.pattern.test(allText)) continue;
+
+    results.push({
+      drug: rule.name,
+      category: rule.category,
+      concern: rule.concern,
+      recommendation: rule.recommendation,
+      severity: rule.severity,
+    });
+  }
+
+  return results;
 }

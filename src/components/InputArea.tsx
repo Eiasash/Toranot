@@ -1,35 +1,63 @@
 import { useState } from "react";
 import { usePatientsDispatch } from "../context/PatientsContext";
 import { Scanner } from "./Scanner";
+import { ParsePreview } from "./ParsePreview";
+import { parsePatientList } from "../parser/parsePatientList";
+import type { PatientEntry } from "../types";
 
 type InputMode = "closed" | "choose" | "scan" | "text";
 
-const PLACEHOLDER = `הדביקו רשימת חולים כאן, לדוגמה:
-
-צד א
-101 כהן יוסף 72 דלקת ריאות DNR | משתחרר היום
-102 לוי שרה 65 אי ספיקת לב NPO | א.ק.ג דחוף`;
+const PLACEHOLDER = `הדביקו רשימת חולים כאן, לדוגמה:\n\nצד א\n101 כהן יוסף 72 דלקת ריאות DNR | משתחרר היום\n102 לוי שרה 65 אי ספיקת לב NPO | א.ק.ג דחוף`;
 
 export function InputArea() {
   const [mode, setMode] = useState<InputMode>("choose");
   const [text, setText] = useState("");
+  const [preview, setPreview] = useState<{ text: string; patients: PatientEntry[] } | null>(null);
   const dispatch = usePatientsDispatch();
 
-  function handleImport(importText?: string) {
-    const t = importText ?? text;
-    if (!t.trim()) return;
-    dispatch({ type: "IMPORT_TEXT", text: t });
+  /** Parse text → show preview instead of committing immediately */
+  function triggerPreview(importText?: string) {
+    const t = (importText ?? text).trim();
+    if (!t) return;
+
+    const parsed = parsePatientList(t);
+    if (parsed.length === 0) {
+      // Nothing parsed — show a clear error inline rather than importing empty
+      alert("לא זוהו חולים בטקסט. בדוק את הפורמט.");
+      return;
+    }
+
+    // Show preview — don't commit to state yet
+    setPreview({ text: t, patients: parsed });
+  }
+
+  /** User confirmed preview — now commit */
+  function confirmImport() {
+    if (!preview) return;
+    dispatch({ type: "IMPORT_TEXT", text: preview.text });
+    setPreview(null);
     setText("");
     setMode("closed");
   }
 
-  function handleClear() {
-    dispatch({ type: "CLEAR_ALL" });
-    setText("");
-    setMode("choose");
+  /** User went back from preview */
+  function cancelPreview() {
+    setPreview(null);
+    // Stay in current mode so they can edit/re-scan
   }
 
-  // --- Collapsed bar ---
+  // ── Parse preview fullscreen overlay ──
+  if (preview) {
+    return (
+      <ParsePreview
+        patients={preview.patients}
+        onConfirm={confirmImport}
+        onCancel={cancelPreview}
+      />
+    );
+  }
+
+  // ── Collapsed bar ──
   if (mode === "closed") {
     return (
       <div className="flex gap-2 p-3">
@@ -39,17 +67,11 @@ export function InputArea() {
         >
           + הוסף חולים
         </button>
-        <button
-          onClick={handleClear}
-          className="py-3 px-4 bg-red-50 text-red-600 rounded-xl text-sm font-medium active:bg-red-100"
-        >
-          נקה
-        </button>
       </div>
     );
   }
 
-  // --- Choose mode: scan or type ---
+  // ── Choose mode: scan or type ──
   if (mode === "choose") {
     return (
       <div className="p-4 space-y-3">
@@ -72,19 +94,19 @@ export function InputArea() {
     );
   }
 
-  // --- Scan mode ---
+  // ── Scan mode ──
   if (mode === "scan") {
     return (
       <div className="p-4">
         <Scanner
-          onTextExtracted={(t) => handleImport(t)}
+          onTextExtracted={(t) => triggerPreview(t)}
           onCancel={() => setMode("choose")}
         />
       </div>
     );
   }
 
-  // --- Text mode ---
+  // ── Text mode ──
   return (
     <div className="p-4 space-y-3">
       <textarea
@@ -98,11 +120,11 @@ export function InputArea() {
         className="w-full p-3 border border-gray-300 rounded-xl bg-white text-gray-900 placeholder:text-gray-400 text-base leading-relaxed resize-y focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none whitespace-pre-wrap break-words"
       />
       <button
-        onClick={() => handleImport()}
+        onClick={() => triggerPreview()}
         disabled={!text.trim()}
         className="w-full py-4 bg-blue-600 text-white rounded-xl text-lg font-medium active:bg-blue-700 active:scale-[0.98] transition-transform disabled:opacity-40 disabled:pointer-events-none"
       >
-        ייבוא רשימה
+        תצוגה מקדימה ←
       </button>
       <button
         onClick={() => setMode("choose")}

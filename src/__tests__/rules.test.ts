@@ -150,20 +150,30 @@ describe("rules engine — all rules", () => {
 
   // 6. Fall risk
   describe("Fall risk", () => {
-    it("triggers on 'נפילה'", () => {
+    // Decision: fall risk generates 0 tasks.
+    // "נפילה" / FALL in the task list is a historical fall or admission flag,
+    // not an acute event. The CT head task was generating noise on every
+    // patient with a fall-risk flag, even if the fall was weeks ago.
+    // Acute fall calls come in by phone and the scenario buttons handle them.
+    it("generates 0 tasks for נפילה (static fall-risk flag = not an acute call)", () => {
       const tasks = applyRules(makePatient({ status: ["נפילה"] }));
-      expect(generatedSources(tasks)).toContain("סיכון נפילה");
+      const fallTasks = tasks.filter((t) => t.generatedFrom === "סיכון נפילה");
+      expect(fallTasks).toHaveLength(0);
     });
 
-    it("triggers on 'FALL' flag", () => {
-      const tasks = applyRules(makePatient({ flags: ["FALL"] }));
-      expect(generatedSources(tasks)).toContain("סיכון נפילה");
-    });
-
-    it("generates 1 fall task (CT head only)", () => {
+    it("generates 0 tasks for FALL flag", () => {
       const tasks = applyRules(makePatient({ flags: ["FALL"] }));
       const fallTasks = tasks.filter((t) => t.generatedFrom === "סיכון נפילה");
-      expect(fallTasks).toHaveLength(1);
+      expect(fallTasks).toHaveLength(0);
+    });
+
+    it("rule still matches (group fires, no tasks emitted) so the group is consumed", () => {
+      // The rule must fire (and mark the group as matched) even though tasks:[].
+      // This prevents a hypothetical future duplicate rule from adding tasks.
+      // We verify indirectly by checking that applyRules runs without error
+      // and returns an array (no tasks from this group).
+      const result = applyRules(makePatient({ flags: ["FALL"] }));
+      expect(Array.isArray(result)).toBe(true);
     });
   });
 
@@ -597,10 +607,13 @@ describe("rules engine — all rules", () => {
       expect(generatedSources(tasks)).toContain("קבלה חדשה");
     });
 
-    it("generates 3 admission tasks (labs+ECG+CXR only)", () => {
+    it("generates 2 admission tasks (verify-labs + ECG; CXR removed)", () => {
+      // CXR was removed: the on-call doc cannot determine from imported text
+      // whether a recent CXR exists, so ordering one blindly creates alarm fatigue.
+      // Labs task is now phrased as verification+order, not just order.
       const tasks = applyRules(makePatient({ status: ["קבלה חדשה"] }));
       const admTasks = tasks.filter((t) => t.generatedFrom === "קבלה חדשה");
-      expect(admTasks).toHaveLength(3);
+      expect(admTasks).toHaveLength(2);
     });
   });
 

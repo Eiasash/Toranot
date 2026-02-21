@@ -89,10 +89,13 @@ const RULES: Rule[] = [
     source: "סיכון נפילה",
     group: "fall",
     triggerField: "tasks",
-    tasks: [
-      // Bed rails + bell = nursing, not doctor tasks
-      { text: "CT ראש אם חבלה / טיפול נוגד קרישה", urgency: "urgent", category: "imaging" },
-    ],
+    // ── No auto-generated tasks.
+    // "נפילה" in the task list is almost always a historical fall or fall-risk
+    // flag documented at admission — not an acute event requiring CT.
+    // Acute falls come through a nurse phone call; if CT is needed, the caller
+    // triggers it. A generated CT task on every patient with a fall-risk flag
+    // adds noise and false urgency. Remove from rules; handle via scenario buttons.
+    tasks: [],
   },
 
   // ═══ BLADDER SCAN ═══
@@ -391,9 +394,13 @@ const RULES: Rule[] = [
     group: "newadmit",
     triggerField: "tasks",
     tasks: [
-      { text: "מעבדה: CBC, CMP, Mg, PO4, PT/INR, CRP", urgency: "urgent", category: "labs" },
+      // Phrased as VERIFY+ORDER — labs may already be sent by the admitting doc.
+      // The on-call task is to confirm they went out and review results.
+      { text: "וודא בדיקות קבלה / הזמן אם חסרות: CBC, CMP, Mg, PO4, PT/INR, CRP", urgency: "urgent", category: "labs" },
+      // ECG is justified on-call for age >50 or cardiac history — genuinely missable at admission.
       { text: "ECG (>50y / רקע קרדיאלי)", urgency: "urgent", category: "labs" },
-      { text: "CXR (אם אין מהשבוע האחרון)", urgency: "routine", category: "imaging" },
+      // CXR removed: on-call doc cannot determine from text whether a recent CXR exists.
+      // Blind ordering leads to alarm fatigue on this task. Handled by primary team.
       // Med rec, fall risk, DVT prophylaxis = admitting doctor / morning team
     ],
   },
@@ -591,7 +598,19 @@ export function applyRules(patient: PatientEntry): Task[] {
     }
   }
 
-  return generated;
+  // Deduplicate: if two rules independently generated an identical task text,
+  // keep only the first occurrence. Normalise for comparison (trim + collapse
+  // whitespace + lowercase) so minor formatting differences don't produce
+  // duplicates that look identical to the user.
+  // Example: both the Sepsis and Fever rules generate "תרביות דם x2" —
+  // the patient should see one task, not two.
+  const seenText = new Set<string>();
+  return generated.filter((task) => {
+    const key = task.text.trim().replace(/\s+/g, " ").toLowerCase();
+    if (seenText.has(key)) return false;
+    seenText.add(key);
+    return true;
+  });
 }
 
 export { RULES };

@@ -3,8 +3,10 @@ import type { PatientEntry } from "../types";
 import {
   checkDrugInteractions,
   checkRenalDoseWarnings,
+  checkBeersCriteria,
   type DrugInteraction,
   type RenalWarning,
+  type BeersCriteria,
 } from "../engine/drugSafety";
 import { calculateLabDeltas, type LabDelta } from "../engine/labDelta";
 
@@ -21,14 +23,16 @@ export function DrugSafetyAlerts({ patient }: { patient: PatientEntry }) {
   const interactions = useMemo(() => checkDrugInteractions(patient), [patient]);
   const renalWarnings = useMemo(() => checkRenalDoseWarnings(patient), [patient]);
   const labDeltas = useMemo(() => calculateLabDeltas(patient), [patient]);
+  const beers = useMemo(() => checkBeersCriteria(patient), [patient]);
 
-  const totalAlerts = interactions.length + renalWarnings.length + labDeltas.length;
+  const totalAlerts = interactions.length + renalWarnings.length + labDeltas.length + beers.length;
   if (totalAlerts === 0) return null;
 
   const hasCritical =
     interactions.some((i) => i.severity === "critical") ||
     renalWarnings.some((w) => w.severity === "critical") ||
-    labDeltas.some((d) => d.severity === "critical");
+    labDeltas.some((d) => d.severity === "critical") ||
+    beers.some((b) => b.severity === "avoid");
 
   return (
     <div>
@@ -63,6 +67,18 @@ export function DrugSafetyAlerts({ patient }: { patient: PatientEntry }) {
           {labDeltas.map((d, i) => (
             <LabDeltaCard key={`ld-${i}`} delta={d} />
           ))}
+
+          {/* Beers Criteria — age-specific geriatric alerts */}
+          {beers.length > 0 && (
+            <div className="mt-1">
+              <div className="text-[10px] font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-1 px-0.5">
+                Beers 2023 — ≥65 שנה
+              </div>
+              {beers.map((b, i) => (
+                <BeersCard key={`br-${i}`} item={b} />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -124,6 +140,28 @@ function LabDeltaCard({ delta }: { delta: LabDelta }) {
       {delta.message && (
         <div className="text-gray-700 dark:text-gray-300">{delta.message}</div>
       )}
+    </div>
+  );
+}
+
+function BeersCard({ item }: { item: BeersCriteria }) {
+  const isAvoid = item.severity === "avoid";
+  const bg = isAvoid
+    ? "border-purple-300 dark:border-purple-700 bg-purple-50/70 dark:bg-purple-900/20"
+    : "border-indigo-300 dark:border-indigo-700 bg-indigo-50/70 dark:bg-indigo-900/20";
+  const icon = isAvoid ? "🚫" : "⚠️";
+
+  return (
+    <div className={`border rounded-lg p-2 text-xs space-y-0.5 mb-1.5 ${bg}`}>
+      <div className="font-bold dark:text-gray-100 flex items-start gap-1">
+        <span>{icon}</span>
+        <span>{item.drug}</span>
+        <span className="ml-auto font-normal text-[10px] text-purple-600 dark:text-purple-400 whitespace-nowrap">
+          {item.category}
+        </span>
+      </div>
+      <div className="text-gray-700 dark:text-gray-300">{item.concern}</div>
+      <div className="text-purple-700 dark:text-purple-300 font-medium">{item.recommendation}</div>
     </div>
   );
 }

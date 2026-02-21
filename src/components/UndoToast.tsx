@@ -39,7 +39,7 @@ export function UndoToastContainer() {
   if (!action) return null;
 
   return (
-    <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[70] animate-slide-up">
+    <div className="fixed undo-toast-position left-1/2 -translate-x-1/2 z-[70] animate-slide-up">
       <div className="flex items-center gap-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-4 py-3 rounded-xl shadow-lg min-w-[260px]">
         <span className="text-sm flex-1">{action.message}</span>
         <button

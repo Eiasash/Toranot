@@ -175,7 +175,7 @@ export function TaskItem({
           onChange={onToggle}
           onClick={(e) => e.stopPropagation()}
           aria-label={`סמן ${task.text} כבוצע`}
-          className="mt-1 h-5 w-5 rounded border-gray-300 bg-white accent-blue-600 text-blue-600 focus:ring-blue-500"
+          className="mt-1 h-6 w-6 rounded border-gray-300 bg-white accent-blue-600 text-blue-600 focus:ring-blue-500 flex-shrink-0"
         />
 
         <div className="flex-1 min-w-0">
@@ -277,7 +277,7 @@ export function TaskItem({
           {!task.done && urgencyBadge(task.urgency)}
 
           <div className="flex gap-1">
-            {/* Timer button */}
+            {/* Timer button — min 44×44px for Android touch target */}
             {!task.done && onSetDue && (
               <button
                 type="button"
@@ -288,7 +288,7 @@ export function TaskItem({
                   setShowTimer((v) => !v);
                 }}
                 className={[
-                  "text-xs px-2 py-0.5 rounded-lg border",
+                  "text-sm min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border",
                   task.dueAt
                     ? "bg-amber-100 border-amber-300 text-amber-700 dark:bg-amber-900/40 dark:border-amber-700 dark:text-amber-300"
                     : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300",
@@ -298,7 +298,7 @@ export function TaskItem({
               </button>
             )}
 
-            {/* Note button */}
+            {/* Note button — min 44×44px for Android touch target */}
             <button
               type="button"
               title="הוסף הערה"
@@ -307,7 +307,7 @@ export function TaskItem({
                 e.stopPropagation();
                 setEditing((v) => !v);
               }}
-              className="text-xs px-2 py-0.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300"
+              className="text-sm min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300"
             >
               ✎
             </button>

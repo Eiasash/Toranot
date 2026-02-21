@@ -194,7 +194,32 @@ body {
   background-color: rgba(239, 68, 68, 0.1) !important;
 }
 
-/* Undo toast slide-up animation */
+/* ─── Bottom navigation safe area ───
+   The bottom nav is 56px. Android gesture nav adds env(safe-area-inset-bottom)
+   on top. The pb-[calc(56px+env(...))] on the main div handles scroll padding,
+   but the undo toast needs to clear the nav too. */
+.bottom-nav-offset {
+  bottom: calc(56px + env(safe-area-inset-bottom));
+}
+
+/* Undo toast — positioned above the bottom nav */
+.undo-toast-position {
+  bottom: calc(72px + env(safe-area-inset-bottom));
+}
+
+/* SectionTabs: taller tap targets on mobile */
+@media (max-width: 768px) {
+  nav[role="tablist"] button {
+    min-height: 48px;
+  }
+}
+
+/* Active state visual feedback — instant, no delay.
+   Android Chrome has a 300ms default delay that makes the app feel sluggish. */
+* {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
 @keyframes slide-up {
   from { transform: translateY(20px) translateX(-50%); opacity: 0; }
   to   { transform: translateY(0) translateX(-50%); opacity: 1; }
