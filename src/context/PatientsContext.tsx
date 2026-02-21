@@ -142,9 +142,13 @@ export type Action =
 export function inferUrgencyFromText(text: string): Urgency {
   const t = text.trim();
   if (!t) return "routine";
-  if (/(^|\b)(סטט|STAT|דחוף)(\b|!)/i.test(t)) return "stat";
-  if (/(^|\b)(אורגנטי|urgent)(\b|!)/i.test(t)) return "urgent";
-  if (/\b(בוקר|לבוקר|בבוקר)\b/.test(t)) return "morning";
+  // \b does not work for Hebrew letters (they are non-word chars in JS regex).
+  // Use Unicode lookbehind/lookahead — "not preceded/followed by a Hebrew letter"
+  // — so we still avoid matching partial Hebrew words, while correctly matching
+  // standalone words in any position within the string.
+  if (/\bSTAT\b|(?<![א-ת])(סטט|דחוף)(?![א-ת])/i.test(t)) return "stat";
+  if (/\burgent\b|(?<![א-ת])אורגנטי(?![א-ת])/i.test(t)) return "urgent";
+  if (/(?<![א-ת])(בוקר|לבוקר|בבוקר)(?![א-ת])/.test(t)) return "morning";
   return "routine";
 }
 
@@ -341,11 +345,17 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
       if (swapIdx < 0 || swapIdx >= sectionPatients.length) return state;
       const a = sectionPatients[idx];
       const b = sectionPatients[swapIdx];
+      // Swap the actual .order property values, not the array indices.
+      // idx/swapIdx are positions in the filtered subarray — using them
+      // directly as order values would corrupt ordering for all patients
+      // whose .order wasn't involved in this swap.
+      const aOrder = a.order ?? idx;
+      const bOrder = b.order ?? swapIdx;
       return {
         ...state,
         patients: state.patients.map((p) => {
-          if (p.id === a.id) return { ...p, order: swapIdx };
-          if (p.id === b.id) return { ...p, order: idx };
+          if (p.id === a.id) return { ...p, order: bOrder };
+          if (p.id === b.id) return { ...p, order: aOrder };
           return p;
         }),
       };

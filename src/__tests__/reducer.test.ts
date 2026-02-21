@@ -156,14 +156,23 @@ describe("inferUrgencyFromText", () => {
     expect(inferUrgencyFromText("STAT blood draw")).toBe("stat");
   });
 
-  // NOTE: Hebrew-only keywords (דחוף, סטט, אורגנטי, בוקר) don't match
-  // because the regex uses \b which doesn't work with Hebrew Unicode chars.
-  // These return "routine" — this is a known limitation.
-  it('returns "routine" for pure Hebrew urgency keywords (\\b limitation)', () => {
-    expect(inferUrgencyFromText("דחוף")).toBe("routine");
-    expect(inferUrgencyFromText("סטט")).toBe("routine");
-    expect(inferUrgencyFromText("אורגנטי")).toBe("routine");
-    expect(inferUrgencyFromText("בדיקה בבוקר")).toBe("routine");
+  // Hebrew urgency keywords now match correctly.
+  // The old \b-based regex was broken for Hebrew; replaced with Unicode
+  // lookbehind/lookahead (?<![א-ת]) / (?![א-ת]).
+  it('returns "stat" for standalone Hebrew stat keyword "דחוף"', () => {
+    expect(inferUrgencyFromText("דחוף")).toBe("stat");
+  });
+
+  it('returns "stat" for Hebrew stat keyword "סטט" in a sentence', () => {
+    expect(inferUrgencyFromText("א.ק.ג סטט")).toBe("stat");
+  });
+
+  it('returns "urgent" for Hebrew urgent keyword "אורגנטי"', () => {
+    expect(inferUrgencyFromText("אורגנטי")).toBe("urgent");
+  });
+
+  it('returns "morning" for Hebrew morning keyword in a sentence', () => {
+    expect(inferUrgencyFromText("בדיקה בבוקר")).toBe("morning");
   });
 
   it('returns "routine" for unrecognized text', () => {
