@@ -79,10 +79,8 @@ const RULES: Rule[] = [
     source: "סוכרת",
     group: "diabetes",
     triggerField: "tasks",
-    tasks: [
-      // Only BS monitoring — the rest is morning team work unless explicitly asked.
-      { text: "מדידת סוכר לפני ארוחות + לפני שינה", urgency: "routine", category: "labs" },
-    ],
+    // BS monitoring is ordered on admission, not an on-call task unless explicitly asked.
+    tasks: [],
   },
 
   // ═══ FALL RISK ═══
@@ -113,10 +111,8 @@ const RULES: Rule[] = [
     source: "בידוד",
     group: "isolation",
     triggerField: "tasks",
-    tasks: [
-      // Signage + PPE = nursing tasks, not doctor
-      { text: "תרבית מעקב לפי פרוטוקול", urgency: "routine", category: "labs" },
-    ],
+    // All isolation tasks (signage, PPE, cultures) = nursing, not on-call doctor.
+    tasks: [],
   },
 
   // ═══ CATHETER ═══

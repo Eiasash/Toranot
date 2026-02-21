@@ -128,32 +128,23 @@ describe("rules engine — all rules", () => {
     });
   });
 
-  // 5. Diabetes
+  // 5. Diabetes — 0 auto-generated tasks (BS only if explicitly asked)
   describe("Diabetes", () => {
-    it("triggers on 'סוכרת'", () => {
+    it("generates 0 tasks for סוכרת", () => {
       const tasks = applyRules(makePatient({ status: ["סוכרת סוג 2"] }));
-      expect(generatedSources(tasks)).toContain("סוכרת");
+      const dmTasks = tasks.filter((t) => t.generatedFrom === "סוכרת");
+      expect(dmTasks).toHaveLength(0);
     });
 
-    it("triggers on 'DM2'", () => {
+    it("generates 0 tasks for DM2", () => {
       const tasks = applyRules(makePatient({ status: ["DM2"] }));
-      expect(generatedSources(tasks)).toContain("סוכרת");
-    });
-
-    it("triggers on 'insulin'", () => {
-      const tasks = applyRules(makePatient({ status: ["insulin sliding scale"] }));
-      expect(generatedSources(tasks)).toContain("סוכרת");
+      const dmTasks = tasks.filter((t) => t.generatedFrom === "סוכרת");
+      expect(dmTasks).toHaveLength(0);
     });
 
     it("does NOT trigger on 'DM' followed by a word char (e.g. DMG)", () => {
       const tasks = applyRules(makePatient({ status: ["DMG test"] }));
       expect(generatedSources(tasks)).not.toContain("סוכרת");
-    });
-
-    it("generates 1 diabetes task (BS monitoring only)", () => {
-      const tasks = applyRules(makePatient({ status: ["סוכרת"] }));
-      const dmTasks = tasks.filter((t) => t.generatedFrom === "סוכרת");
-      expect(dmTasks).toHaveLength(1);
     });
   });
 
@@ -201,27 +192,18 @@ describe("rules engine — all rules", () => {
     });
   });
 
-  // 8. Isolation
+  // 8. Isolation — 0 auto-generated tasks (nursing job)
   describe("Isolation", () => {
-    it("triggers on 'בידוד'", () => {
+    it("generates 0 tasks for בידוד", () => {
       const tasks = applyRules(makePatient({ status: ["בידוד מגע"] }));
-      expect(generatedSources(tasks)).toContain("בידוד");
-    });
-
-    it("triggers on 'MRSA' flag", () => {
-      const tasks = applyRules(makePatient({ flags: ["MRSA"] }));
-      expect(generatedSources(tasks)).toContain("בידוד");
-    });
-
-    it("triggers on 'VRE'", () => {
-      const tasks = applyRules(makePatient({ flags: ["VRE"] }));
-      expect(generatedSources(tasks)).toContain("בידוד");
-    });
-
-    it("generates 1 isolation task (culture only)", () => {
-      const tasks = applyRules(makePatient({ status: ["בידוד"] }));
       const isoTasks = tasks.filter((t) => t.generatedFrom === "בידוד");
-      expect(isoTasks).toHaveLength(1);
+      expect(isoTasks).toHaveLength(0);
+    });
+
+    it("generates 0 tasks for MRSA", () => {
+      const tasks = applyRules(makePatient({ flags: ["MRSA"] }));
+      const isoTasks = tasks.filter((t) => t.generatedFrom === "בידוד");
+      expect(isoTasks).toHaveLength(0);
     });
   });
 
@@ -704,11 +686,11 @@ describe("rules engine — cross-cutting behavior", () => {
 
   it("multiple conditions generate tasks from each rule", () => {
     const tasks = applyRules(
-      makePatient({ status: ["סוכרת"], flags: ["NPO"] }),
+      makePatient({ status: ["NPO", "עירוי דם"] }),
     );
     const sources = generatedSources(tasks);
-    expect(sources).toContain("סוכרת");
     expect(sources).toContain("NPO");
+    expect(sources).toContain("עירוי דם");
   });
 
   it("patient with no matching conditions generates no tasks", () => {
