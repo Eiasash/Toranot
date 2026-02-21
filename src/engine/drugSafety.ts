@@ -373,12 +373,18 @@ export function checkRenalDoseWarnings(patient: PatientEntry): RenalWarning[] {
   for (const drug of RENAL_DRUGS) {
     if (!drug.pattern.test(allText)) continue;
 
-    // Find the most severe applicable threshold using the conservative CrCl
+    // Find the most severe applicable threshold using the conservative CrCl.
+    // Secondary sort by maxCrCl ascending so that within the same severity,
+    // the most specific (narrowest) threshold wins. Without this, Enoxaparin
+    // CrCl <15 would get the CrCl <30 "reduce dose" guidance instead of
+    // the CrCl <15 "AVOID — use UFH" guidance (both are severity "critical").
     const applicable = drug.thresholds
       .filter((t) => conservativeCrCl <= t.maxCrCl)
       .sort((a, b) => {
         const order = { critical: 0, warning: 1 };
-        return order[a.severity] - order[b.severity];
+        const severityDiff = order[a.severity] - order[b.severity];
+        if (severityDiff !== 0) return severityDiff;
+        return a.maxCrCl - b.maxCrCl;
       });
 
     if (applicable.length > 0) {

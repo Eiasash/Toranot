@@ -111,7 +111,7 @@ export function ParsePreview({ patients, onConfirm, onCancel }: ParsePreviewProp
                       {p.room ?? "?"}
                     </span>
                     <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex-1">
-                      {p.name}
+                      {p.name ?? "?"}
                     </span>
                     {p.age != null && (
                       <span className="text-xs text-gray-500 dark:text-gray-400">
