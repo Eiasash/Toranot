@@ -11,6 +11,7 @@ import { GlobalSearch } from "./components/GlobalSearch";
 import { UndoToastContainer } from "./components/UndoToast";
 import { ShiftTimer } from "./components/ShiftTimer";
 import { usePatientsDispatch, usePatientsState } from "./context/PatientsContext";
+import { QRSync } from "./components/QRSync";
 import { requestNotificationPermission, syncReminders } from "./utils/taskReminders";
 
 // ─── Shift Progress Bar ────────────────────────────────────
@@ -47,7 +48,7 @@ function ShiftProgress() {
 
 type ConfirmDialog =
   | { type: "none" }
-  | { type: "archive"; label: string; incompleteTasks: Array<{ name: string; room: string | null; task: string }> }
+  | { type: "archive"; label: string; incompleteTasks: Array<{ name: string; room: string | null; task: string }>; patientsNoTasks: Array<{ name: string; room: string | null }>; abnormalLabs: Array<{ name: string; room: string | null; lab: string }>; openStatCount: number }
   | { type: "clear" };
 
 function ConfirmModal({
@@ -87,6 +88,9 @@ function ConfirmModal({
 
   // archive dialog
   const hasIncomplete = dialog.incompleteTasks.length > 0;
+  const hasNoTasks = dialog.patientsNoTasks.length > 0;
+  const hasAbnormalLabs = dialog.abnormalLabs.length > 0;
+  const hasIssues = hasIncomplete || hasNoTasks || hasAbnormalLabs;
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center px-4 pb-8 sm:pb-0 bg-black/40">
       <div className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden max-h-[80vh] flex flex-col">
@@ -98,14 +102,26 @@ function ConfirmModal({
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{dialog.label}</p>
         </div>
 
-        {/* Incomplete tasks warning */}
-        {hasIncomplete && (
-          <div className="mx-5 mb-3 flex-shrink-0">
+        <div className="overflow-y-auto flex-1 px-5 pb-3 space-y-2.5">
+          {/* Open STAT tasks — red */}
+          {dialog.openStatCount > 0 && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl p-3">
+              <p className="text-xs font-semibold text-red-800 dark:text-red-300 mb-1">
+                🔴 {dialog.openStatCount} משימות STAT פתוחות!
+              </p>
+              <p className="text-xs text-red-600 dark:text-red-400">
+                משימות דחופות שטרם הושלמו. שקול לטפל לפני סיום המשמרת.
+              </p>
+            </div>
+          )}
+
+          {/* Incomplete urgent tasks */}
+          {hasIncomplete && (
             <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-3">
               <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 mb-2">
-                ⚠️ {dialog.incompleteTasks.length} משימות לא הושלמו
+                ⚠️ {dialog.incompleteTasks.length} משימות דחופות לא הושלמו
               </p>
-              <div className="space-y-1 max-h-36 overflow-y-auto">
+              <div className="space-y-1 max-h-28 overflow-y-auto">
                 {dialog.incompleteTasks.map((t, i) => (
                   <div key={i} className="text-xs text-amber-700 dark:text-amber-400">
                     <span className="font-mono font-bold">{t.room ?? "?"}</span>
@@ -114,15 +130,63 @@ function ConfirmModal({
                 ))}
               </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {/* Abnormal labs without follow-up — orange */}
+          {hasAbnormalLabs && (
+            <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded-xl p-3">
+              <p className="text-xs font-semibold text-orange-800 dark:text-orange-300 mb-2">
+                🧪 {dialog.abnormalLabs.length} ערכי מעבדה חריגים ללא מעקב
+              </p>
+              <div className="space-y-1 max-h-28 overflow-y-auto">
+                {dialog.abnormalLabs.map((l, i) => (
+                  <div key={i} className="text-xs text-orange-700 dark:text-orange-400">
+                    <span className="font-mono font-bold">{l.room ?? "?"}</span>
+                    {" "}{l.name} — {l.lab}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Patients with no tasks — blue info */}
+          {hasNoTasks && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-3">
+              <p className="text-xs font-semibold text-blue-800 dark:text-blue-300 mb-2">
+                ℹ️ {dialog.patientsNoTasks.length} מטופלים ללא משימות
+              </p>
+              <div className="space-y-1 max-h-20 overflow-y-auto">
+                {dialog.patientsNoTasks.map((p, i) => (
+                  <div key={i} className="text-xs text-blue-700 dark:text-blue-400">
+                    <span className="font-mono font-bold">{p.room ?? "?"}</span> {p.name}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* All clear */}
+          {!hasIssues && (
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-xl p-3">
+              <p className="text-xs font-semibold text-green-800 dark:text-green-300">
+                ✅ אין ממצאים חריגים — ניתן לסיים בבטחה
+              </p>
+            </div>
+          )}
+        </div>
 
         <div className="flex border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
           <button onClick={onCancel} className="flex-1 py-4 text-sm text-gray-600 dark:text-gray-400 active:bg-gray-50 dark:active:bg-gray-800">
             ביטול
           </button>
-          <button onClick={onConfirm} className="flex-1 py-4 text-sm font-bold text-blue-600 border-r border-gray-200 dark:border-gray-700 active:bg-blue-50 dark:active:bg-blue-900/20">
-            {hasIncomplete ? "שמור בכל זאת" : "שמור משמרת"}
+          <button onClick={onConfirm} className={`flex-1 py-4 text-sm font-bold border-r border-gray-200 dark:border-gray-700 ${
+            dialog.openStatCount > 0
+              ? "text-red-600 active:bg-red-50 dark:active:bg-red-900/20"
+              : hasIssues
+                ? "text-amber-600 active:bg-amber-50 dark:active:bg-amber-900/20"
+                : "text-blue-600 active:bg-blue-50 dark:active:bg-blue-900/20"
+          }`}>
+            {dialog.openStatCount > 0 ? "שמור למרות STAT פתוח" : hasIssues ? "שמור בכל זאת" : "שמור משמרת"}
           </button>
         </div>
       </div>
@@ -145,14 +209,52 @@ function OverflowMenu() {
     const shiftType = hour >= 7 && hour < 15 ? "בוקר" : hour >= 15 && hour < 23 ? "ערב" : "לילה";
     const label = `${date} — ${shiftType}`;
 
-    // Collect incomplete stat/urgent tasks for the warning list
+    // Collect incomplete stat/urgent tasks
     const incompleteTasks = patients.flatMap((p) =>
       [...p.tasks, ...p.generatedTasks]
         .filter((t) => !t.done && (t.urgency === "stat" || t.urgency === "urgent"))
         .map((t) => ({ name: p.name ?? "?", room: p.room ?? null, task: t.text })),
     );
 
-    setDialog({ type: "archive", label, incompleteTasks });
+    // Patients with zero tasks (possibly forgotten)
+    const patientsNoTasks = patients
+      .filter((p) => [...p.tasks, ...p.generatedTasks].length === 0)
+      .map((p) => ({ name: p.name ?? "?", room: p.room ?? null }));
+
+    // Abnormal labs without a follow-up task mentioning that lab
+    const abnormalLabs: Array<{ name: string; room: string | null; lab: string }> = [];
+    for (const p of patients) {
+      for (const lab of p.labs ?? []) {
+        const val = lab.value;
+        if (isNaN(val)) continue;
+        const abnormal =
+          (lab.label === "K" && (val < 3.0 || val > 5.5)) ||
+          (lab.label === "Na" && (val < 130 || val > 150)) ||
+          (lab.label === "Cr" && val > 1.5) ||
+          (lab.label === "Hb" && val < 8) ||
+          (lab.label === "PLT" && val < 50) ||
+          (lab.label === "WBC" && val > 20) ||
+          (lab.label === "INR" && val > 3) ||
+          (lab.label === "glucose" && (val < 70 || val > 400)) ||
+          (lab.label === "Lac" && val > 4) ||
+          (lab.label === "pH" && (val < 7.25 || val > 7.55));
+        if (abnormal) {
+          const allTasks = [...p.tasks, ...p.generatedTasks];
+          const hasFollowUp = allTasks.some((t) => !t.done && t.text.toLowerCase().includes(lab.label.toLowerCase()));
+          if (!hasFollowUp) {
+            abnormalLabs.push({ name: p.name ?? "?", room: p.room ?? null, lab: `${lab.label}: ${val}` });
+          }
+        }
+      }
+    }
+
+    const openStatCount = incompleteTasks.filter((t) =>
+      patients.some((p) =>
+        [...p.tasks, ...p.generatedTasks].some((pt) => pt.text === t.task && pt.urgency === "stat" && !pt.done)
+      )
+    ).length;
+
+    setDialog({ type: "archive", label, incompleteTasks, patientsNoTasks, abnormalLabs, openStatCount });
   };
 
   const handleClearClick = () => {
@@ -219,6 +321,17 @@ function OverflowMenu() {
                 <span className="text-base">📁</span>
                 היסטוריית משמרות
               </button>
+              {/* QR Sync */}
+              {patients.length > 0 && (
+                <button
+                  onClick={() => setOpen(false)}
+                  id="overflow-qrsync-trigger"
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-slate-200 active:bg-slate-700 border-t border-slate-700 text-right"
+                >
+                  <span className="text-base">📲</span>
+                  סנכרון QR
+                </button>
+              )}
               {/* Clear all */}
               {patients.length > 0 && (
                 <button
@@ -351,7 +464,7 @@ function useShakeDetector(onShake: () => void) {
 }
 
 // ─── Main App ──────────────────────────────────────────────
-type Modal = "none" | "reference" | "handoff" | "dashboard" | "history" | "search";
+type Modal = "none" | "reference" | "handoff" | "dashboard" | "history" | "search" | "qrsync";
 
 function AppInner() {
   const [modal, setModal] = useState<Modal>("none");
@@ -384,6 +497,15 @@ function AppInner() {
     const el = document.getElementById("overflow-history-trigger");
     if (!el) return;
     const handler = () => setModal("history");
+    el.addEventListener("click", handler);
+    return () => el.removeEventListener("click", handler);
+  });
+
+  // Listen for QR sync button
+  useEffect(() => {
+    const el = document.getElementById("overflow-qrsync-trigger");
+    if (!el) return;
+    const handler = () => setModal("qrsync");
     el.addEventListener("click", handler);
     return () => el.removeEventListener("click", handler);
   });
@@ -452,6 +574,7 @@ function AppInner() {
       {modal === "dashboard"  && <TaskDashboard   onClose={() => setModal("none")} />}
       {modal === "history"    && <ShiftHistory    onClose={() => setModal("none")} />}
       {modal === "search"     && <GlobalSearch    onClose={() => setModal("none")} />}
+      {modal === "qrsync"     && <QRSync          onClose={() => setModal("none")} />}
     </div>
   );
 }

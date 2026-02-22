@@ -1,15 +1,29 @@
-import { useCallback } from "react";
+import { useCallback, useState, useMemo } from "react";
 import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
 import { SECTION_LABEL } from "../types";
 import { PatientCard, PatientRow } from "./PatientCard";
 import { PullToRefresh } from "./PullToRefresh";
+import { calculateAcuity } from "../engine/acuity";
 
 export function PatientList() {
   const { patients, activeSection } = usePatientsState();
   const dispatch = usePatientsDispatch();
-  const filtered = patients
-    .filter((p) => p.section === activeSection)
-    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const [sortByAcuity, setSortByAcuity] = useState(false);
+
+  const filtered = useMemo(() => {
+    const sectionPatients = patients
+      .filter((p) => p.section === activeSection);
+
+    if (sortByAcuity) {
+      return [...sectionPatients].sort((a, b) => {
+        const scoreA = calculateAcuity(a).score;
+        const scoreB = calculateAcuity(b).score;
+        if (scoreA !== scoreB) return scoreB - scoreA;
+        return (a.order ?? 0) - (b.order ?? 0);
+      });
+    }
+    return sectionPatients.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  }, [patients, activeSection, sortByAcuity]);
 
   const handleRefresh = useCallback(() => {
     dispatch({ type: "REAPPLY_RULES" });
@@ -34,6 +48,25 @@ export function PatientList() {
 
   return (
     <>
+      {/* Sort toggle */}
+      {filtered.length > 1 && (
+        <div className="flex items-center justify-between px-3 py-1.5 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            {filtered.length} חולים ב{SECTION_LABEL[activeSection]}
+          </span>
+          <button
+            onClick={() => setSortByAcuity((v) => !v)}
+            className={`text-xs px-2.5 py-1 rounded-lg transition-colors ${
+              sortByAcuity
+                ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 font-semibold"
+                : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
+            }`}
+          >
+            {sortByAcuity ? "🔥 מיון חומרה" : "📋 מיון ידני"}
+          </button>
+        </div>
+      )}
+
       {/* Mobile: full-width cards with pull-to-refresh */}
       <div className="lg:hidden">
         <PullToRefresh onRefresh={handleRefresh}>

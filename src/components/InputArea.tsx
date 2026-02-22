@@ -31,10 +31,15 @@ export function InputArea() {
     setPreview({ text: t, patients: parsed });
   }
 
-  /** User confirmed preview — now commit */
-  function confirmImport() {
+  /** User confirmed preview — now commit (with any inline edits) */
+  function confirmImport(editedPatients?: PatientEntry[]) {
     if (!preview) return;
-    dispatch({ type: "IMPORT_TEXT", text: preview.text });
+    if (editedPatients) {
+      // Use the edited patients directly (inline edits in ParsePreview)
+      dispatch({ type: "IMPORT_BACKUP", patients: editedPatients });
+    } else {
+      dispatch({ type: "IMPORT_TEXT", text: preview.text });
+    }
     setPreview(null);
     setText("");
     setMode("closed");

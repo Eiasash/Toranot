@@ -1,31 +1,25 @@
 /**
- * ParsePreview — shows what WILL be imported before committing to app state.
+ * ParsePreview — Enhanced with inline field editing + confidence indicators.
  *
- * Clinical rationale: Claude Vision OCR is very good but not infallible.
- * Common failure modes:
- *   - Room number misread (49/1 → 48/1)
- *   - Two patient rows merged
- *   - Hebrew name OCR error (שרה → שרח)
- *   - Wrong section assignment when the printed page title is ambiguous
+ * NEW: Tap any field (room, name, age, diagnosis) to edit it in-place.
+ * Low-confidence fields get a yellow border to draw attention.
+ * Confidence is based on OCR confidence from the parser.
  *
- * The preview gives the doctor one fast visual scan before tasks are
- * generated, rules fire, and the list becomes live. This is the same
- * principle as a medication double-check before administration.
- *
- * Design: quick to scan — room + name + age prominent, tasks count secondary.
- * One tap to confirm. One tap to go back and re-scan.
+ * Clinical safety: room number errors are the #1 cause of wrong-patient
+ * task assignment. Yellow highlighting on low-confidence rooms ensures
+ * the doctor checks before importing.
  */
 
+import { useState, useRef, useEffect, useCallback } from "react";
 import type { PatientEntry } from "../types";
 import { SECTION_LABEL } from "../types";
 
 interface ParsePreviewProps {
   patients: PatientEntry[];
-  onConfirm: () => void;
+  onConfirm: (editedPatients: PatientEntry[]) => void;
   onCancel: () => void;
 }
 
-/** Group patients by section for a clean visual layout */
 function groupBySection(patients: PatientEntry[]) {
   const map = new Map<string, PatientEntry[]>();
   for (const p of patients) {
@@ -36,7 +30,121 @@ function groupBySection(patients: PatientEntry[]) {
   return map;
 }
 
-export function ParsePreview({ patients, onConfirm, onCancel }: ParsePreviewProps) {
+// ── Inline editable field ──
+function EditableField({
+  value,
+  onChange,
+  placeholder,
+  className,
+  lowConfidence,
+  mono,
+  type = "text",
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  className?: string;
+  lowConfidence?: boolean;
+  mono?: boolean;
+  type?: "text" | "number";
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editing]);
+
+  const commit = useCallback(() => {
+    setEditing(false);
+    if (draft !== value) onChange(draft);
+  }, [draft, value, onChange]);
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        type={type}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+          if (e.key === "Escape") { setDraft(value); setEditing(false); }
+        }}
+        className={`px-1.5 py-0.5 rounded border-2 border-blue-400 bg-blue-50 dark:bg-blue-900/30 text-sm outline-none ${mono ? "font-mono" : ""} ${className ?? ""}`}
+        dir="auto"
+      />
+    );
+  }
+
+  return (
+    <button
+      onClick={() => { setDraft(value); setEditing(true); }}
+      className={`px-1.5 py-0.5 rounded text-sm transition-colors cursor-text text-right ${
+        lowConfidence
+          ? "border-2 border-amber-400 bg-amber-50 dark:bg-amber-900/20"
+          : "border border-transparent hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
+      } ${mono ? "font-mono" : ""} ${className ?? ""}`}
+      title="לחץ לעריכה"
+    >
+      {value || <span className="text-gray-400 italic">{placeholder}</span>}
+      {lowConfidence && <span className="mr-1 text-amber-500 text-[10px]">⚠️</span>}
+    </button>
+  );
+}
+
+// ── Delete patient button ──
+function DeleteButton({ onDelete }: { onDelete: () => void }) {
+  const [confirming, setConfirming] = useState(false);
+
+  if (confirming) {
+    return (
+      <div className="flex items-center gap-1">
+        <button
+          onClick={onDelete}
+          className="text-[10px] px-2 py-1 bg-red-600 text-white rounded font-semibold"
+        >
+          מחק
+        </button>
+        <button
+          onClick={() => setConfirming(false)}
+          className="text-[10px] px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded"
+        >
+          ✕
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setConfirming(true)}
+      className="text-gray-400 hover:text-red-500 text-sm px-1"
+      title="הסר חולה"
+    >
+      🗑️
+    </button>
+  );
+}
+
+export function ParsePreview({ patients: initialPatients, onConfirm, onCancel }: ParsePreviewProps) {
+  const [patients, setPatients] = useState<PatientEntry[]>(initialPatients);
+
+  const updatePatient = useCallback((id: string, update: Partial<PatientEntry>) => {
+    setPatients((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, ...update } : p)),
+    );
+  }, []);
+
+  const deletePatient = useCallback((id: string) => {
+    setPatients((prev) => prev.filter((p) => p.id !== id));
+  }, []);
+
   const sections = groupBySection(patients);
   const totalTasks = patients.reduce(
     (sum, p) => sum + p.tasks.length + p.generatedTasks.length,
@@ -50,6 +158,7 @@ export function ParsePreview({ patients, onConfirm, onCancel }: ParsePreviewProp
       ).length,
     0,
   );
+  const lowConfCount = patients.filter((p) => p.confidence < 0.8).length;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-gray-900">
@@ -69,22 +178,29 @@ export function ParsePreview({ patients, onConfirm, onCancel }: ParsePreviewProp
             {statCount > 0 && (
               <span className="text-red-400 mr-1"> · 🔴 {statCount} סטט</span>
             )}
-            {" — בדוק לפני הייבוא"}
+            {" — "}
+            <span className="text-blue-300">לחץ על שדה לעריכה</span>
           </p>
         </div>
       </div>
 
-      {/* Warning banner */}
-      <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 px-4 py-2 text-xs text-amber-800 dark:text-amber-300 flex-shrink-0">
-        <span className="font-semibold">⚠️ בדוק חדר ושם לכל חולה לפני אישור.</span>
-        {" "}שגיאת OCR בחדר עלולה להוביל למשימות בחולה הלא נכון.
+      {/* Warning banners */}
+      <div className="flex-shrink-0">
+        <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 px-4 py-2 text-xs text-amber-800 dark:text-amber-300">
+          <span className="font-semibold">⚠️ בדוק חדר ושם לכל חולה לפני אישור.</span>
+          {" "}שגיאת OCR בחדר עלולה להוביל למשימות בחולה הלא נכון.
+        </div>
+        {lowConfCount > 0 && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 px-4 py-1.5 text-xs text-amber-700 dark:text-amber-400">
+            🔍 <span className="font-semibold">{lowConfCount} שדות</span> עם ביטחון OCR נמוך — מסומנים בצהוב
+          </div>
+        )}
       </div>
 
-      {/* Patient list */}
+      {/* Patient list with inline editing */}
       <div className="flex-1 overflow-y-auto">
         {Array.from(sections.entries()).map(([sectionLabel, pts]) => (
           <div key={sectionLabel}>
-            {/* Section header */}
             <div className="sticky top-0 bg-slate-100 dark:bg-slate-800 px-4 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 z-10">
               {sectionLabel} · {pts.length} חולים
             </div>
@@ -95,6 +211,7 @@ export function ParsePreview({ patients, onConfirm, onCancel }: ParsePreviewProp
               const statTasks = pending.filter((t) => t.urgency === "stat");
               const urgentTasks = pending.filter((t) => t.urgency === "urgent");
               const hasCritical = statTasks.length > 0;
+              const isLowConf = p.confidence < 0.8;
 
               return (
                 <div
@@ -102,32 +219,53 @@ export function ParsePreview({ patients, onConfirm, onCancel }: ParsePreviewProp
                   className={`px-4 py-3 border-b border-gray-100 dark:border-gray-800 ${
                     hasCritical
                       ? "bg-red-50/50 dark:bg-red-900/10"
+                      : isLowConf
+                      ? "bg-amber-50/30 dark:bg-amber-900/5"
                       : "bg-white dark:bg-gray-900"
                   }`}
                 >
-                  {/* Main row: room + name + age */}
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-mono text-sm font-bold text-blue-700 dark:text-blue-400 min-w-[3.5rem]">
-                      {p.room ?? "?"}
-                    </span>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex-1">
-                      {p.name ?? "?"}
-                    </span>
+                  {/* Editable row: room + name + age + delete */}
+                  <div className="flex items-center gap-1.5">
+                    <EditableField
+                      value={p.room ?? ""}
+                      onChange={(v) => updatePatient(p.id, { room: v || null })}
+                      placeholder="חדר"
+                      className="text-blue-700 dark:text-blue-400 font-bold min-w-[3rem] text-center"
+                      lowConfidence={isLowConf}
+                      mono
+                    />
+                    <EditableField
+                      value={p.name ?? ""}
+                      onChange={(v) => updatePatient(p.id, { name: v || null })}
+                      placeholder="שם"
+                      className="font-semibold text-gray-900 dark:text-gray-100 flex-1"
+                      lowConfidence={isLowConf}
+                    />
                     {p.age != null && (
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {p.age}♦
-                      </span>
+                      <EditableField
+                        value={String(p.age)}
+                        onChange={(v) => updatePatient(p.id, { age: parseInt(v) || null })}
+                        placeholder="גיל"
+                        className="text-gray-500 dark:text-gray-400 w-10 text-center"
+                        type="number"
+                      />
                     )}
+                    <DeleteButton onDelete={() => deletePatient(p.id)} />
                   </div>
 
-                  {/* Diagnosis */}
-                  {p.diagnosis && (
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-                      {p.diagnosis}
+                  {/* Editable diagnosis */}
+                  {(p.diagnosis || isLowConf) && (
+                    <div className="mt-0.5">
+                      <EditableField
+                        value={p.diagnosis ?? ""}
+                        onChange={(v) => updatePatient(p.id, { diagnosis: v || null })}
+                        placeholder="אבחנה"
+                        className="text-xs text-gray-500 dark:text-gray-400 w-full"
+                      />
                     </div>
                   )}
 
-                  {/* Flags + task summary */}
+                  {/* Flags + task summary (read-only) */}
                   <div className="flex flex-wrap gap-1 mt-1">
                     {p.flags.map((f) => (
                       <span
@@ -157,9 +295,15 @@ export function ParsePreview({ patients, onConfirm, onCancel }: ParsePreviewProp
                         {pending.length} משימות
                       </span>
                     )}
+
+                    {/* Confidence badge */}
+                    {isLowConf && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 font-semibold">
+                        🔍 OCR {Math.round(p.confidence * 100)}%
+                      </span>
+                    )}
                   </div>
 
-                  {/* First stat task text preview */}
                   {statTasks.length > 0 && (
                     <div className="mt-1 text-xs text-red-700 dark:text-red-300 truncate">
                       📋 {statTasks[0].text}
@@ -172,11 +316,12 @@ export function ParsePreview({ patients, onConfirm, onCancel }: ParsePreviewProp
         ))}
       </div>
 
-      {/* Footer CTA */}
+      {/* Footer */}
       <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900 space-y-2">
         <button
-          onClick={onConfirm}
-          className="w-full py-4 bg-blue-600 text-white rounded-xl text-lg font-bold active:bg-blue-700 active:scale-[0.98] transition-transform"
+          onClick={() => onConfirm(patients)}
+          disabled={patients.length === 0}
+          className="w-full py-4 bg-blue-600 text-white rounded-xl text-lg font-bold active:bg-blue-700 active:scale-[0.98] transition-transform disabled:opacity-40"
         >
           ✓ אשר ייבוא {patients.length} חולים
         </button>

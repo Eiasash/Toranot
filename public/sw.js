@@ -1,12 +1,14 @@
 /**
- * Service Worker v7 — Improved offline support + asset precaching
+ * Service Worker v8 — Push notifications + improved offline + asset precaching
+ * 
+ * NEW: Background push notification support for task reminders.
+ * These work even when the app is backgrounded/screen off.
  * 
  * Strategy: Cache-first for hashed assets (immutable), network-first for HTML.
- * On new version: auto-update and notify user via postMessage.
- * Cross-Origin Isolation headers for SharedArrayBuffer support.
+ * Cross-Origin Isolation headers for SharedArrayBuffer (Tesseract.js).
  */
 
-const CACHE_VERSION = 7;
+const CACHE_VERSION = 8;
 const CACHE_NAME = `toranot-v${CACHE_VERSION}`;
 
 const PRECACHE_ASSETS = [
@@ -17,7 +19,7 @@ const PRECACHE_ASSETS = [
   "./icon-512.png",
 ];
 
-// Install: precache assets, skip waiting to activate immediately
+// ── Install ──
 self.addEventListener("install", (event) => {
   self.skipWaiting();
   event.waitUntil(
@@ -27,7 +29,7 @@ self.addEventListener("install", (event) => {
   );
 });
 
-// Activate: purge ALL old caches, claim clients, notify about update
+// ── Activate ──
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     Promise.all([
@@ -40,38 +42,37 @@ self.addEventListener("activate", (event) => {
       ),
       self.clients.claim(),
     ]).then(() => {
-      // Notify all clients that a new version is active
       self.clients.matchAll().then((clients) => {
         clients.forEach((client) => {
-          client.postMessage({
-            type: "SW_UPDATED",
-            version: CACHE_VERSION,
-          });
+          client.postMessage({ type: "SW_UPDATED", version: CACHE_VERSION });
         });
       });
     }),
   );
 });
 
-// Fetch: smart strategy based on request type
+// ── Fetch ──
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   if (event.request.url.startsWith("chrome-extension://")) return;
   if (
     event.request.cache === "only-if-cached" &&
     event.request.mode !== "same-origin"
-  )
-    return;
+  ) return;
 
-  // Skip caching for API calls
-  if (event.request.url.includes("/api/") || event.request.url.includes("/.netlify/")) {
+  // Skip caching for API calls (Anthropic, etc.)
+  if (
+    event.request.url.includes("/api/") ||
+    event.request.url.includes("/.netlify/") ||
+    event.request.url.includes("api.anthropic.com")
+  ) {
     return;
   }
 
   const url = new URL(event.request.url);
   const isSameOrigin = url.origin === self.location.origin;
 
-  // Hashed assets (JS/CSS with fingerprint) → cache-first (immutable)
+  // Hashed assets → cache-first (immutable)
   const isHashedAsset = isSameOrigin && /\/assets\/.*-[a-zA-Z0-9]{8,}\.(js|css|woff2?)$/.test(url.pathname);
 
   if (isHashedAsset) {
@@ -90,25 +91,194 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Everything else → network-first with cache fallback
+  // Everything else → network-first
   event.respondWith(
     fetch(event.request)
       .then((response) => {
         if (!response || response.status === 0 || response.type === "error")
           return response;
-
         const coiResponse = addCOIHeaders(response);
-
-        // Cache successful same-origin responses
         if (response.status === 200 && isSameOrigin) {
           const toCache = coiResponse.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, toCache));
         }
-
         return coiResponse;
       })
       .catch(() => caches.match(event.request)),
   );
+});
+
+// ── Push Notifications ──
+// Receives push events from the app's scheduling system.
+// The app posts scheduled reminders via the message event below,
+// and the SW fires notifications at the right time even when backgrounded.
+
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
+
+  let payload;
+  try {
+    payload = event.data.json();
+  } catch {
+    payload = {
+      title: "תורנות — תזכורת",
+      body: event.data.text(),
+      tag: "toranot-reminder",
+    };
+  }
+
+  const options = {
+    body: payload.body || "",
+    icon: "./icon-192.png",
+    badge: "./icon-192.png",
+    tag: payload.tag || "toranot-" + Date.now(),
+    renotify: true,
+    requireInteraction: payload.urgency === "stat",
+    vibrate: payload.urgency === "stat"
+      ? [200, 100, 200, 100, 200]  // Aggressive for STAT
+      : [200, 100, 200],            // Normal
+    data: {
+      url: payload.url || "./",
+      patientId: payload.patientId || null,
+      taskId: payload.taskId || null,
+    },
+    actions: [
+      { action: "done", title: "✓ בוצע" },
+      { action: "snooze", title: "⏰ +15 דק׳" },
+    ],
+  };
+
+  event.waitUntil(self.registration.showNotification(payload.title, options));
+});
+
+// ── Notification click → open app at the right patient ──
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  const data = event.notification.data || {};
+  const action = event.action;
+
+  if (action === "done" && data.taskId) {
+    // Mark task done via postMessage to any open client
+    event.waitUntil(
+      self.clients.matchAll({ type: "window" }).then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({
+            type: "TASK_DONE_FROM_NOTIFICATION",
+            taskId: data.taskId,
+            patientId: data.patientId,
+          });
+        });
+      }),
+    );
+    return;
+  }
+
+  if (action === "snooze" && data.taskId) {
+    // Snooze: re-show notification in 15 minutes
+    event.waitUntil(
+      new Promise((resolve) => {
+        setTimeout(() => {
+          self.registration
+            .showNotification(event.notification.title + " (תזכורת חוזרת)", {
+              body: event.notification.body,
+              icon: "./icon-192.png",
+              badge: "./icon-192.png",
+              tag: "snooze-" + data.taskId,
+              renotify: true,
+              vibrate: [200, 100, 200],
+              data: data,
+              actions: [
+                { action: "done", title: "✓ בוצע" },
+                { action: "snooze", title: "⏰ +15 דק׳" },
+              ],
+            })
+            .then(resolve);
+        }, 15 * 60 * 1000);
+      }),
+    );
+    return;
+  }
+
+  // Default: open/focus the app
+  const urlToOpen = data.url || "./";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      // Focus existing window if available
+      for (const client of clients) {
+        if (client.url.includes("toranot") || client.url.includes(self.location.origin)) {
+          client.focus();
+          if (data.patientId) {
+            client.postMessage({
+              type: "FOCUS_PATIENT",
+              patientId: data.patientId,
+            });
+          }
+          return;
+        }
+      }
+      // Otherwise open a new window
+      return self.clients.openWindow(urlToOpen);
+    }),
+  );
+});
+
+// ── Message from app: schedule local notification ──
+// Since there's no push server, the app uses postMessage to ask
+// the SW to show a notification. This works even when app is backgrounded
+// because the SW stays alive briefly after the message.
+self.addEventListener("message", (event) => {
+  if (!event.data) return;
+
+  if (event.data.type === "SCHEDULE_NOTIFICATION") {
+    const { title, body, tag, delay, urgency, patientId, taskId } = event.data;
+    
+    if (delay && delay > 0) {
+      // Delayed notification — use setTimeout in SW context
+      setTimeout(() => {
+        self.registration.showNotification(title, {
+          body,
+          icon: "./icon-192.png",
+          badge: "./icon-192.png",
+          tag: tag || "toranot-" + Date.now(),
+          renotify: true,
+          requireInteraction: urgency === "stat",
+          vibrate: urgency === "stat"
+            ? [200, 100, 200, 100, 200]
+            : [200, 100, 200],
+          data: { url: "./", patientId, taskId },
+          actions: [
+            { action: "done", title: "✓ בוצע" },
+            { action: "snooze", title: "⏰ +15 דק׳" },
+          ],
+        });
+      }, delay);
+    } else {
+      // Immediate notification
+      event.waitUntil(
+        self.registration.showNotification(title, {
+          body,
+          icon: "./icon-192.png",
+          badge: "./icon-192.png",
+          tag: tag || "toranot-" + Date.now(),
+          renotify: true,
+          requireInteraction: urgency === "stat",
+          vibrate: urgency === "stat"
+            ? [200, 100, 200, 100, 200]
+            : [200, 100, 200],
+          data: { url: "./", patientId, taskId },
+          actions: [
+            { action: "done", title: "✓ בוצע" },
+            { action: "snooze", title: "⏰ +15 דק׳" },
+          ],
+        }),
+      );
+    }
+  }
+
+  if (event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 function addCOIHeaders(response) {

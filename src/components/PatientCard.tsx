@@ -12,6 +12,8 @@ import { MedFlagBadges } from "./MedFlags";
 import { generateHints } from "../engine/hints";
 import { showUndoToast } from "./UndoToast";
 import { TaskTemplates } from "./TaskTemplates";
+import { NurseTemplates } from "./NurseTemplates";
+import { AIClinicalReasoning } from "./AIClinicalReasoning";
 import { VoiceButton } from "./VoiceInput";
 import { hapticSuccess } from "../utils/haptics";
 
@@ -200,6 +202,8 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
   const [showLabForm, setShowLabForm] = useState(false);
   const [showLabChart, setShowLabChart] = useState(false);
   const [showHints, setShowHints] = useState(false);
+  const [showNurseTemplates, setShowNurseTemplates] = useState(false);
+  const [showAI, setShowAI] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(patient.name ?? "");
   const [editRoom, setEditRoom] = useState(patient.room ?? "");
@@ -524,6 +528,18 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
         >
           📊 Lab
         </button>
+        <button
+          onClick={() => setShowNurseTemplates(true)}
+          className="text-xs px-2.5 py-1 rounded-lg border border-green-200 dark:border-green-700 bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300 active:bg-green-100"
+        >
+          📱 אחות
+        </button>
+        <button
+          onClick={() => setShowAI(true)}
+          className="text-xs px-2.5 py-1 rounded-lg border border-violet-200 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/30 text-violet-800 dark:text-violet-300 active:bg-violet-100"
+        >
+          🤖 AI
+        </button>
         {(patient.labs?.length ?? 0) >= 2 && (
           <button
             onClick={() => setShowLabChart(!showLabChart)}
@@ -675,6 +691,12 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
       )}
       {showTemplates && (
         <TaskTemplates patient={patient} onClose={() => setShowTemplates(false)} />
+      )}
+      {showNurseTemplates && (
+        <NurseTemplates patient={patient} onClose={() => setShowNurseTemplates(false)} />
+      )}
+      {showAI && (
+        <AIClinicalReasoning patient={patient} onClose={() => setShowAI(false)} />
       )}
     </div>
   );
