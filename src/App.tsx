@@ -257,6 +257,27 @@ function OverflowMenu() {
     setDialog({ type: "archive", label, incompleteTasks, patientsNoTasks, abnormalLabs, openStatCount });
   };
 
+  const [shareCopied, setShareCopied] = useState(false);
+
+  const handleShareClick = () => {
+    setOpen(false);
+    const key = (() => { try { return localStorage.getItem("toranot-anthropic-key"); } catch { return null; } })();
+    const base = window.location.origin + window.location.pathname;
+    const url = key ? `${base}#apikey=${encodeURIComponent(key)}` : base;
+
+    if (navigator.share) {
+      navigator.share({ title: "תורנות — ניהול משמרת", url }).catch(() => {
+        navigator.clipboard.writeText(url);
+        setShareCopied(true);
+        setTimeout(() => setShareCopied(false), 2000);
+      });
+    } else {
+      navigator.clipboard.writeText(url);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    }
+  };
+
   const handleClearClick = () => {
     setOpen(false);
     setDialog({ type: "clear" });
@@ -320,6 +341,14 @@ function OverflowMenu() {
               >
                 <span className="text-base">📁</span>
                 היסטוריית משמרות
+              </button>
+              {/* Share link with AI key */}
+              <button
+                onClick={handleShareClick}
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-slate-200 active:bg-slate-700 border-t border-slate-700 text-right"
+              >
+                <span className="text-base">{shareCopied ? "✅" : "🔗"}</span>
+                {shareCopied ? "הקישור הועתק!" : "שתף עם AI"}
               </button>
               {/* QR Sync */}
               {patients.length > 0 && (
@@ -580,6 +609,22 @@ function AppInner() {
 }
 
 export function App() {
+  // Extract API key from URL hash on first load: #apikey=sk-ant-...
+  // Hash fragments never hit server logs, analytics, or referrer headers.
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash.includes("apikey=")) return;
+    const match = hash.match(/apikey=([^&]+)/);
+    if (match?.[1]) {
+      try {
+        localStorage.setItem("toranot-anthropic-key", decodeURIComponent(match[1]));
+      } catch { /* quota */ }
+      // Clean the URL so key isn't visible in address bar / history
+      const cleanHash = hash.replace(/[#&]?apikey=[^&]+/, "").replace(/^#$/, "");
+      window.history.replaceState(null, "", window.location.pathname + (cleanHash || ""));
+    }
+  }, []);
+
   return (
     <PatientsProvider>
       <AppInner />
