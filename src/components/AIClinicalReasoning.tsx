@@ -20,8 +20,13 @@ import type { PatientEntry } from "../types";
 import { safeGetItem, safeSetItem } from "../utils/storage";
 
 const API_KEY_STORAGE = "toranot-anthropic-key";
-const API_URL = "https://api.anthropic.com/v1/messages";
+const DIRECT_API_URL = "https://api.anthropic.com/v1/messages";
+const PROXY_API_URL = "/api/claude";
 const MODEL = "claude-sonnet-4-20250514";
+
+/** On Netlify, the serverless proxy holds the key — no client key needed */
+const isNetlifyHosted = () =>
+  typeof window !== "undefined" && window.location.hostname.includes("netlify");
 
 interface AIClinicalReasoningProps {
   patient: PatientEntry;
@@ -160,14 +165,21 @@ async function callClaudeAPI(
   userMessage: string,
   signal?: AbortSignal,
 ): Promise<string> {
-  const response = await fetch(API_URL, {
+  const useProxy = isNetlifyHosted();
+  const url = useProxy ? PROXY_API_URL : DIRECT_API_URL;
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (!useProxy) {
+    headers["x-api-key"] = apiKey;
+    headers["anthropic-version"] = "2023-06-01";
+    headers["anthropic-dangerous-direct-browser-access"] = "true";
+  }
+
+  const response = await fetch(url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true",
-    },
+    headers,
     body: JSON.stringify({
       model: MODEL,
       max_tokens: 1500,
@@ -195,7 +207,8 @@ async function callClaudeAPI(
 
 export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningProps) {
   const [apiKey, setApiKey] = useState(() => safeGetItem(API_KEY_STORAGE) ?? "");
-  const [showKeySetup, setShowKeySetup] = useState(!apiKey);
+  const proxyMode = isNetlifyHosted();
+  const [showKeySetup, setShowKeySetup] = useState(!proxyMode && !apiKey);
   const [selectedMode, setSelectedMode] = useState<QueryMode | null>(null);
   const [freeformQ, setFreeformQ] = useState("");
   const [response, setResponse] = useState("");
@@ -218,7 +231,7 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
   }, []);
 
   const handleQuery = useCallback(async (mode: QueryMode) => {
-    if (!apiKey) {
+    if (!proxyMode && !apiKey) {
       setShowKeySetup(true);
       return;
     }
@@ -268,13 +281,17 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowKeySetup(true)}
-              className="text-violet-300 hover:text-white text-xs"
-              title="הגדרות API"
-            >
-              ⚙️
-            </button>
+            {proxyMode ? (
+              <span className="text-[10px] text-green-300" title="AI פעיל דרך שרת">☁️ מוכן</span>
+            ) : (
+              <button
+                onClick={() => setShowKeySetup(true)}
+                className="text-violet-300 hover:text-white text-xs"
+                title="הגדרות API"
+              >
+                ⚙️
+              </button>
+            )}
             <button onClick={onClose} className="text-white/70 hover:text-white text-xl px-2">✕</button>
           </div>
         </div>
