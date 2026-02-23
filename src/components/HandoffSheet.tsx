@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { usePatientsState } from "../context/PatientsContext";
 import { SECTION_LABEL, type PatientEntry, type Task } from "../types";
 import { formatLabsForHandoff } from "./LabChart";

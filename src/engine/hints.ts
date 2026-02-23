@@ -327,6 +327,7 @@ export function generateHints(patient: PatientEntry): ClinicalHint[] {
     ...patient.flags,
     ...patient.status,
     ...(patient.notes ?? []),
+    patient.handoverNote ?? "",
   ].join(" ");
   if (!textToSearch.trim()) return [];
 

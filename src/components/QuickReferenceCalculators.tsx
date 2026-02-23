@@ -2,7 +2,7 @@
  * Clinical calculators and reference components extracted from QuickReference.
  * CrClCalculator, CURB65Calculator, NEWS2Calculator, ElectrolyteReference, InsulinReference
  */
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { crclToBucket } from "../utils/renal";
 
 // ─────────────────────────────────────────────────────────
@@ -28,7 +28,7 @@ export function CrClCalculator({ onCrClChange }: { onCrClChange?: (crcl: number 
   }, [age, weight, creatinine, female, isHD]);
 
   // Report CrCl to parent
-  useMemo(() => {
+  useEffect(() => {
     onCrClChange?.(crcl, isHD);
   }, [crcl, isHD, onCrClChange]);
 
