@@ -394,6 +394,7 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
         archivedAt: new Date().toISOString(),
       };
       const history = [snapshot, ...state.shiftHistory].slice(0, MAX_SHIFT_HISTORY);
+      console.debug("[Toranot] Shift archived:", snapshot.label, "| total:", history.length, "| patients:", snapshot.patients.length);
       return { ...state, shiftHistory: history };
     }
 
