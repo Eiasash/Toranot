@@ -307,7 +307,7 @@ function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qrsync") 
         {open && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-            <div className="absolute left-0 top-full mt-1 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl overflow-hidden min-w-[200px]">
+            <div className="absolute left-0 top-full mt-1 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl overflow-hidden min-w-[200px]" onClick={(e) => e.stopPropagation()}>
               {/* Tomorrow toggle */}
               <button
                 onClick={() => { dispatch({ type: "TOGGLE_SHOW_TOMORROW" }); setOpen(false); }}
@@ -336,7 +336,7 @@ function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qrsync") 
               )}
               {/* History */}
               <button
-                onClick={() => { setOpen(false); onOpenModal("history"); }}
+                onClick={() => { onOpenModal("history"); setOpen(false); }}
                 className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-slate-200 active:bg-slate-700 border-t border-slate-700 text-right"
               >
                 <span className="text-base">📁</span>
@@ -353,7 +353,7 @@ function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qrsync") 
               {/* QR Sync */}
               {patients.length > 0 && (
                 <button
-                  onClick={() => { setOpen(false); onOpenModal("qrsync"); }}
+                  onClick={() => { onOpenModal("qrsync"); setOpen(false); }}
                   className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-slate-200 active:bg-slate-700 border-t border-slate-700 text-right"
                 >
                   <span className="text-base">📲</span>
