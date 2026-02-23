@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
 import type { Task, PatientEntry, Urgency, Section } from "../types";
+import { SECTION_LABEL } from "../types";
 import { SectionDashboard } from "./SectionDashboard";
 
 interface DashTask {
@@ -38,7 +39,7 @@ export function TaskDashboard({ onClose }: { onClose: () => void }) {
   const { patients } = usePatientsState();
   const dispatch = usePatientsDispatch();
   const [filter, setFilter] = useState<FilterMode>("all");
-  const [tab, setTab] = useState<"tasks" | "sections">("tasks");
+  const [tab, setTab] = useState<"tasks" | "sections" | "route">("tasks");
 
   const allDashTasks = useMemo(() => {
     const items: DashTask[] = [];
@@ -80,6 +81,31 @@ export function TaskDashboard({ onClose }: { onClose: () => void }) {
       if (d.task.dueAt && new Date(d.task.dueAt) < now) c.overdue++;
     }
     return c;
+  }, [allDashTasks]);
+
+  // Route mode: group pending tasks by section → room for physical rounds
+  const routeGroups = useMemo(() => {
+    const map = new Map<Section, Map<string, DashTask[]>>();
+    for (const d of allDashTasks) {
+      const sec = d.patient.section;
+      if (!map.has(sec)) map.set(sec, new Map());
+      const roomKey = d.patient.room ?? "ללא חדר";
+      const roomMap = map.get(sec)!;
+      if (!roomMap.has(roomKey)) roomMap.set(roomKey, []);
+      roomMap.get(roomKey)!.push(d);
+    }
+    // Sort rooms naturally within each section
+    const result: Array<{ section: Section; rooms: Array<{ room: string; tasks: DashTask[] }> }> = [];
+    for (const [section, roomMap] of map) {
+      const rooms = [...roomMap.entries()]
+        .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
+        .map(([room, tasks]) => ({
+          room,
+          tasks: tasks.sort((a, b) => URGENCY_ORDER[a.task.urgency] - URGENCY_ORDER[b.task.urgency]),
+        }));
+      result.push({ section, rooms });
+    }
+    return result;
   }, [allDashTasks]);
 
   return (
@@ -126,11 +152,55 @@ export function TaskDashboard({ onClose }: { onClose: () => void }) {
           >
             🏥 סקירת מדורים
           </button>
+          <button
+            onClick={() => setTab("route")}
+            className={`flex-1 py-2 text-xs font-medium transition-colors ${
+              tab === "route"
+                ? "text-red-600 dark:text-red-400 border-b-2 border-red-600"
+                : "text-gray-500 dark:text-gray-400"
+            }`}
+          >
+            🚶 מסלול סיבוב
+          </button>
         </div>
 
         {tab === "sections" ? (
           <div className="flex-1 overflow-y-auto p-4">
             <SectionDashboard patients={patients} onSelectSection={() => { onClose(); }} />
+          </div>
+        ) : tab === "route" ? (
+          <div className="flex-1 overflow-y-auto p-3 space-y-3">
+            {routeGroups.length === 0 ? (
+              <p className="text-center text-gray-400 py-12">אין משימות ממתינות 🎉</p>
+            ) : (
+              routeGroups.map(({ section, rooms }) => (
+                <div key={section}>
+                  <div className="text-xs font-bold text-red-700 dark:text-red-400 mb-1.5 px-1">
+                    📍 {SECTION_LABEL[section]}
+                  </div>
+                  {rooms.map(({ room, tasks }) => (
+                    <div key={room} className="mb-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 p-2">
+                      <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                        🚪 חדר {room} — {tasks[0]?.patient.name ?? ""}
+                        <span className="text-gray-400 font-normal mr-1">({tasks.length} משימות)</span>
+                      </div>
+                      <div className="space-y-1">
+                        {tasks.map((d) => (
+                          <div
+                            key={d.task.id}
+                            onClick={() => dispatch({ type: "TOGGLE_TASK", patientId: d.patient.id, taskId: d.task.id })}
+                            className="flex items-start gap-1.5 text-xs cursor-pointer active:opacity-60"
+                          >
+                            <span className="mt-0.5">{URGENCY_LABEL[d.task.urgency] || "⚪"}</span>
+                            <span className="text-gray-800 dark:text-gray-200 flex-1" dir="auto">{d.task.text}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))
+            )}
           </div>
         ) : (
         <>

@@ -3,6 +3,7 @@ import { DRUG_DOSING } from "../data/dosing";
 import type { DrugDosingEntry } from "../data/dosing";
 import { extractAntibioticsFromPlan } from "../engine/drugSafety";
 import { crclToBucket, type CrClBucket } from "../utils/renal";
+import { safeGetItem, safeSetItem } from "../utils/storage";
 
 // ─────────────────────────────────────────────────────────
 // DATA: DAG Protocol Quick Reference
@@ -736,8 +737,12 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<RefTab>("protocols");
   const [search, setSearch] = useState("");
   const [protoCategory, setProtoCategory] = useState("all");
-  const [sharedCrCl, setSharedCrCl] = useState<number | null>(null);
-  const [isHD, setIsHD] = useState(false);
+  // Persist CrCl across sessions (survives app close during 26h shift)
+  const [sharedCrCl, setSharedCrCl] = useState<number | null>(() => {
+    const stored = safeGetItem("toranot_crcl");
+    return stored ? Number(stored) : null;
+  });
+  const [isHD, setIsHD] = useState(() => safeGetItem("toranot_crcl_hd") === "1");
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
 
   const crclBucket: CrClBucket | null = useMemo(() => {
@@ -748,7 +753,11 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
 
   const handleCrClChange = useCallback((crcl: number | null, hd?: boolean) => {
     setSharedCrCl(crcl);
-    if (hd !== undefined) setIsHD(hd);
+    if (crcl !== null) safeSetItem("toranot_crcl", String(crcl));
+    if (hd !== undefined) {
+      setIsHD(hd);
+      safeSetItem("toranot_crcl_hd", hd ? "1" : "0");
+    }
   }, []);
 
   const handleCopyProtocol = useCallback((p: ProtocolEntry, idx: number) => {

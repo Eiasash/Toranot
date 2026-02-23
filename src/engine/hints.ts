@@ -284,21 +284,57 @@ const HINT_RULES: HintRule[] = [
       ],
     },
   },
+  // ═══ COMFORT CARE / PALLIATIVE ═══
+  {
+    trigger: /comfort\s*care|palliative|פליאטיב|טיפול תומך בלבד|טיפול מנחם|EOL|end.of.life|הנוחות בלבד|טיפולי נוחות/i,
+    hint: {
+      emoji: "🕊️",
+      title: "טיפול מנחם — הנחיות רקע",
+      tips: [
+        "מיקוד: שליטה בתסמינים (כאב, קוצר נשימה, בחילה, חרדה)",
+        "סקאלת כאב q4h — מורפין SC 2.5-5mg PRN / fentanyl patch",
+        "קוצר נשימה → מורפין SC + O2 לנוחות (לא לפי SpO2 יעד)",
+        "הפחתת ניטורים מיותרים (BP, labs) אלא אם משנה טיפול",
+        "שיחה עם המשפחה על ציפיות ומהלך צפוי",
+        "ודא שיש PRN: כאב, חרדה, הפרשות, בחילה",
+      ],
+    },
+  },
+  // ═══ DNR/DNI (not comfort care — still gets workup) ═══
+  {
+    trigger: /\bDNR\b|\bDNI\b|לא להחיות|אל החיאה/i,
+    hint: {
+      emoji: "📋",
+      title: "DNR/DNI — תזכורת",
+      tips: [
+        "ודא שטופס DNR/DNI חתום ומעודכן בתיק",
+        "DNR ≠ comfort care — טיפול רפואי מלא ממשיך",
+        "בהידרדרות: אנטיביוטיקה, נוזלים, ניטור — כן. הנשמה, CPR — לא",
+        "עדכן צוות סיעוד לגבי סטטוס Code",
+      ],
+    },
+  },
 ];
 
 /**
- * Generate clinical hints for a patient based on their DIAGNOSIS field only.
- * Returns empty array if no diagnosis matches.
+ * Generate clinical hints for a patient based on diagnosis, flags, and status.
+ * Returns empty array if no matches found.
  */
 export function generateHints(patient: PatientEntry): ClinicalHint[] {
-  const diagnosis = patient.diagnosis ?? "";
-  if (!diagnosis.trim()) return [];
+  // Check diagnosis + flags + status for broader coverage
+  const textToSearch = [
+    patient.diagnosis ?? "",
+    ...patient.flags,
+    ...patient.status,
+    ...(patient.notes ?? []),
+  ].join(" ");
+  if (!textToSearch.trim()) return [];
 
   const hints: ClinicalHint[] = [];
   const seen = new Set<string>();
 
   for (const rule of HINT_RULES) {
-    if (rule.trigger.test(diagnosis) && !seen.has(rule.hint.title)) {
+    if (rule.trigger.test(textToSearch) && !seen.has(rule.hint.title)) {
       seen.add(rule.hint.title);
       hints.push(rule.hint);
     }

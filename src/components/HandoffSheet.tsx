@@ -1,7 +1,13 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { usePatientsState } from "../context/PatientsContext";
 import { SECTION_LABEL, type PatientEntry, type Task } from "../types";
 import { formatLabsForHandoff } from "./LabChart";
+import {
+  checkDrugInteractions,
+  checkRenalDoseWarnings,
+  checkBeersCriteria,
+} from "../engine/drugSafety";
+import { calculateLabDeltas } from "../engine/labDelta";
 
 function urgencyLabel(u: Task["urgency"]) {
   return u === "stat" ? "🔴" : u === "urgent" ? "🟡" : u === "extra" ? "🟣" : "";
@@ -63,6 +69,34 @@ function formatPatient(p: PatientEntry): string {
     lines.push(`  📌 ${p.handoverNote}`);
   }
 
+  // Safety alerts for morning team awareness
+  const interactions = checkDrugInteractions(p);
+  const renalWarnings = checkRenalDoseWarnings(p);
+  const labDeltas = calculateLabDeltas(p);
+  const beers = checkBeersCriteria(p);
+  const critInteractions = interactions.filter(i => i.severity === "critical");
+  const critRenal = renalWarnings.filter(w => w.severity === "critical");
+  const critLabs = labDeltas.filter(d => d.severity === "critical");
+  const critBeers = beers.filter(b => b.severity === "avoid");
+  const totalCrit = critInteractions.length + critRenal.length + critLabs.length + critBeers.length;
+
+  if (totalCrit > 0) {
+    lines.push(`  ⚠️ התראות בטיחות:`);
+    for (const ix of critInteractions) {
+      lines.push(`    🔴 ${ix.risk}: ${ix.detail}`);
+    }
+    for (const w of critRenal) {
+      lines.push(`    🔴 ${w.drug} — ${w.adjustment}`);
+    }
+    for (const d of critLabs) {
+      const arrow = d.direction === "up" ? "↑" : d.direction === "down" ? "↓" : "→";
+      lines.push(`    🔴 ${d.label}: ${d.baseline}${arrow}${d.latest}`);
+    }
+    for (const b of critBeers) {
+      lines.push(`    🚫 Beers: ${b.drug} — ${b.recommendation}`);
+    }
+  }
+
   return lines.join("\n");
 }
 
@@ -110,11 +144,43 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
     const statPending = allTasks.filter(
       (t) => !t.done && t.urgency === "stat",
     ).length;
+    const statDone = allTasks.filter(
+      (t) => t.done && t.urgency === "stat",
+    ).length;
+    const urgentDone = allTasks.filter(
+      (t) => t.done && t.urgency === "urgent",
+    ).length;
+
+    // Safety stats
+    let totalSafetyAlerts = 0;
+    let patientsWithAlerts = 0;
+    for (const p of patients) {
+      const count = checkDrugInteractions(p).length
+        + checkRenalDoseWarnings(p).length
+        + calculateLabDeltas(p).length
+        + checkBeersCriteria(p).length;
+      totalSafetyAlerts += count;
+      if (count > 0) patientsWithAlerts++;
+    }
+
+    // Acuity breakdown
+    const patientsWithLabs = patients.filter(p => (p.labs ?? []).length > 0).length;
+    const patientsWithNotes = patients.filter(p => p.handoverNote).length;
 
     lines.push(`${"─".repeat(35)}`);
+    lines.push(`📊 סיכום משמרת:`);
     lines.push(
-      `סה"כ: ${patients.length} חולים | ✅ ${totalDone} בוצעו | ⏳ ${totalPending} ממתינים${statPending > 0 ? ` | 🔴 ${statPending} סטט` : ""}`,
+      `  חולים: ${patients.length} | ✅ ${totalDone} בוצעו | ⏳ ${totalPending} ממתינים`,
     );
+    if (statDone > 0 || statPending > 0) {
+      lines.push(`  🔴 סטט: ${statDone} בוצעו, ${statPending} ממתינים | 🟡 דחוף: ${urgentDone} בוצעו`);
+    }
+    if (totalSafetyAlerts > 0) {
+      lines.push(`  ⚠️ ${totalSafetyAlerts} התראות בטיחות ב-${patientsWithAlerts} חולים`);
+    }
+    if (patientsWithLabs > 0) {
+      lines.push(`  🔬 ${patientsWithLabs} חולים עם מעבדות מעודכנות`);
+    }
 
     return lines.join("\n");
   }, [patients, sections]);

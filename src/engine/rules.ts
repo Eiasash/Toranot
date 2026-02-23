@@ -24,6 +24,27 @@ interface Rule {
   tasks: RuleTask[];
 }
 
+// ── Comfort care / palliative detection ──
+// These patterns identify patients who should NOT get aggressive workup tasks.
+// DNR/DNI alone is NOT enough — many DNR patients still get full medical care.
+// Only explicit comfort/palliative flags trigger suppression.
+const COMFORT_CARE_PATTERN = /comfort\s*care|palliative|פליאטיב|טיפול תומך בלבד|טיפול מנחם|EOL|end.of.life|הנוחות בלבד|טיפולי נוחות/i;
+
+// Rule groups that are suppressed for comfort-care-only patients.
+// These represent aggressive workup/intervention that conflicts with comfort goals.
+const COMFORT_SUPPRESSED_GROUPS = new Set([
+  "sepsis",       // blood cultures, lactate, aggressive abx — may still want comfort abx
+  "aki",          // renal workup, fluid boluses
+  "acs",          // troponin, cath lab, heparin
+  "dvtpe",        // CTA, anticoagulation
+  "transfusion",  // T&S, transfusion protocol
+  "stroke",       // CT head, tPA, neurology
+  "gibleed",      // type & screen, GI consult, scope
+  "preop",        // pre-op workup
+  "anemia",       // type & screen, workup
+  "newadmit",     // full admission workup
+]);
+
 const RULES: Rule[] = [
   // ═══ DISCHARGE ═══
   {
@@ -553,6 +574,13 @@ export function applyRules(patient: PatientEntry): Task[] {
   const generated: Task[] = [];
   const matchedGroups = new Set<string>();
 
+  // ── Palliative / comfort care detection ──
+  // If the patient is flagged for comfort care only, suppress aggressive
+  // workup and intervention tasks. DNR/DNI alone does NOT suppress —
+  // only explicit comfort-care / palliative / end-of-life flags do.
+  const allFlags = [...patient.flags, ...patient.status, ...(patient.notes ?? [])].join(" ");
+  const isComfortCareOnly = COMFORT_CARE_PATTERN.test(allFlags);
+
   // Pre-build text blobs for each trigger scope
   const diagnosisText = patient.diagnosis ?? "";
   const tasksText = [
@@ -564,6 +592,9 @@ export function applyRules(patient: PatientEntry): Task[] {
 
   for (const rule of RULES) {
     if (rule.group && matchedGroups.has(rule.group)) continue;
+
+    // Suppress aggressive rules for comfort-care-only patients
+    if (isComfortCareOnly && rule.group && COMFORT_SUPPRESSED_GROUPS.has(rule.group)) continue;
 
     // Pick which text to match against (default: tasks only, never diagnosis)
     let textToMatch: string;

@@ -208,6 +208,67 @@ export function LabBadges({ patient }: { patient: PatientEntry }) {
   );
 }
 
+// ── Bulk lab parser ──
+// Parses strings like "Cr 1.8, K 5.2, WBC 14, Hb 9.1" or "Na=138 K=4.5 Cr=1.2"
+// Also handles "Cr: 1.8 | K+: 5.2 | WBC: 14"
+const LAB_ALIASES: Record<string, string> = {
+  cr: "Cr", creatinine: "Cr", creat: "Cr",
+  k: "K+", "k+": "K+", potassium: "K+",
+  na: "Na", sodium: "Na",
+  wbc: "WBC", "white cells": "WBC", leukocytes: "WBC",
+  hb: "Hb", hgb: "Hb", hemoglobin: "Hb",
+  plt: "PLT", platelets: "PLT",
+  crp: "CRP",
+  glucose: "Glucose", glu: "Glucose", sugar: "Glucose", סוכר: "Glucose",
+  inr: "INR",
+  lactate: "Lactate", lac: "Lactate",
+  albumin: "Albumin", alb: "Albumin",
+  urea: "Urea", bun: "Urea",
+  ast: "AST", got: "AST",
+  alt: "ALT", gpt: "ALT",
+  alp: "ALP",
+  ggt: "GGT",
+  bili: "Bili", bilirubin: "Bili", "total bili": "Bili",
+  ldh: "LDH",
+  tsh: "TSH",
+  hba1c: "HbA1c", a1c: "HbA1c",
+  phos: "Phos", phosphate: "Phos",
+  mg: "Mg", magnesium: "Mg",
+  ca: "Ca", calcium: "Ca",
+  iron: "Iron", fe: "Iron",
+  ferritin: "Ferritin",
+  troponin: "Troponin", trop: "Troponin", "trop i": "Troponin", tnni: "Troponin",
+  bnp: "BNP", "nt-probnp": "BNP", ntprobnp: "BNP",
+  d_dimer: "D-Dimer", "d-dimer": "D-Dimer", ddimer: "D-Dimer",
+  fibrinogen: "Fibrinogen", fib: "Fibrinogen",
+  ptt: "PTT", aptt: "PTT",
+  pt: "PT",
+};
+
+function parseBulkLabs(input: string): Array<{ label: string; value: number }> {
+  const results: Array<{ label: string; value: number }> = [];
+  // Split on common delimiters: comma, pipe, semicolon, newline, tab
+  const segments = input.split(/[,|;\n\t]+/);
+
+  for (const seg of segments) {
+    const trimmed = seg.trim();
+    if (!trimmed) continue;
+
+    // Match patterns: "Cr 1.8", "Cr: 1.8", "Cr=1.8", "K+ 5.2"
+    const match = trimmed.match(/^([a-zA-Zא-ת+\-\s/]+?)\s*[:=]?\s*(\d+\.?\d*)\s*$/);
+    if (!match) continue;
+
+    const rawLabel = match[1].trim().toLowerCase();
+    const value = parseFloat(match[2]);
+    if (isNaN(value)) continue;
+
+    const normalizedLabel = LAB_ALIASES[rawLabel] ?? match[1].trim();
+    results.push({ label: normalizedLabel, value });
+  }
+
+  return results;
+}
+
 export function AddLabForm({
   patient,
   onClose,
@@ -218,6 +279,9 @@ export function AddLabForm({
   const dispatch = usePatientsDispatch();
   const [label, setLabel] = useState("");
   const [value, setValue] = useState("");
+  const [bulkMode, setBulkMode] = useState(false);
+  const [bulkText, setBulkText] = useState("");
+  const [bulkPreview, setBulkPreview] = useState<Array<{ label: string; value: number }>>([]);
 
   const add = () => {
     const v = parseFloat(value);
@@ -235,22 +299,90 @@ export function AddLabForm({
     // Keep label for rapid entry of same lab
   };
 
+  const handleBulkChange = (text: string) => {
+    setBulkText(text);
+    setBulkPreview(parseBulkLabs(text));
+  };
+
+  const submitBulk = () => {
+    const parsed = parseBulkLabs(bulkText);
+    if (parsed.length === 0) return;
+    const now = new Date().toISOString();
+    for (const { label: l, value: v } of parsed) {
+      dispatch({
+        type: "ADD_LAB",
+        patientId: patient.id,
+        lab: { id: generateId("lab-"), label: l, value: v, time: now },
+      });
+      const severity = getLabSeverity(l, v);
+      if (severity === "critical" || severity === "warning") hapticWarning();
+    }
+    setBulkText("");
+    setBulkPreview([]);
+    onClose();
+  };
+
+  if (bulkMode) {
+    return (
+      <div className="space-y-2 pt-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-purple-700 dark:text-purple-300">📋 הדבקת מעבדות</span>
+          <button onClick={() => setBulkMode(false)} className="text-xs text-blue-600 dark:text-blue-400">חזרה לרגיל</button>
+        </div>
+        <textarea
+          value={bulkText}
+          onChange={(e) => handleBulkChange(e.target.value)}
+          placeholder="הדבק: Cr 1.8, K 5.2, WBC 14, Hb 9.1&#10;או: Na=138 | K+=4.5 | Cr=1.2"
+          dir="ltr"
+          rows={3}
+          className="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-mono"
+          autoFocus
+        />
+        {bulkPreview.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {bulkPreview.map((p, i) => {
+              const sev = getLabSeverity(p.label, p.value);
+              return (
+                <span key={i} className={`text-xs px-1.5 py-0.5 rounded border ${SEVERITY_STYLES[sev]}`}>
+                  {sev === "critical" ? "🔴 " : sev === "warning" ? "🟡 " : ""}{p.label} {p.value}
+                </span>
+              );
+            })}
+          </div>
+        )}
+        <div className="flex gap-2">
+          <button
+            onClick={submitBulk}
+            disabled={bulkPreview.length === 0}
+            className="flex-1 px-3 py-1.5 text-xs bg-purple-600 text-white rounded-lg disabled:opacity-40"
+          >
+            הוסף {bulkPreview.length} מעבדות
+          </button>
+          <button onClick={onClose} className="px-2 py-1.5 text-xs text-gray-500 border border-gray-200 dark:border-gray-600 rounded-lg">✕</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2 pt-2">
-      <div className="flex flex-wrap gap-1">
-        {COMMON_LABS.map((l) => (
-          <button
-            key={l}
-            onClick={() => setLabel(l)}
-            className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${
-              label === l
-                ? "bg-purple-600 text-white border-purple-600"
-                : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600"
-            }`}
-          >
-            {l}
-          </button>
-        ))}
+      <div className="flex items-center justify-between">
+        <div className="flex flex-wrap gap-1">
+          {COMMON_LABS.map((l) => (
+            <button
+              key={l}
+              onClick={() => setLabel(l)}
+              className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${
+                label === l
+                  ? "bg-purple-600 text-white border-purple-600"
+                  : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600"
+              }`}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+        <button onClick={() => setBulkMode(true)} className="text-xs text-blue-600 dark:text-blue-400 whitespace-nowrap mr-1">📋 הדבק</button>
       </div>
       <div className="flex items-center gap-2">
         <input
@@ -288,3 +420,5 @@ export function AddLabForm({
     </div>
   );
 }
+
+export { parseBulkLabs, LAB_ALIASES };
