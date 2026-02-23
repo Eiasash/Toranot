@@ -87,9 +87,16 @@ function loadSavedPatients(): PatientEntry[] {
 function loadShiftHistory(): ShiftSnapshot[] {
   try {
     const raw = safeGetItem(STORAGE_KEY_SHIFT_HISTORY);
-    return raw ? JSON.parse(raw) : [];
-  } catch (err) {
-    console.warn("Failed to load shift history:", err);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed)
+      ? parsed.map((s: ShiftSnapshot) => ({
+          ...s,
+          patients: Array.isArray(s.patients)
+            ? s.patients.map(normalizePatient)
+            : [],
+        }))
+      : [];
+  } catch {
     return [];
   }
 }
@@ -103,13 +110,13 @@ function loadDarkMode(): boolean {
   }
 }
 
-const initialState: PatientsState = {
+const initializer = (): PatientsState => ({
   patients: loadSavedPatients(),
   activeSection: "SIDE_A",
   showTomorrow: false,
   darkMode: loadDarkMode(),
   shiftHistory: loadShiftHistory(),
-};
+});
 
 // -----------------------------
 // Actions
@@ -392,7 +399,10 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
         id: generateId("shift-"),
         date: new Date().toISOString(),
         label: action.label,
-        patients: state.patients,
+        patients:
+          typeof structuredClone === "function"
+            ? structuredClone(state.patients)
+            : JSON.parse(JSON.stringify(state.patients)),
         archivedAt: new Date().toISOString(),
       };
       const history = [snapshot, ...state.shiftHistory].slice(0, MAX_SHIFT_HISTORY);
@@ -448,11 +458,17 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
 // -----------------------------
 // Context
 // -----------------------------
-const PatientsStateContext = createContext<PatientsState>(initialState);
+const PatientsStateContext = createContext<PatientsState>({
+  patients: [],
+  activeSection: "SIDE_A",
+  showTomorrow: false,
+  darkMode: false,
+  shiftHistory: [],
+});
 const PatientsDispatchContext = createContext<Dispatch<Action>>(() => {});
 
 export function PatientsProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, initialState);
+  const [state, dispatch] = useReducer(reducer, undefined as unknown as PatientsState, initializer);
 
   // Persist patients to localStorage so data survives Android tab kills
   useEffect(() => {
