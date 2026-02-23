@@ -373,8 +373,8 @@ function OverflowMenu() {
                 </button>
               )}
               {/* Build stamp */}
-              <div className="px-4 py-2 text-[10px] text-slate-500 border-t border-slate-700 select-all">
-                build {__BUILD_TIME__.slice(0, 16).replace("T", " ")}
+              <div className="px-4 py-2 text-[10px] text-slate-500 border-t border-slate-700 select-text">
+                build {__GIT_SHA__} · {new Date(__BUILD_TIME__).toLocaleString("en-GB")}
               </div>
             </div>
           </>

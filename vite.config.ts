@@ -7,5 +7,6 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   define: {
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+    __GIT_SHA__: JSON.stringify(process.env.GITHUB_SHA?.slice(0, 7) ?? "dev"),
   },
 });
