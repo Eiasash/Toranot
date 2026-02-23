@@ -255,7 +255,15 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
       setResponse(result);
     } catch (err: unknown) {
       if ((err as Error).name === "AbortError") return;
-      setError((err as Error).message || "שגיאה לא צפויה");
+      const msg = (err as Error).message || "";
+      // Network-level failures
+      if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("fetch")) {
+        setError("אין חיבור לשרת. בדוק חיבור אינטרנט או נסה שוב.");
+      } else if (msg.includes("timeout") || msg.includes("Timeout")) {
+        setError("תם הזמן המוקצב. נסה שוב — שאילתות מורכבות לוקחות יותר זמן.");
+      } else {
+        setError(msg || "שגיאה לא צפויה");
+      }
     } finally {
       setLoading(false);
     }
@@ -385,7 +393,15 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
 
               {error && (
                 <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 text-sm text-red-700 dark:text-red-300">
-                  ❌ {error}
+                  <div>❌ {error}</div>
+                  {selectedMode && (
+                    <button
+                      onClick={() => handleQuery(selectedMode)}
+                      className="mt-2 text-xs bg-red-100 dark:bg-red-800/40 px-3 py-1 rounded-lg border border-red-300 dark:border-red-600"
+                    >
+                      🔄 נסה שוב
+                    </button>
+                  )}
                 </div>
               )}
 
