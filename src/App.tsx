@@ -195,7 +195,7 @@ function ConfirmModal({
 }
 
 // ─── Overflow menu (secondary actions) ────────────────────
-function OverflowMenu() {
+function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qrsync") => void }) {
   const [open, setOpen] = useState(false);
   const [dialog, setDialog] = useState<ConfirmDialog>({ type: "none" });
   const { darkMode, showTomorrow, patients } = usePatientsState();
@@ -336,8 +336,7 @@ function OverflowMenu() {
               )}
               {/* History */}
               <button
-                onClick={() => setOpen(false)}
-                id="overflow-history-trigger"
+                onClick={() => { setOpen(false); onOpenModal("history"); }}
                 className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-slate-200 active:bg-slate-700 border-t border-slate-700 text-right"
               >
                 <span className="text-base">📁</span>
@@ -354,8 +353,7 @@ function OverflowMenu() {
               {/* QR Sync */}
               {patients.length > 0 && (
                 <button
-                  onClick={() => setOpen(false)}
-                  id="overflow-qrsync-trigger"
+                  onClick={() => { setOpen(false); onOpenModal("qrsync"); }}
                   className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-slate-200 active:bg-slate-700 border-t border-slate-700 text-right"
                 >
                   <span className="text-base">📲</span>
@@ -525,25 +523,6 @@ function AppInner() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  // Listen for the history button inside the overflow menu
-  // (avoids prop-drilling the setModal into OverflowMenu)
-  useEffect(() => {
-    const el = document.getElementById("overflow-history-trigger");
-    if (!el) return;
-    const handler = () => setModal("history");
-    el.addEventListener("click", handler);
-    return () => el.removeEventListener("click", handler);
-  });
-
-  // Listen for QR sync button
-  useEffect(() => {
-    const el = document.getElementById("overflow-qrsync-trigger");
-    if (!el) return;
-    const handler = () => setModal("qrsync");
-    el.addEventListener("click", handler);
-    return () => el.removeEventListener("click", handler);
-  });
-
   const pendingStat = patients
     .flatMap((p) => [...p.tasks, ...p.generatedTasks])
     .filter((t) => !t.done && t.urgency === "stat").length;
@@ -581,7 +560,7 @@ function AppInner() {
           </div>
 
           {/* Overflow menu — all secondary actions */}
-          <OverflowMenu />
+          <OverflowMenu onOpenModal={(m) => setModal(m)} />
         </div>
       </header>
 
