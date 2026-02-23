@@ -138,7 +138,8 @@ export type Action =
   | { type: "TOGGLE_SHOW_TOMORROW" }
   | { type: "REAPPLY_RULES" }
   | { type: "IMPORT_BACKUP"; patients: PatientEntry[] }
-  | { type: "SYNC_STORAGE"; patients: PatientEntry[]; shiftHistory: ShiftSnapshot[] };
+  | { type: "SYNC_SHIFT_HISTORY"; shiftHistory: ShiftSnapshot[] }
+  | { type: "SYNC_PATIENTS"; patients: PatientEntry[] };
 
 export function inferUrgencyFromText(text: string): Urgency {
   const t = text.trim();
@@ -433,12 +434,11 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
     case "IMPORT_BACKUP":
       return { ...state, patients: action.patients.map(normalizePatient) };
 
-    case "SYNC_STORAGE":
-      return {
-        ...state,
-        patients: action.patients.map(normalizePatient),
-        shiftHistory: action.shiftHistory,
-      };
+    case "SYNC_SHIFT_HISTORY":
+      return { ...state, shiftHistory: action.shiftHistory };
+
+    case "SYNC_PATIENTS":
+      return { ...state, patients: action.patients.map(normalizePatient) };
 
     default:
       return state;
@@ -475,13 +475,24 @@ export function PatientsProvider({ children }: { children: ReactNode }) {
 
   // Cross-tab sync: if another tab writes to localStorage, pick up the changes.
   // The "storage" event only fires in OTHER tabs, never the one that wrote.
+  // Uses e.newValue directly — no re-reading storage. Validates before dispatch.
   useEffect(() => {
     const handler = (e: StorageEvent) => {
-      if (e.key !== STORAGE_KEY_PATIENTS && e.key !== STORAGE_KEY_SHIFT_HISTORY) return;
-      console.info("[Toranot] storage sync from another tab, key:", e.key);
-      const patients = (() => { try { return JSON.parse(safeGetItem(STORAGE_KEY_PATIENTS) ?? "[]"); } catch { return []; } })();
-      const shiftHistory = (() => { try { return JSON.parse(safeGetItem(STORAGE_KEY_SHIFT_HISTORY) ?? "[]"); } catch { return []; } })();
-      dispatch({ type: "SYNC_STORAGE", patients, shiftHistory });
+      try {
+        if (e.key === STORAGE_KEY_SHIFT_HISTORY) {
+          const parsed = e.newValue ? JSON.parse(e.newValue) : [];
+          const safe = (Array.isArray(parsed) ? parsed : []).slice(0, MAX_SHIFT_HISTORY);
+          dispatch({ type: "SYNC_SHIFT_HISTORY", shiftHistory: safe });
+          console.info("[Toranot] storage sync: shiftHistory", safe.length, "items");
+        } else if (e.key === STORAGE_KEY_PATIENTS) {
+          const parsed = e.newValue ? JSON.parse(e.newValue) : [];
+          const safe = Array.isArray(parsed) ? parsed : [];
+          dispatch({ type: "SYNC_PATIENTS", patients: safe });
+          console.info("[Toranot] storage sync: patients", safe.length, "items");
+        }
+      } catch {
+        console.warn("[Toranot] storage sync parse failed for key:", e.key);
+      }
     };
     window.addEventListener("storage", handler);
     return () => window.removeEventListener("storage", handler);
