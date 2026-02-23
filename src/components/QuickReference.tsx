@@ -1,4 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
+import { DRUG_DOSING } from "../data/dosing";
+import type { DrugDosingEntry } from "../data/dosing";
+import { extractAntibioticsFromPlan } from "../engine/drugSafety";
+import { crclToBucket, type CrClBucket } from "../utils/renal";
 
 // ─────────────────────────────────────────────────────────
 // DATA: DAG Protocol Quick Reference
@@ -163,16 +167,92 @@ const PROTO_CATEGORIES = [
 ];
 
 // ─────────────────────────────────────────────────────────
-// CrCl CALCULATOR (Cockcroft-Gault)
+// RENAL DOSE ADJUSTMENT — maps extracted ABx names → dosing keys
 // ─────────────────────────────────────────────────────────
 
-function CrClCalculator() {
+const ABX_KEY_ALIASES: Record<string, keyof typeof DRUG_DOSING> = {
+  "piperacillin/tazobactam": "pip_tazo",
+  "pip/tazo": "pip_tazo",
+  "tazocin": "pip_tazo",
+  "meropenem": "meropenem",
+  "vancomycin": "vancomycin",
+  "aztreonam": "aztreonam",
+  "ceftriaxone": "ceftriaxone",
+  "cefazolin": "cefazolin",
+  "cephalexin": "cephalexin",
+  "cefepime": "cefepime",
+  "amoxicillin/clavulanate": "amox_clav",
+  "augmentin": "amox_clav",
+  "metronidazole": "metronidazole",
+  "flagyl": "metronidazole",
+  "ciprofloxacin": "ciprofloxacin",
+  "cipro": "ciprofloxacin",
+  "levofloxacin": "levofloxacin",
+  "levo": "levofloxacin",
+  "gentamicin": "gentamicin",
+  "genta": "gentamicin",
+  "amikacin": "amikacin",
+  "clindamycin": "clindamycin",
+  "azithromycin": "azithromycin",
+  "nitrofurantoin": "nitrofurantoin",
+  "fidaxomicin": "fidaxomicin",
+};
+
+const BUCKET_LABELS: Record<CrClBucket, string> = {
+  gt50: ">50",
+  "10_50": "10-50",
+  lt10: "<10",
+  hd: "HD",
+};
+
+function resolveDoseForBucket(
+  key: keyof typeof DRUG_DOSING,
+  bucket: CrClBucket
+): { label: string; dose: string; notes?: string } | null {
+  const entry: DrugDosingEntry | undefined = DRUG_DOSING[key];
+  if (!entry) return null;
+  const dose =
+    bucket === "gt50" ? entry.normal
+    : bucket === "10_50" ? entry.crcl_10_50
+    : bucket === "lt10" ? entry.crcl_lt10
+    : bucket === "hd" ? entry.hd
+    : entry.normal;
+  if (!dose) return null;
+  return { label: entry.label, dose, notes: entry.notes };
+}
+
+function getDoseLinesForPlan(
+  planText: string,
+  bucket: CrClBucket
+): Array<{ label: string; dose: string; notes?: string; needsAdjustment: boolean }> {
+  const abxNames = extractAntibioticsFromPlan(planText);
+  const seen = new Set<string>();
+  const lines: Array<{ label: string; dose: string; notes?: string; needsAdjustment: boolean }> = [];
+
+  for (const name of abxNames) {
+    const key = ABX_KEY_ALIASES[name.toLowerCase().trim()];
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    const resolved = resolveDoseForBucket(key, bucket);
+    if (!resolved) continue;
+    const entry = DRUG_DOSING[key];
+    const needsAdjustment = bucket !== "gt50" && entry.normal !== resolved.dose &&
+      !resolved.dose.toLowerCase().includes("no renal adjustment") &&
+      !resolved.dose.toLowerCase().includes("no adjustment");
+    lines.push({ ...resolved, needsAdjustment });
+  }
+  return lines;
+}
+
+function CrClCalculator({ onCrClChange }: { onCrClChange?: (crcl: number | null, isHD?: boolean) => void }) {
   const [age, setAge] = useState("");
   const [weight, setWeight] = useState("");
   const [creatinine, setCr] = useState("");
   const [female, setFemale] = useState(false);
+  const [isHD, setIsHD] = useState(false);
 
   const crcl = useMemo(() => {
+    if (isHD) return 0; // HD overrides
     const a = parseFloat(age);
     const w = parseFloat(weight);
     const c = parseFloat(creatinine);
@@ -180,7 +260,14 @@ function CrClCalculator() {
     let val = ((140 - a) * w) / (72 * c);
     if (female) val *= 0.85;
     return Math.round(val);
-  }, [age, weight, creatinine, female]);
+  }, [age, weight, creatinine, female, isHD]);
+
+  // Report CrCl to parent
+  useMemo(() => {
+    onCrClChange?.(crcl, isHD);
+  }, [crcl, isHD, onCrClChange]);
+
+  const bucket = crcl !== null ? crclToBucket(crcl, isHD) : null;
 
   return (
     <div className="space-y-3">
@@ -201,26 +288,42 @@ function CrClCalculator() {
           <input type="number" step="0.1" value={creatinine} onChange={(e) => setCr(e.target.value)}
             className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 rounded-lg" placeholder="1.2" />
         </label>
-        <label className="text-xs text-gray-600 flex items-end gap-2 pb-1.5">
-          <input type="checkbox" checked={female} onChange={() => setFemale(!female)}
-            className="h-4 w-4 rounded accent-blue-600" />
-          נקבה (×0.85)
-        </label>
+        <div className="flex flex-col gap-1 text-xs text-gray-600 justify-end pb-1.5">
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={female} onChange={() => setFemale(!female)}
+              className="h-4 w-4 rounded accent-blue-600" />
+            נקבה (×0.85)
+          </label>
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={isHD} onChange={() => setIsHD(!isHD)}
+              className="h-4 w-4 rounded accent-purple-600" />
+            דיאליזה (HD)
+          </label>
+        </div>
       </div>
-      {crcl !== null && (
+      {(crcl !== null || isHD) && (
         <div className={`text-center text-lg font-bold p-3 rounded-xl ${
-          crcl > 60 ? "bg-green-100 text-green-800" :
-          crcl > 30 ? "bg-yellow-100 text-yellow-800" :
-          crcl > 15 ? "bg-orange-100 text-orange-800" :
+          isHD ? "bg-purple-100 text-purple-800" :
+          crcl! > 60 ? "bg-green-100 text-green-800" :
+          crcl! > 30 ? "bg-yellow-100 text-yellow-800" :
+          crcl! > 15 ? "bg-orange-100 text-orange-800" :
           "bg-red-100 text-red-800"
         }`}>
-          CrCl = {crcl} ml/min
-          <div className="text-xs font-normal mt-1">
-            {crcl > 60 ? "תקין / ירידה קלה" :
-             crcl > 30 ? "ירידה בינונית — התאם מינונים" :
-             crcl > 15 ? "ירידה חמורה — הפחת משמעותית" :
-             "אי-ספיקת כליות קשה — שקול דיאליזה"}
-          </div>
+          {isHD ? "HD — דיאליזה" : `CrCl = ${crcl} ml/min`}
+          {bucket && (
+            <div className="text-xs font-normal mt-1">
+              {isHD ? "מינונים מותאמים להמודיאליזה" :
+               crcl! > 60 ? "תקין / ירידה קלה" :
+               crcl! > 30 ? "ירידה בינונית — התאם מינונים" :
+               crcl! > 15 ? "ירידה חמורה — הפחת משמעותית" :
+               "אי-ספיקת כליות קשה — שקול דיאליזה"}
+            </div>
+          )}
+          {bucket && bucket !== "gt50" && (
+            <div className="text-xs font-semibold mt-2 bg-white/50 rounded-lg p-1.5">
+              💊 חזור ללשונית ABx לראות מינונים מותאמים
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -633,6 +736,41 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<RefTab>("protocols");
   const [search, setSearch] = useState("");
   const [protoCategory, setProtoCategory] = useState("all");
+  const [sharedCrCl, setSharedCrCl] = useState<number | null>(null);
+  const [isHD, setIsHD] = useState(false);
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+
+  const crclBucket: CrClBucket | null = useMemo(() => {
+    if (isHD) return "hd";
+    if (sharedCrCl === null) return null;
+    return crclToBucket(sharedCrCl, false);
+  }, [sharedCrCl, isHD]);
+
+  const handleCrClChange = useCallback((crcl: number | null, hd?: boolean) => {
+    setSharedCrCl(crcl);
+    if (hd !== undefined) setIsHD(hd);
+  }, []);
+
+  const handleCopyProtocol = useCallback((p: ProtocolEntry, idx: number) => {
+    const lines = [
+      `${p.condition} (${p.conditionHe})`,
+      `1st: ${p.empiric}`,
+      `Alt: ${p.alternative}`,
+    ];
+    if (crclBucket && crclBucket !== "gt50") {
+      const doseLines = getDoseLinesForPlan(p.empiric + " " + p.alternative, crclBucket);
+      const adjusted = doseLines.filter(d => d.needsAdjustment);
+      if (adjusted.length > 0) {
+        lines.push(``, `⚠ Dose adjust (CrCl bucket: ${BUCKET_LABELS[crclBucket]}):`);
+        adjusted.forEach(d => lines.push(`  ${d.label}: ${d.dose}`));
+      }
+    }
+    lines.push(``, p.notes);
+    navigator.clipboard.writeText(lines.join("\n")).then(() => {
+      setCopiedIdx(idx);
+      setTimeout(() => setCopiedIdx(null), 1500);
+    });
+  }, [crclBucket]);
 
   const filteredProtocols = useMemo(() => {
     let list = PROTOCOLS;
@@ -740,16 +878,47 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
         <div className="flex-1 overflow-y-auto p-4 space-y-3 dark:bg-[#0a0a0a]">
           {tab === "protocols" && (
             <>
+              {/* CrCl status banner */}
+              {crclBucket ? (
+                <div className={`flex items-center justify-between rounded-lg px-3 py-2 text-xs font-medium ${
+                  crclBucket === "gt50" ? "bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400" :
+                  crclBucket === "hd" ? "bg-purple-50 text-purple-700 dark:bg-purple-950/20 dark:text-purple-400" :
+                  "bg-orange-50 text-orange-700 dark:bg-orange-950/20 dark:text-orange-400"
+                }`}>
+                  <span>
+                    {crclBucket === "hd" ? "💊 HD — מינונים מותאמים לדיאליזה" :
+                     `💊 CrCl ${sharedCrCl} ml/min (${BUCKET_LABELS[crclBucket]}) — מינונים מותאמים`}
+                  </span>
+                  <button onClick={() => setTab("crcl")} className="underline">שנה</button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setTab("crcl")}
+                  className="w-full text-center text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20 rounded-lg px-3 py-2 hover:bg-blue-100 transition-colors"
+                >
+                  💊 הזן CrCl להתאמת מינונים →
+                </button>
+              )}
               {filteredProtocols.length === 0 ? (
                 <p className="text-sm text-gray-400 text-center py-8">לא נמצאו פרוטוקולים</p>
               ) : (
-                filteredProtocols.map((p, i) => (
-                  <div key={i} className="border border-gray-200 rounded-xl p-3 space-y-2">
+                filteredProtocols.map((p, i) => {
+                  const doseLines = crclBucket ? getDoseLinesForPlan(p.empiric + " " + p.alternative, crclBucket) : [];
+                  const hasAdjustments = doseLines.some(d => d.needsAdjustment);
+                  return (
+                  <div key={i} className={`border rounded-xl p-3 space-y-2 ${hasAdjustments ? "border-orange-300 bg-orange-50/30 dark:bg-orange-950/10" : "border-gray-200"}`}>
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <div className="font-bold text-sm">{p.conditionHe}</div>
                         <div className="text-xs text-gray-500">{p.condition}</div>
                       </div>
+                      <button
+                        onClick={() => handleCopyProtocol(p, i)}
+                        className="flex-none text-xs px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                        title="העתק פרוטוקול"
+                      >
+                        {copiedIdx === i ? "✓" : "📋"}
+                      </button>
                     </div>
                     <div className="text-sm space-y-1">
                       <div>
@@ -760,10 +929,32 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
                         <span className="text-xs font-semibold text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded">Alt</span>
                         <span className="mr-2 text-sm" dir="ltr">{p.alternative}</span>
                       </div>
-                      <div className="text-xs text-gray-600 bg-gray-50 rounded p-2">{p.notes}</div>
+                      {/* Dose adjustment block */}
+                      {crclBucket && doseLines.length > 0 && (
+                        <div className={`mt-2 rounded-lg border p-2.5 text-xs space-y-1.5 ${
+                          hasAdjustments
+                            ? "border-orange-300 bg-orange-50 dark:bg-orange-950/20"
+                            : "border-gray-200 bg-gray-50 dark:bg-gray-900"
+                        }`}>
+                          <div className="font-semibold flex items-center gap-1.5" dir="ltr">
+                            {hasAdjustments ? "⚠️" : "💊"} Dose — CrCl {BUCKET_LABELS[crclBucket]} ml/min
+                          </div>
+                          {doseLines.map((d) => (
+                            <div key={d.label} className={`flex flex-col ${d.needsAdjustment ? "text-orange-800 dark:text-orange-300" : "text-gray-600 dark:text-gray-400"}`} dir="ltr">
+                              <span className="font-medium">{d.label}:</span>
+                              <span className="mr-1">{d.dose}</span>
+                              {d.notes && d.needsAdjustment && (
+                                <span className="text-[11px] italic text-gray-500">{d.notes}</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="text-xs text-gray-600 bg-gray-50 dark:bg-gray-900 rounded p-2">{p.notes}</div>
                     </div>
                   </div>
-                ))
+                  );
+                })
               )}
               <a
                 href="https://szmc.anova.co.il/"
@@ -789,7 +980,7 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          {tab === "crcl" && <CrClCalculator />}
+          {tab === "crcl" && <CrClCalculator onCrClChange={(crcl, hd) => handleCrClChange(crcl, hd)} />}
           {tab === "curb65" && <CURB65Calculator />}
           {tab === "news2" && <NEWS2Calculator />}
           {tab === "lytes" && <ElectrolyteReference />}

@@ -557,3 +557,59 @@ export function checkBeersCriteria(patient: PatientEntry): BeersCriteria[] {
 
   return results;
 }
+
+// ════════════════════════════════════════════════════════════
+// 4. ANTIBIOTIC EXTRACTION FROM EMPIRIC PLAN TEXT
+// ════════════════════════════════════════════════════════════
+//
+// Parses a free-text empiric plan (e.g. "Ceftriaxone 2g IV q12h +
+// Vancomycin 15-20mg/kg IV q8-12h") and returns normalized antibiotic
+// names suitable for lookup in the dosing database.
+
+const ABX_EXTRACT_PATTERNS: Array<{ pattern: RegExp; name: string }> = [
+  // Order matters for overlapping matches — more specific first
+  { pattern: /piperacillin[\s/-]*tazobactam|pip[\s/-]*tazo|tazocin|tazorex/i, name: "piperacillin/tazobactam" },
+  { pattern: /amoxicillin[\s/-]*clavulan(?:ate|ic)|augmentin|amoxiclav/i, name: "amoxicillin/clavulanate" },
+  { pattern: /ceftazidime[\s/-]*avibactam|zavicefta/i, name: "ceftazidime/avibactam" },
+  { pattern: /ampicillin[\s/-]*sulbactam|unasyn/i, name: "ampicillin/sulbactam" },
+  { pattern: /trimethoprim[\s/-]*sulfamethoxazole|TMP[\s/-]*SMX|bactrim|septra/i, name: "trimethoprim/sulfamethoxazole" },
+  { pattern: /ceftriaxone|rocephin/i, name: "ceftriaxone" },
+  { pattern: /cefazolin|cefamezin/i, name: "cefazolin" },
+  { pattern: /cephalexin|ceforal/i, name: "cephalexin" },
+  { pattern: /cefepime/i, name: "cefepime" },
+  { pattern: /ceftazidime|fortum/i, name: "ceftazidime" },
+  { pattern: /cefuroxime|zinacef/i, name: "cefuroxime" },
+  { pattern: /meropenem|meronem/i, name: "meropenem" },
+  { pattern: /ertapenem|invanz/i, name: "ertapenem" },
+  { pattern: /imipenem/i, name: "imipenem" },
+  { pattern: /aztreonam/i, name: "aztreonam" },
+  { pattern: /vancomycin/i, name: "vancomycin" },
+  { pattern: /ciprofloxacin|cipro(?!lex)/i, name: "ciprofloxacin" },
+  { pattern: /levofloxacin|tavanic/i, name: "levofloxacin" },
+  { pattern: /moxifloxacin|avelox/i, name: "moxifloxacin" },
+  { pattern: /gentamicin/i, name: "gentamicin" },
+  { pattern: /amikacin/i, name: "amikacin" },
+  { pattern: /metronidazole|flagyl/i, name: "metronidazole" },
+  { pattern: /clindamycin|dalacin/i, name: "clindamycin" },
+  { pattern: /azithromycin|zithromax/i, name: "azithromycin" },
+  { pattern: /nitrofurantoin|macrodantin/i, name: "nitrofurantoin" },
+  { pattern: /fidaxomicin|dificlir/i, name: "fidaxomicin" },
+  { pattern: /fluconazole|diflucan|triflucan/i, name: "fluconazole" },
+  { pattern: /dexamethasone/i, name: "dexamethasone" },
+];
+
+/**
+ * Extract antibiotic names from a free-text empiric plan string.
+ * Returns deduplicated array of normalized lowercase names.
+ */
+export function extractAntibioticsFromPlan(planText: string): string[] {
+  const found: string[] = [];
+  for (const { pattern, name } of ABX_EXTRACT_PATTERNS) {
+    if (pattern.test(planText)) {
+      if (!found.includes(name)) {
+        found.push(name);
+      }
+    }
+  }
+  return found;
+}
