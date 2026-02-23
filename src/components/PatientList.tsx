@@ -48,22 +48,45 @@ export function PatientList() {
 
   return (
     <>
-      {/* Sort toggle */}
+      {/* Sort toggle + room chips */}
       {filtered.length > 1 && (
-        <div className="flex items-center justify-between px-3 py-1.5 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
-          <span className="text-xs text-gray-500 dark:text-gray-400">
-            {filtered.length} חולים ב{SECTION_LABEL[activeSection]}
-          </span>
-          <button
-            onClick={() => setSortByAcuity((v) => !v)}
-            className={`text-xs px-2.5 py-1 rounded-lg transition-colors ${
-              sortByAcuity
-                ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 font-semibold"
-                : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
-            }`}
-          >
-            {sortByAcuity ? "🔥 מיון חומרה" : "📋 מיון ידני"}
-          </button>
+        <div className="px-3 py-1.5 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {filtered.length} חולים ב{SECTION_LABEL[activeSection]}
+            </span>
+            <button
+              onClick={() => setSortByAcuity((v) => !v)}
+              className={`text-xs px-2.5 py-1 rounded-lg transition-colors ${
+                sortByAcuity
+                  ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 font-semibold"
+                  : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
+              }`}
+            >
+              {sortByAcuity ? "🔥 מיון חומרה" : "📋 מיון ידני"}
+            </button>
+          </div>
+          {/* Room quick-filter chips */}
+          {(() => {
+            const rooms = [...new Set(filtered.map(p => p.room).filter(Boolean))].sort();
+            if (rooms.length < 2) return null;
+            return (
+              <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
+                {rooms.map(room => (
+                  <button
+                    key={room}
+                    onClick={() => {
+                      const el = document.getElementById(`patient-room-${room}`);
+                      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }}
+                    className="shrink-0 text-xs px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 active:bg-blue-200 font-mono tabular-nums"
+                  >
+                    {room}
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
         </div>
       )}
 

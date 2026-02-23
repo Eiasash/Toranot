@@ -198,7 +198,7 @@ function ConfirmModal({
 function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qrsync") => void }) {
   const [open, setOpen] = useState(false);
   const [dialog, setDialog] = useState<ConfirmDialog>({ type: "none" });
-  const { darkMode, showTomorrow, patients } = usePatientsState();
+  const { darkMode, showTomorrow, scanMode, patients } = usePatientsState();
   const dispatch = usePatientsDispatch();
 
   const handleArchiveClick = () => {
@@ -315,6 +315,14 @@ function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qrsync") 
               >
                 <span className="text-base">📅</span>
                 {showTomorrow ? "הסתר משימות מחר" : "הצג משימות מחר"}
+              </button>
+              {/* Scan mode */}
+              <button
+                onClick={() => { dispatch({ type: "TOGGLE_SCAN_MODE" }); setOpen(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-slate-200 active:bg-slate-700 border-t border-slate-700 text-right"
+              >
+                <span className="text-base">{scanMode ? "📋" : "👁️"}</span>
+                {scanMode ? "תצוגה מלאה" : "מצב סקירה"}
               </button>
               {/* Dark mode */}
               <button

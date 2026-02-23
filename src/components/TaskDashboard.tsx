@@ -40,6 +40,7 @@ export function TaskDashboard({ onClose }: { onClose: () => void }) {
   const dispatch = usePatientsDispatch();
   const [filter, setFilter] = useState<FilterMode>("all");
   const [tab, setTab] = useState<"tasks" | "sections" | "route">("tasks");
+  const [showCompleted, setShowCompleted] = useState(false);
 
   const allDashTasks = useMemo(() => {
     const items: DashTask[] = [];
@@ -118,12 +119,12 @@ export function TaskDashboard({ onClose }: { onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="bg-red-700 text-white px-4 py-3 flex items-center justify-between">
+        <div className="bg-slate-800 text-white px-4 py-3 flex items-center justify-between rounded-t-2xl">
           <div>
             <h2 className="text-base font-bold">
               לוח משימות ({allDashTasks.length} ממתינות)
             </h2>
-            <p className="text-xs text-red-200">כל המשימות — כל החולים</p>
+            <p className="text-xs text-slate-400">כל המשימות — כל החולים</p>
           </div>
           <button onClick={onClose} className="text-white/70 hover:text-white text-xl px-2">
             ✕
@@ -136,7 +137,7 @@ export function TaskDashboard({ onClose }: { onClose: () => void }) {
             onClick={() => setTab("tasks")}
             className={`flex-1 py-2 text-xs font-medium transition-colors ${
               tab === "tasks"
-                ? "text-red-600 dark:text-red-400 border-b-2 border-red-600"
+                ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600"
                 : "text-gray-500 dark:text-gray-400"
             }`}
           >
@@ -146,7 +147,7 @@ export function TaskDashboard({ onClose }: { onClose: () => void }) {
             onClick={() => setTab("sections")}
             className={`flex-1 py-2 text-xs font-medium transition-colors ${
               tab === "sections"
-                ? "text-red-600 dark:text-red-400 border-b-2 border-red-600"
+                ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600"
                 : "text-gray-500 dark:text-gray-400"
             }`}
           >
@@ -156,7 +157,7 @@ export function TaskDashboard({ onClose }: { onClose: () => void }) {
             onClick={() => setTab("route")}
             className={`flex-1 py-2 text-xs font-medium transition-colors ${
               tab === "route"
-                ? "text-red-600 dark:text-red-400 border-b-2 border-red-600"
+                ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600"
                 : "text-gray-500 dark:text-gray-400"
             }`}
           >
@@ -175,7 +176,7 @@ export function TaskDashboard({ onClose }: { onClose: () => void }) {
             ) : (
               routeGroups.map(({ section, rooms }) => (
                 <div key={section}>
-                  <div className="text-xs font-bold text-red-700 dark:text-red-400 mb-1.5 px-1">
+                  <div className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 px-1">
                     📍 {SECTION_LABEL[section]}
                   </div>
                   {rooms.map(({ room, tasks }) => (
@@ -219,7 +220,7 @@ export function TaskDashboard({ onClose }: { onClose: () => void }) {
               onClick={() => setFilter(f.key)}
               className={`flex-none px-3 py-1 text-xs rounded-full border transition-colors ${
                 filter === f.key
-                  ? "bg-red-600 text-white border-red-600"
+                  ? "bg-blue-600 text-white border-blue-600"
                   : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600"
               }`}
             >
@@ -290,6 +291,46 @@ export function TaskDashboard({ onClose }: { onClose: () => void }) {
               </div>
             ))
           )}
+
+          {/* Completed tasks toggle */}
+          {(() => {
+            const completed: DashTask[] = [];
+            for (const p of patients) {
+              for (const t of [...p.tasks, ...p.generatedTasks]) {
+                if (t.done) completed.push({ task: t, patient: p });
+              }
+            }
+            if (completed.length === 0) return null;
+            return (
+              <>
+                <button
+                  onClick={() => setShowCompleted(v => !v)}
+                  className="w-full text-xs text-gray-400 dark:text-gray-500 py-2 active:text-gray-600"
+                >
+                  {showCompleted ? "▴" : "▾"} הצג משימות שהושלמו ({completed.length})
+                </button>
+                {showCompleted && completed.map(d => (
+                  <div
+                    key={`done-${d.patient.id}-${d.task.id}`}
+                    className="flex items-start gap-2 p-2 rounded-lg border border-gray-100 dark:border-gray-700 opacity-50"
+                  >
+                    <input
+                      type="checkbox"
+                      checked
+                      onChange={() => dispatch({ type: "TOGGLE_TASK", patientId: d.patient.id, taskId: d.task.id })}
+                      className="mt-1 h-5 w-5 rounded accent-blue-600"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm line-through text-gray-400 dark:text-gray-500" dir="auto" style={{ unicodeBidi: "plaintext" }}>
+                        {d.task.text}
+                      </div>
+                      <div className="text-xs text-gray-400">{d.patient.room} {d.patient.name}</div>
+                    </div>
+                  </div>
+                ))}
+              </>
+            );
+          })()}
         </div>
         </>
         )}

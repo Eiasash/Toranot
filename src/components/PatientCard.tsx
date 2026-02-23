@@ -182,7 +182,7 @@ function HandoverNoteInline({ patient }: { patient: PatientEntry }) {
 
 export function PatientCard({ patient }: { patient: PatientEntry }) {
   const dispatch = usePatientsDispatch();
-  const { showTomorrow } = usePatientsState();
+  const { showTomorrow, scanMode } = usePatientsState();
 
   const manualNotes = patient.notes ?? [];
 
@@ -255,8 +255,49 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
     setDraft("");
   };
 
+  // Acuity score for left border
+  const acuityScore = calcAcuity(patient);
+  const borderColor =
+    acuityScore >= 8 ? "border-l-red-500" :
+    acuityScore >= 5 ? "border-l-yellow-400" :
+    acuityScore >= 1 ? "border-l-orange-300" :
+    "border-l-gray-200 dark:border-l-gray-700";
+
+  // ── Scan Mode: compact card ──
+  if (scanMode) {
+    return (
+      <div id={patient.room ? `patient-room-${patient.room}` : undefined} className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 border-l-4 ${borderColor} px-3 py-2 flex items-center gap-3`}>
+        {acuityScore > 0 && <AcuityBadge patient={patient} />}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold truncate dark:text-gray-100">
+              {patient.name ?? "לא ידוע"}
+            </span>
+            {patient.room && (
+              <span className="shrink-0 text-xs bg-blue-600 text-white px-1.5 py-0.5 rounded">
+                {patient.room}
+              </span>
+            )}
+            {patient.age && (
+              <span className="text-xs text-gray-500 tabular-nums">{patient.age}</span>
+            )}
+            {patient.flags.filter(f => f.toUpperCase().includes("DNR") || f.toUpperCase().includes("DNI")).map(f => (
+              <FlagBadge key={f} flag={f} />
+            ))}
+          </div>
+          {patient.diagnosis && (
+            <div className="text-xs text-gray-500 dark:text-gray-400 truncate" dir="auto">
+              {patient.diagnosis}
+            </div>
+          )}
+        </div>
+        <TaskProgress done={doneCount} total={totalCount} />
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 space-y-3 animate-card-in">
+    <div id={patient.room ? `patient-room-${patient.room}` : undefined} className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 border-l-4 ${borderColor} p-4 space-y-3 animate-card-in`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           {editing ? (
@@ -508,8 +549,13 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
         );
       })()}
 
-      {/* Quick action buttons */}
-      <div className="flex gap-1.5">
+      {/* Quick action buttons — collapsed by default */}
+      <details className="group">
+        <summary className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 cursor-pointer active:bg-gray-100 list-none flex items-center gap-1">
+          <span className="text-sm">🔧</span> כלים
+          <span className="text-gray-400 group-open:rotate-180 transition-transform">▾</span>
+        </summary>
+        <div className="flex gap-1.5 mt-2 flex-wrap">
         <button
           onClick={() => setShowScenario(true)}
           className="text-xs px-2.5 py-1 rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 active:bg-amber-100"
@@ -552,7 +598,8 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
             📈 תרשים
           </button>
         )}
-      </div>
+        </div>
+      </details>
 
       {showLabForm && (
         <AddLabForm patient={patient} onClose={() => setShowLabForm(false)} />

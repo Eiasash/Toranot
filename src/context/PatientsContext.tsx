@@ -38,6 +38,7 @@ interface PatientsState {
   showTomorrow: boolean;
   darkMode: boolean;
   shiftHistory: ShiftSnapshot[];
+  scanMode: boolean;
 }
 
 // Data loaded from localStorage or external sources may have missing/wrong-typed fields.
@@ -116,6 +117,7 @@ const initializer = (): PatientsState => ({
   showTomorrow: false,
   darkMode: loadDarkMode(),
   shiftHistory: loadShiftHistory(),
+  scanMode: false,
 });
 
 // -----------------------------
@@ -146,7 +148,8 @@ export type Action =
   | { type: "REAPPLY_RULES" }
   | { type: "IMPORT_BACKUP"; patients: PatientEntry[] }
   | { type: "SYNC_SHIFT_HISTORY"; shiftHistory: ShiftSnapshot[] }
-  | { type: "SYNC_PATIENTS"; patients: PatientEntry[] };
+  | { type: "SYNC_PATIENTS"; patients: PatientEntry[] }
+  | { type: "TOGGLE_SCAN_MODE" };
 
 export function inferUrgencyFromText(text: string): Urgency {
   const t = text.trim();
@@ -297,6 +300,9 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
 
     case "TOGGLE_SHOW_TOMORROW":
       return { ...state, showTomorrow: !state.showTomorrow };
+
+    case "TOGGLE_SCAN_MODE":
+      return { ...state, scanMode: !state.scanMode };
 
     case "ADD_LAB":
       return {
@@ -464,6 +470,7 @@ const PatientsStateContext = createContext<PatientsState>({
   showTomorrow: false,
   darkMode: false,
   shiftHistory: [],
+  scanMode: false,
 });
 const PatientsDispatchContext = createContext<Dispatch<Action>>(() => {});
 
