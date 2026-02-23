@@ -17,10 +17,10 @@ createRoot(rootEl).render(
 requestNotificationPermission();
 
 // ── Service Worker: register, auto-update every 5 min, auto-reload on update ──
-const SW_URL = (import.meta.env.BASE_URL || "/") + "sw.js";
+const SW_URL = `${import.meta.env.BASE_URL}sw.js`;
 const UPDATE_EVERY_MS = 5 * 60 * 1000;
 
-function registerAndAutoUpdateSW() {
+export function registerAndAutoUpdateSW() {
   if (!("serviceWorker" in navigator)) return;
 
   let refreshing = false;
@@ -34,8 +34,9 @@ function registerAndAutoUpdateSW() {
   navigator.serviceWorker
     .register(SW_URL)
     .then((reg) => {
-      // If there's already a waiting worker (common on first load after deploy), activate it.
-      if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
+      if (reg.waiting) {
+        reg.waiting.postMessage({ type: "SKIP_WAITING" });
+      }
 
       reg.addEventListener("updatefound", () => {
         const worker = reg.installing;
@@ -48,7 +49,9 @@ function registerAndAutoUpdateSW() {
         });
       });
 
-      window.setInterval(() => reg.update().catch(() => {}), UPDATE_EVERY_MS);
+      window.setInterval(() => {
+        reg.update().catch(() => {});
+      }, UPDATE_EVERY_MS);
     })
     .catch(() => {});
 }
