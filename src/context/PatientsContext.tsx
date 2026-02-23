@@ -137,7 +137,8 @@ export type Action =
   | { type: "CLEAR_ALL" }
   | { type: "TOGGLE_SHOW_TOMORROW" }
   | { type: "REAPPLY_RULES" }
-  | { type: "IMPORT_BACKUP"; patients: PatientEntry[] };
+  | { type: "IMPORT_BACKUP"; patients: PatientEntry[] }
+  | { type: "SYNC_STORAGE"; patients: PatientEntry[]; shiftHistory: ShiftSnapshot[] };
 
 export function inferUrgencyFromText(text: string): Urgency {
   const t = text.trim();
@@ -432,6 +433,13 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
     case "IMPORT_BACKUP":
       return { ...state, patients: action.patients.map(normalizePatient) };
 
+    case "SYNC_STORAGE":
+      return {
+        ...state,
+        patients: action.patients.map(normalizePatient),
+        shiftHistory: action.shiftHistory,
+      };
+
     default:
       return state;
   }
@@ -464,6 +472,20 @@ export function PatientsProvider({ children }: { children: ReactNode }) {
     safeSetItem(STORAGE_KEY_DARK_MODE, state.darkMode ? "true" : "false");
     document.documentElement.classList.toggle("dark", state.darkMode);
   }, [state.darkMode]);
+
+  // Cross-tab sync: if another tab writes to localStorage, pick up the changes.
+  // The "storage" event only fires in OTHER tabs, never the one that wrote.
+  useEffect(() => {
+    const handler = (e: StorageEvent) => {
+      if (e.key !== STORAGE_KEY_PATIENTS && e.key !== STORAGE_KEY_SHIFT_HISTORY) return;
+      console.info("[Toranot] storage sync from another tab, key:", e.key);
+      const patients = (() => { try { return JSON.parse(safeGetItem(STORAGE_KEY_PATIENTS) ?? "[]"); } catch { return []; } })();
+      const shiftHistory = (() => { try { return JSON.parse(safeGetItem(STORAGE_KEY_SHIFT_HISTORY) ?? "[]"); } catch { return []; } })();
+      dispatch({ type: "SYNC_STORAGE", patients, shiftHistory });
+    };
+    window.addEventListener("storage", handler);
+    return () => window.removeEventListener("storage", handler);
+  }, [dispatch]);
 
   return (
     <PatientsStateContext.Provider value={state}>
