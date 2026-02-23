@@ -16,45 +16,41 @@ createRoot(rootEl).render(
 // Request notification permission for task timers
 requestNotificationPermission();
 
-// Service Worker registration with auto-update
-if ("serviceWorker" in navigator) {
-  const baseUrl = import.meta.env.BASE_URL || "/";
-  navigator.serviceWorker
-    .register(baseUrl + "sw.js", { scope: baseUrl })
-    .then((reg) => {
-      // Check for updates every 5 minutes (26h shifts — can't rely on navigation)
-      setInterval(() => reg.update(), 5 * 60 * 1000);
+// ── Service Worker: register, auto-update every 5 min, auto-reload on update ──
+const SW_URL = (import.meta.env.BASE_URL || "/") + "sw.js";
+const UPDATE_EVERY_MS = 5 * 60 * 1000;
 
-      reg.addEventListener("updatefound", () => {
-        const newWorker = reg.installing;
-        if (!newWorker) return;
-        newWorker.addEventListener("statechange", () => {
-          if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
-            // New SW ready while old one is still controlling — activate it now
-            console.log("[Toranot] New service worker installed, activating...");
-            newWorker.postMessage({ type: "SKIP_WAITING" });
-          }
-          if (
-            newWorker.state === "activated" &&
-            !navigator.serviceWorker.controller
-          ) {
-            // First install — reload so COI headers apply
-            window.location.reload();
-          }
-        });
-      });
-    })
-    .catch((error) => {
-      console.warn("Service worker registration failed:", error);
-    });
+function registerAndAutoUpdateSW() {
+  if (!("serviceWorker" in navigator)) return;
 
-  // When the new SW takes control, reload to pick up new hashed assets.
-  // State lives in localStorage — reload is safe and instant.
   let refreshing = false;
+
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (refreshing) return;
     refreshing = true;
-    console.log("[Toranot] New service worker active — reloading for fresh assets");
     window.location.reload();
   });
+
+  navigator.serviceWorker
+    .register(SW_URL)
+    .then((reg) => {
+      // If there's already a waiting worker (common on first load after deploy), activate it.
+      if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
+
+      reg.addEventListener("updatefound", () => {
+        const worker = reg.installing;
+        if (!worker) return;
+
+        worker.addEventListener("statechange", () => {
+          if (worker.state === "installed" && navigator.serviceWorker.controller) {
+            worker.postMessage({ type: "SKIP_WAITING" });
+          }
+        });
+      });
+
+      window.setInterval(() => reg.update().catch(() => {}), UPDATE_EVERY_MS);
+    })
+    .catch(() => {});
 }
+
+registerAndAutoUpdateSW();
