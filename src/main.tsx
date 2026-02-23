@@ -7,6 +7,8 @@ import { requestNotificationPermission } from "./components/TaskCountdown";
 const rootEl = document.getElementById("root");
 if (!rootEl) throw new Error("Root element #root not found");
 
+console.info("[Toranot] build", __GIT_SHA__, __BUILD_TIME__);
+
 createRoot(rootEl).render(
   <StrictMode>
     <App />
