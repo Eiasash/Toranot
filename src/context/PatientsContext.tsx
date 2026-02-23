@@ -452,7 +452,10 @@ export function PatientsProvider({ children }: { children: ReactNode }) {
 
   // Persist shift history
   useEffect(() => {
-    safeSetItem(STORAGE_KEY_SHIFT_HISTORY, JSON.stringify(state.shiftHistory));
+    const ok = safeSetItem(STORAGE_KEY_SHIFT_HISTORY, JSON.stringify(state.shiftHistory));
+    if (!ok && state.shiftHistory.length > 0) {
+      alert("⚠️ לא ניתן לשמור היסטוריית משמרות — נפח האחסון מלא. נסה למחוק משמרות ישנות.");
+    }
   }, [state.shiftHistory]);
 
   // Persist dark mode + apply class

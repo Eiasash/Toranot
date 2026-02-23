@@ -286,6 +286,7 @@ function OverflowMenu() {
   const handleConfirm = () => {
     if (dialog.type === "archive") {
       dispatch({ type: "ARCHIVE_SHIFT", label: dialog.label });
+      console.log("[Toranot] Shift archived:", dialog.label);
     } else if (dialog.type === "clear") {
       dispatch({ type: "CLEAR_ALL" });
     }

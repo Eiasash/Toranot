@@ -11,11 +11,13 @@ export function safeGetItem(key: string): string | null {
   }
 }
 
-export function safeSetItem(key: string, value: string): void {
+export function safeSetItem(key: string, value: string): boolean {
   try {
     localStorage.setItem(key, value);
+    return true;
   } catch (err) {
     console.warn(`Failed to write localStorage key "${key}":`, err);
+    return false;
   }
 }
 
