@@ -19,6 +19,7 @@ import { safeGetItem, safeSetItem } from "../utils/storage";
 const STORAGE_KEY_PATIENTS = "toranot-patients";
 const STORAGE_KEY_SHIFT_HISTORY = "toranot-shift-history";
 const STORAGE_KEY_DARK_MODE = "toranot-dark";
+const STORAGE_KEY_SCAN_MODE = "toranot-scan-mode";
 const MAX_SHIFT_HISTORY = 30;
 
 // -----------------------------
@@ -111,17 +112,23 @@ function loadDarkMode(): boolean {
   }
 }
 
+function loadScanMode(): boolean {
+  try {
+    return safeGetItem(STORAGE_KEY_SCAN_MODE) === "true";
+  } catch {
+    return false;
+  }
+}
+
 const initializer = (): PatientsState => ({
   patients: loadSavedPatients(),
   activeSection: "SIDE_A",
   showTomorrow: false,
   darkMode: loadDarkMode(),
   shiftHistory: loadShiftHistory(),
-  scanMode: false,
+  scanMode: loadScanMode(),
 });
 
-// -----------------------------
-// Actions
 // -----------------------------
 export type Action =
   | { type: "IMPORT_TEXT"; text: string }
@@ -495,6 +502,11 @@ export function PatientsProvider({ children }: { children: ReactNode }) {
     safeSetItem(STORAGE_KEY_DARK_MODE, state.darkMode ? "true" : "false");
     document.documentElement.classList.toggle("dark", state.darkMode);
   }, [state.darkMode]);
+
+  // Persist scan mode
+  useEffect(() => {
+    safeSetItem(STORAGE_KEY_SCAN_MODE, state.scanMode ? "true" : "false");
+  }, [state.scanMode]);
 
   // Cross-tab sync: if another tab writes to localStorage, pick up the changes.
   // The "storage" event only fires in OTHER tabs, never the one that wrote.
