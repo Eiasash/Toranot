@@ -8,22 +8,20 @@ import { calculateAcuity } from "../engine/acuity";
 export function PatientList() {
   const { patients, activeSection } = usePatientsState();
   const dispatch = usePatientsDispatch();
-  const [sortByAcuity, setSortByAcuity] = useState(false);
+  const [sortMode, setSortMode] = useState<"room" | "severity" | "name">("room");
 
   const filtered = useMemo(() => {
-    const sectionPatients = patients
-      .filter((p) => p.section === activeSection);
-
-    if (sortByAcuity) {
-      return [...sectionPatients].sort((a, b) => {
-        const scoreA = calculateAcuity(a).score;
-        const scoreB = calculateAcuity(b).score;
-        if (scoreA !== scoreB) return scoreB - scoreA;
-        return (a.order ?? 0) - (b.order ?? 0);
-      });
+    const sectionPatients = patients.filter((p) => p.section === activeSection);
+    const sorted = [...sectionPatients];
+    if (sortMode === "severity") {
+      sorted.sort((a, b) => calculateAcuity(b).score - calculateAcuity(a).score || (a.order ?? 0) - (b.order ?? 0));
+    } else if (sortMode === "name") {
+      sorted.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "", "he"));
+    } else {
+      sorted.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     }
-    return sectionPatients.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-  }, [patients, activeSection, sortByAcuity]);
+    return sorted;
+  }, [patients, activeSection, sortMode]);
 
   const handleRefresh = useCallback(() => {
     dispatch({ type: "REAPPLY_RULES" });
@@ -51,20 +49,19 @@ export function PatientList() {
       {/* Sort toggle + room chips — sticky so they stay visible while scrolling */}
       {filtered.length > 1 && (
         <div className="sticky top-0 z-10 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 space-y-1.5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-500 dark:text-gray-400">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
               {filtered.length} חולים ב{SECTION_LABEL[activeSection]}
             </span>
-            <button
-              onClick={() => setSortByAcuity((v) => !v)}
-              className={`text-xs px-2.5 py-1 rounded-lg transition-colors ${
-                sortByAcuity
-                  ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 font-semibold"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
-              }`}
+            <select
+              value={sortMode}
+              onChange={e => setSortMode(e.target.value as "room" | "severity" | "name")}
+              className="text-xs px-2 py-1 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-none outline-none"
             >
-              {sortByAcuity ? "🔥 מיון חומרה" : "📋 מיון ידני"}
-            </button>
+              <option value="room">📋 לפי חדר</option>
+              <option value="severity">🔥 לפי חומרה</option>
+              <option value="name">א→ב לפי שם</option>
+            </select>
           </div>
           {/* Room quick-filter chips + unstable jump */}
           {(() => {

@@ -55,6 +55,7 @@ function makeState(
     darkMode: false,
     shiftHistory: [],
     scanMode: false,
+    events: [],
     ...overrides,
   };
 }

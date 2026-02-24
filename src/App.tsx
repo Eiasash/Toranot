@@ -12,6 +12,8 @@ import { UndoToastContainer } from "./components/UndoToast";
 import { ShiftTimer } from "./components/ShiftTimer";
 import { usePatientsDispatch, usePatientsState } from "./context/PatientsContext";
 import { QRSync } from "./components/QRSync";
+import { QuickCaptureSheet } from "./components/QuickCaptureSheet";
+import { MorningReport } from "./components/MorningReport";
 import { requestNotificationPermission, syncReminders } from "./utils/taskReminders";
 
 // ─── Shift Progress Bar ────────────────────────────────────
@@ -195,7 +197,7 @@ function ConfirmModal({
 }
 
 // ─── Overflow menu (secondary actions) ────────────────────
-function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qrsync") => void }) {
+function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qrsync" | "capture" | "morning") => void }) {
   const [open, setOpen] = useState(false);
   const [dialog, setDialog] = useState<ConfirmDialog>({ type: "none" });
   const { darkMode, showTomorrow, scanMode, patients } = usePatientsState();
@@ -315,6 +317,22 @@ function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qrsync") 
               >
                 <span className="text-base">📅</span>
                 {showTomorrow ? "הסתר משימות מחר" : "הצג משימות מחר"}
+              </button>
+              {/* Quick capture */}
+              <button
+                onClick={() => { onOpenModal("capture"); setOpen(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-slate-200 active:bg-slate-700 border-t border-slate-700 text-right"
+              >
+                <span className="text-base">📲</span>
+                קליטה מהירה
+              </button>
+              {/* Morning report */}
+              <button
+                onClick={() => { onOpenModal("morning"); setOpen(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-slate-200 active:bg-slate-700 border-t border-slate-700 text-right"
+              >
+                <span className="text-base">☀️</span>
+                דוח בוקר
               </button>
               {/* Scan mode */}
               <button
@@ -504,7 +522,7 @@ function useShakeDetector(onShake: () => void) {
 }
 
 // ─── Main App ──────────────────────────────────────────────
-type Modal = "none" | "reference" | "handoff" | "dashboard" | "history" | "search" | "qrsync";
+type Modal = "none" | "reference" | "handoff" | "dashboard" | "history" | "search" | "qrsync" | "capture" | "morning";
 
 function AppInner() {
   const [modal, setModal] = useState<Modal>("none");
@@ -596,6 +614,8 @@ function AppInner() {
       {modal === "history"    && <ShiftHistory    onClose={() => setModal("none")} />}
       {modal === "search"     && <GlobalSearch    onClose={() => setModal("none")} />}
       {modal === "qrsync"     && <QRSync          onClose={() => setModal("none")} />}
+      {modal === "capture"    && <QuickCaptureSheet onClose={() => setModal("none")} />}
+      {modal === "morning"    && <MorningReport   onClose={() => setModal("none")} />}
     </div>
   );
 }

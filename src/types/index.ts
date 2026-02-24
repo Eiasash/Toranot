@@ -14,4 +14,5 @@ export type {
   PatientEntry,
   LabEntry,
   PatientPhoto,
+  WardEvent,
 } from "./patient";

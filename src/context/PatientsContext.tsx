@@ -6,7 +6,7 @@ import {
   type ReactNode,
   type Dispatch,
 } from "react";
-import type { PatientEntry, Section, Task, Urgency, LabEntry } from "../types";
+import type { PatientEntry, Section, Task, Urgency, LabEntry, WardEvent } from "../types";
 import { parsePatientList } from "../parser/parsePatientList";
 import { mergeScan } from "../engine/mergeScan";
 import { applyRules } from "../engine/rules";
@@ -20,6 +20,8 @@ const STORAGE_KEY_PATIENTS = "toranot-patients";
 const STORAGE_KEY_SHIFT_HISTORY = "toranot-shift-history";
 const STORAGE_KEY_DARK_MODE = "toranot-dark";
 const STORAGE_KEY_SCAN_MODE = "toranot-scan-mode";
+const STORAGE_KEY_EVENTS = "toranot-events";
+const MAX_EVENTS = 300;
 const MAX_SHIFT_HISTORY = 30;
 
 // -----------------------------
@@ -40,6 +42,7 @@ interface PatientsState {
   darkMode: boolean;
   shiftHistory: ShiftSnapshot[];
   scanMode: boolean;
+  events: WardEvent[];
 }
 
 // Data loaded from localStorage or external sources may have missing/wrong-typed fields.
@@ -120,6 +123,17 @@ function loadScanMode(): boolean {
   }
 }
 
+function loadEvents(): WardEvent[] {
+  try {
+    const raw = safeGetItem(STORAGE_KEY_EVENTS);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 const initializer = (): PatientsState => ({
   patients: loadSavedPatients(),
   activeSection: "SIDE_A",
@@ -127,6 +141,7 @@ const initializer = (): PatientsState => ({
   darkMode: loadDarkMode(),
   shiftHistory: loadShiftHistory(),
   scanMode: loadScanMode(),
+  events: loadEvents(),
 });
 
 // -----------------------------
@@ -156,7 +171,11 @@ export type Action =
   | { type: "IMPORT_BACKUP"; patients: PatientEntry[] }
   | { type: "SYNC_SHIFT_HISTORY"; shiftHistory: ShiftSnapshot[] }
   | { type: "SYNC_PATIENTS"; patients: PatientEntry[] }
-  | { type: "TOGGLE_SCAN_MODE" };
+  | { type: "TOGGLE_SCAN_MODE" }
+  | { type: "LOG_EVENT"; event: WardEvent }
+  | { type: "MOVE_PATIENT"; patientId: string; toRoom: string; toSection?: Section }
+  | { type: "NEW_ADMISSION"; patient: PatientEntry }
+  | { type: "ADD_UNASSIGNED_TASK"; text: string; urgency: Urgency };
 
 export function inferUrgencyFromText(text: string): Urgency {
   const t = text.trim();
@@ -196,19 +215,32 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
     case "SET_SECTION":
       return { ...state, activeSection: action.section };
 
-    case "TOGGLE_TASK":
-      return {
-        ...state,
-        patients: state.patients.map((p) =>
-          p.id === action.patientId
-            ? {
-                ...p,
-                tasks: toggleTaskInList(p.tasks, action.taskId),
-                generatedTasks: toggleTaskInList(p.generatedTasks, action.taskId),
-              }
-            : p,
-        ),
-      };
+    case "TOGGLE_TASK": {
+      const patient = state.patients.find(p => p.id === action.patientId);
+      const task = patient && [...(patient.tasks), ...(patient.generatedTasks)].find(t => t.id === action.taskId);
+      const wasUndone = task && !task.done;
+      const newPatients = state.patients.map((p) =>
+        p.id === action.patientId
+          ? {
+              ...p,
+              tasks: toggleTaskInList(p.tasks, action.taskId),
+              generatedTasks: toggleTaskInList(p.generatedTasks, action.taskId),
+            }
+          : p,
+      );
+      if (wasUndone && task) {
+        const event: WardEvent = {
+          id: generateId("ev-"),
+          type: "TASK_COMPLETED",
+          at: new Date().toISOString(),
+          patientId: action.patientId,
+          taskId: action.taskId,
+          text: task.text,
+        };
+        return { ...state, patients: newPatients, events: [event, ...state.events].slice(0, MAX_EVENTS) };
+      }
+      return { ...state, patients: newPatients };
+    }
 
     case "SET_TASK_NOTE":
       return {
@@ -249,9 +281,21 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
     case "ADD_TASK": {
       const text = action.text.trim();
       if (!text) return state;
-
+      const patient = state.patients.find(p => p.id === action.patientId);
+      const urgency = action.urgency ?? inferUrgencyFromText(text);
+      const taskId = generateId("manual-");
+      const event: WardEvent = {
+        id: generateId("ev-"),
+        type: "TASK_CREATED",
+        at: new Date().toISOString(),
+        patientId: action.patientId,
+        patientName: patient?.name ?? null,
+        text,
+        urgency,
+      };
       return {
         ...state,
+        events: [event, ...state.events].slice(0, MAX_EVENTS),
         patients: state.patients.map((p) =>
           p.id === action.patientId
             ? {
@@ -259,11 +303,11 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
                 tasks: [
                   ...p.tasks,
                   {
-                    id: generateId("manual-"),
+                    id: taskId,
                     text,
-                    urgency: action.urgency ?? inferUrgencyFromText(text),
-                    category: "other",
-                    source: "manual",
+                    urgency,
+                    category: "other" as const,
+                    source: "manual" as const,
                     done: false,
                     doneTime: null,
                     time: null,
@@ -463,6 +507,61 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
     case "SYNC_PATIENTS":
       return { ...state, patients: action.patients.map(normalizePatient) };
 
+    case "LOG_EVENT": {
+      const events = [action.event, ...state.events].slice(0, MAX_EVENTS);
+      return { ...state, events };
+    }
+
+    case "MOVE_PATIENT": {
+      const patient = state.patients.find(p => p.id === action.patientId);
+      if (!patient) return state;
+      const event: WardEvent = {
+        id: generateId("ev-"),
+        type: "MOVE",
+        at: new Date().toISOString(),
+        patientId: action.patientId,
+        patientName: patient.name,
+        from: patient.room,
+        to: action.toRoom,
+      };
+      return {
+        ...state,
+        events: [event, ...state.events].slice(0, MAX_EVENTS),
+        patients: state.patients.map(p =>
+          p.id === action.patientId
+            ? { ...p, room: action.toRoom, ...(action.toSection ? { section: action.toSection } : {}) }
+            : p,
+        ),
+      };
+    }
+
+    case "NEW_ADMISSION": {
+      const event: WardEvent = {
+        id: generateId("ev-"),
+        type: "ADMISSION",
+        at: new Date().toISOString(),
+        patientId: action.patient.id,
+        patientName: action.patient.name,
+        room: action.patient.room,
+      };
+      return {
+        ...state,
+        events: [event, ...state.events].slice(0, MAX_EVENTS),
+        patients: [...state.patients, action.patient],
+      };
+    }
+
+    case "ADD_UNASSIGNED_TASK": {
+      const event: WardEvent = {
+        id: generateId("ev-"),
+        type: "TASK_CREATED",
+        at: new Date().toISOString(),
+        text: action.text,
+        urgency: action.urgency,
+      };
+      return { ...state, events: [event, ...state.events].slice(0, MAX_EVENTS) };
+    }
+
     default:
       return state;
   }
@@ -478,6 +577,7 @@ const PatientsStateContext = createContext<PatientsState>({
   darkMode: false,
   shiftHistory: [],
   scanMode: false,
+  events: [],
 });
 const PatientsDispatchContext = createContext<Dispatch<Action>>(() => {});
 
@@ -507,6 +607,11 @@ export function PatientsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     safeSetItem(STORAGE_KEY_SCAN_MODE, state.scanMode ? "true" : "false");
   }, [state.scanMode]);
+
+  // Persist events log
+  useEffect(() => {
+    safeSetItem(STORAGE_KEY_EVENTS, JSON.stringify(state.events));
+  }, [state.events]);
 
   // Cross-tab sync: if another tab writes to localStorage, pick up the changes.
   // The "storage" event only fires in OTHER tabs, never the one that wrote.

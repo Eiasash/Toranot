@@ -1,4 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { usePatientsState } from "../context/PatientsContext";
+import { SECTION_LABEL } from "../types";
 
 // ─── Searchable data sources ─────────────────────────────
 // We inline the data references here to avoid circular imports.
@@ -102,6 +104,7 @@ const ALL_ITEMS = [...MEDS, ...SCENARIOS, ...ABX, ...TOOLS, ...CRIT_VALUES];
 export function GlobalSearch({ onClose }: { onClose: () => void }) {
   const [q, setQ] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const { patients } = usePatientsState();
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -116,6 +119,16 @@ export function GlobalSearch({ onClose }: { onClose: () => void }) {
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
+  const patientResults = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    if (!term) return [];
+    return patients.filter(p =>
+      (p.name?.toLowerCase().includes(term)) ||
+      (p.room?.toLowerCase().includes(term)) ||
+      (p.diagnosis?.toLowerCase().includes(term))
+    ).slice(0, 8);
+  }, [q, patients]);
+
   const results = useMemo(() => {
     const term = q.trim().toLowerCase();
     if (!term) return [];
@@ -124,7 +137,7 @@ export function GlobalSearch({ onClose }: { onClose: () => void }) {
         item.title.toLowerCase().includes(term) ||
         item.sub.toLowerCase().includes(term) ||
         (item.detail?.toLowerCase().includes(term) ?? false),
-    ).slice(0, 20);
+    ).slice(0, 15);
   }, [q]);
 
   return (
@@ -143,7 +156,7 @@ export function GlobalSearch({ onClose }: { onClose: () => void }) {
             ref={inputRef}
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="חפש תרופה, פרוטוקול, תרחיש..."
+            placeholder="שם, חדר, אבחנה, תרופה, פרוטוקול..."
             dir="auto"
             className="flex-1 bg-transparent text-gray-900 dark:text-gray-100 text-base outline-none placeholder:text-gray-400"
           />
@@ -156,42 +169,85 @@ export function GlobalSearch({ onClose }: { onClose: () => void }) {
         <div className="max-h-[60vh] overflow-y-auto">
           {q.trim() === "" && (
             <div className="px-4 py-6 text-center text-gray-400 text-sm">
-              <p>חפש תרופות, אנטיביוטיקה, תרחישים, מחשבונים, ערכים קריטיים</p>
+              <p>חפש מטופלים, תרופות, אנטיביוטיקה, תרחישים, מחשבונים, ערכים קריטיים</p>
               <p className="text-xs mt-2 text-gray-500">נער את הטלפון 📱 כדי לפתוח מכל מסך</p>
             </div>
           )}
 
-          {q.trim() !== "" && results.length === 0 && (
+          {q.trim() !== "" && patientResults.length === 0 && results.length === 0 && (
             <div className="px-4 py-6 text-center text-gray-400 text-sm">
               לא נמצאו תוצאות
             </div>
           )}
 
-          {results.map((item, i) => (
-            <div
-              key={`${item.title}-${i}`}
-              className="px-4 py-2.5 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-            >
-              <div className="flex items-start gap-2">
-                <span className="text-xs text-gray-400 whitespace-nowrap mt-0.5">
-                  {item.cat}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm text-gray-900 dark:text-gray-100">
-                    {item.title}
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    {item.sub}
-                  </div>
-                  {item.detail && (
-                    <div className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
-                      {item.detail}
-                    </div>
-                  )}
-                </div>
+          {/* Patient results — section aware */}
+          {patientResults.length > 0 && (
+            <>
+              <div className="px-4 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wide bg-gray-50 dark:bg-gray-800/50">
+                מטופלים
               </div>
-            </div>
-          ))}
+              {patientResults.map(p => {
+                const acuityScore = [...p.tasks, ...p.generatedTasks].reduce((s, t) => {
+                  if (t.done) return s;
+                  return s + (t.urgency === "stat" ? 3 : t.urgency === "urgent" ? 2 : 0);
+                }, 0);
+                return (
+                  <button
+                    key={p.id}
+                    className="w-full px-4 py-2.5 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-right"
+                    onClick={() => {
+                      onClose();
+                      setTimeout(() => {
+                        document.getElementById(`patient-${p.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+                      }, 100);
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      {p.room && <span className="text-xs font-mono bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded shrink-0">{p.room}</span>}
+                      <span className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{p.name ?? "—"}</span>
+                      {acuityScore >= 5 && <span className="text-xs text-red-500 shrink-0">⚠️</span>}
+                      <span className="text-xs text-gray-400 shrink-0 mr-auto">{SECTION_LABEL[p.section]}</span>
+                    </div>
+                    {p.diagnosis && <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{p.diagnosis}</div>}
+                  </button>
+                );
+              })}
+            </>
+          )}
+
+          {/* Clinical reference results */}
+          {results.length > 0 && (
+            <>
+              <div className="px-4 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wide bg-gray-50 dark:bg-gray-800/50">
+                עזר קליני
+              </div>
+              {results.map((item, i) => (
+                <div
+                  key={`${item.title}-${i}`}
+                  className="px-4 py-2.5 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                >
+                  <div className="flex items-start gap-2">
+                    <span className="text-xs text-gray-400 whitespace-nowrap mt-0.5">
+                      {item.cat}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-sm text-gray-900 dark:text-gray-100">
+                        {item.title}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {item.sub}
+                      </div>
+                      {item.detail && (
+                        <div className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
+                          {item.detail}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
         </div>
       </div>
     </div>
