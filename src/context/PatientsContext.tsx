@@ -21,6 +21,7 @@ const STORAGE_KEY_SHIFT_HISTORY = "toranot-shift-history";
 const STORAGE_KEY_DARK_MODE = "toranot-dark";
 const STORAGE_KEY_SCAN_MODE = "toranot-scan-mode";
 const STORAGE_KEY_EVENTS = "toranot-events";
+const STORAGE_KEY_UNASSIGNED = "toranot-unassigned-tasks";
 const MAX_EVENTS = 300;
 const MAX_SHIFT_HISTORY = 30;
 
@@ -43,6 +44,7 @@ interface PatientsState {
   shiftHistory: ShiftSnapshot[];
   scanMode: boolean;
   events: WardEvent[];
+  unassignedTasks: Task[];
 }
 
 // Data loaded from localStorage or external sources may have missing/wrong-typed fields.
@@ -134,6 +136,17 @@ function loadEvents(): WardEvent[] {
   }
 }
 
+function loadUnassignedTasks(): Task[] {
+  try {
+    const raw = safeGetItem(STORAGE_KEY_UNASSIGNED);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map(normalizeTask) : [];
+  } catch {
+    return [];
+  }
+}
+
 const initializer = (): PatientsState => ({
   patients: loadSavedPatients(),
   activeSection: "SIDE_A",
@@ -142,6 +155,7 @@ const initializer = (): PatientsState => ({
   shiftHistory: loadShiftHistory(),
   scanMode: loadScanMode(),
   events: loadEvents(),
+  unassignedTasks: loadUnassignedTasks(),
 });
 
 // -----------------------------
@@ -175,7 +189,9 @@ export type Action =
   | { type: "LOG_EVENT"; event: WardEvent }
   | { type: "MOVE_PATIENT"; patientId: string; toRoom: string; toSection?: Section }
   | { type: "NEW_ADMISSION"; patient: PatientEntry }
-  | { type: "ADD_UNASSIGNED_TASK"; text: string; urgency: Urgency };
+  | { type: "ADD_UNASSIGNED_TASK"; text: string; urgency: Urgency }
+  | { type: "ASSIGN_TASK_TO_PATIENT"; taskId: string; patientId: string }
+  | { type: "TOGGLE_UNASSIGNED_TASK"; taskId: string };
 
 export function inferUrgencyFromText(text: string): Urgency {
   const t = text.trim();
@@ -552,6 +568,18 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
     }
 
     case "ADD_UNASSIGNED_TASK": {
+      const task: Task = {
+        id: generateId("task-"),
+        text: action.text,
+        urgency: action.urgency,
+        category: "other",
+        source: "manual",
+        done: false,
+        doneTime: null,
+        time: null,
+        confidence: 1,
+        note: null,
+      };
       const event: WardEvent = {
         id: generateId("ev-"),
         type: "TASK_CREATED",
@@ -559,7 +587,36 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
         text: action.text,
         urgency: action.urgency,
       };
-      return { ...state, events: [event, ...state.events].slice(0, MAX_EVENTS) };
+      return {
+        ...state,
+        unassignedTasks: [task, ...state.unassignedTasks],
+        events: [event, ...state.events].slice(0, MAX_EVENTS),
+      };
+    }
+
+    case "ASSIGN_TASK_TO_PATIENT": {
+      const task = state.unassignedTasks.find(t => t.id === action.taskId);
+      if (!task) return state;
+      return {
+        ...state,
+        unassignedTasks: state.unassignedTasks.filter(t => t.id !== action.taskId),
+        patients: state.patients.map(p =>
+          p.id === action.patientId
+            ? { ...p, tasks: [task, ...p.tasks] }
+            : p
+        ),
+      };
+    }
+
+    case "TOGGLE_UNASSIGNED_TASK": {
+      return {
+        ...state,
+        unassignedTasks: state.unassignedTasks.map(t =>
+          t.id === action.taskId
+            ? { ...t, done: !t.done, doneTime: !t.done ? new Date().toISOString() : null }
+            : t
+        ),
+      };
     }
 
     default:
@@ -578,6 +635,7 @@ const PatientsStateContext = createContext<PatientsState>({
   shiftHistory: [],
   scanMode: false,
   events: [],
+  unassignedTasks: [],
 });
 const PatientsDispatchContext = createContext<Dispatch<Action>>(() => {});
 
@@ -612,6 +670,11 @@ export function PatientsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     safeSetItem(STORAGE_KEY_EVENTS, JSON.stringify(state.events));
   }, [state.events]);
+
+  // Persist unassigned tasks
+  useEffect(() => {
+    safeSetItem(STORAGE_KEY_UNASSIGNED, JSON.stringify(state.unassignedTasks));
+  }, [state.unassignedTasks]);
 
   // Cross-tab sync: if another tab writes to localStorage, pick up the changes.
   // The "storage" event only fires in OTHER tabs, never the one that wrote.

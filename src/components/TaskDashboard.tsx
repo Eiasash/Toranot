@@ -36,7 +36,7 @@ const URGENCY_LABEL: Record<Urgency, string> = {
 type FilterMode = "all" | "stat" | "urgent" | "overdue";
 
 export function TaskDashboard({ onClose }: { onClose: () => void }) {
-  const { patients } = usePatientsState();
+  const { patients, unassignedTasks } = usePatientsState();
   const dispatch = usePatientsDispatch();
   const [filter, setFilter] = useState<FilterMode>("all");
   const [tab, setTab] = useState<"tasks" | "sections" | "route">("tasks");
@@ -290,6 +290,58 @@ export function TaskDashboard({ onClose }: { onClose: () => void }) {
                 </span>
               </div>
             ))
+          )}
+
+          {/* Unassigned tasks — captured without patient match */}
+          {unassignedTasks.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <h3 className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-2 flex items-center gap-1.5">
+                <span>📌</span> לא משויך ({unassignedTasks.filter(t => !t.done).length})
+              </h3>
+              <div className="space-y-2">
+                {unassignedTasks.map(task => (
+                  <div
+                    key={task.id}
+                    className="flex items-center gap-2 p-2 rounded-lg border border-amber-100 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-900/10"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={task.done}
+                      onChange={() => dispatch({ type: "TOGGLE_UNASSIGNED_TASK", taskId: task.id })}
+                      className="h-5 w-5 rounded accent-amber-500 shrink-0"
+                    />
+                    <span
+                      className={`flex-1 text-sm min-w-0 truncate ${task.done ? "line-through opacity-50 text-gray-400" : "text-gray-900 dark:text-gray-100"}`}
+                      dir="auto"
+                    >
+                      {task.text}
+                    </span>
+                    <span className={`text-[10px] font-bold shrink-0 ${
+                      task.urgency === "stat" ? "text-red-600" :
+                      task.urgency === "urgent" ? "text-amber-600" :
+                      "text-gray-400"
+                    }`}>
+                      {task.urgency === "stat" ? "STAT" : task.urgency === "urgent" ? "דחוף" : ""}
+                    </span>
+                    <select
+                      className="text-xs border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 shrink-0 max-w-[110px]"
+                      onChange={e => {
+                        if (!e.target.value) return;
+                        dispatch({ type: "ASSIGN_TASK_TO_PATIENT", taskId: task.id, patientId: e.target.value });
+                      }}
+                      defaultValue=""
+                    >
+                      <option value="" disabled>שיוך →</option>
+                      {patients.map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.room ?? "?"} — {p.name ?? "?"}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
 
           {/* Completed tasks toggle */}
