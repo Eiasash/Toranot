@@ -80,6 +80,16 @@ export function normalizePatient(p: RawPatient): PatientEntry {
   } as PatientEntry;
 }
 
+// Archiving entire patients (including base64 photos) will blow up localStorage fast.
+// Shift history is for timeline/context, not for hoarding JPEGs.
+function stripPatientForArchive(p: PatientEntry): PatientEntry {
+  return {
+    ...p,
+    photos: [],
+    generatedTasks: [],
+  };
+}
+
 function loadSavedPatients(): PatientEntry[] {
   try {
     const raw = safeGetItem(STORAGE_KEY_PATIENTS);
@@ -472,10 +482,8 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
         id: generateId("shift-"),
         date: new Date().toISOString(),
         label: action.label,
-        patients:
-          typeof structuredClone === "function"
-            ? structuredClone(state.patients)
-            : JSON.parse(JSON.stringify(state.patients)),
+        // IMPORTANT: don't archive base64 photos (localStorage will explode).
+        patients: state.patients.map(stripPatientForArchive),
         archivedAt: new Date().toISOString(),
       };
       const history = [snapshot, ...state.shiftHistory].slice(0, MAX_SHIFT_HISTORY);
@@ -503,7 +511,7 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
       return { ...state, darkMode: !state.darkMode };
 
     case "CLEAR_ALL":
-      return { ...state, patients: [] };
+      return { ...state, patients: [], events: [], unassignedTasks: [] };
 
     case "REAPPLY_RULES":
       return {

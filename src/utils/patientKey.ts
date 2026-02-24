@@ -23,3 +23,16 @@ export function buildPatientLooseKey(
 ): string {
   return `${normalize(room)}|${normalize(name)}`;
 }
+
+/**
+ * Stable-ish identity key: name + age.
+ *
+ * Used to keep a patient "the same" even if room/bed changes overnight.
+ * Collisions are possible (same name+age), so matching must be conservative.
+ */
+export function buildPatientStableKey(
+  name: string | null,
+  age: number | null | undefined,
+): string {
+  return `${normalize(name)}|${age ?? ""}`;
+}

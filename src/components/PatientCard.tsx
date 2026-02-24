@@ -211,13 +211,24 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
   const [editDiagnosis, setEditDiagnosis] = useState(patient.diagnosis ?? "");
 
   const saveEdit = () => {
+    const nextName = editName.trim() || undefined;
+    const nextRoom = editRoom.trim() || undefined;
+    const nextSection = editSection;
+    const nextDx = editDiagnosis.trim() || undefined;
+
+    const locationChanged = (nextRoom ?? null) !== (patient.room ?? null) || nextSection !== patient.section;
+    if (locationChanged && nextRoom) {
+      dispatch({ type: "MOVE_PATIENT", patientId: patient.id, toRoom: nextRoom, toSection: nextSection });
+    }
+
     dispatch({
       type: "EDIT_PATIENT",
       patientId: patient.id,
-      name: editName.trim() || undefined,
-      room: editRoom.trim() || undefined,
-      section: editSection,
-      diagnosis: editDiagnosis.trim() || undefined,
+      name: nextName,
+      diagnosis: nextDx,
+      // If we already dispatched MOVE_PATIENT, don't double-write room/section here.
+      room: locationChanged ? undefined : nextRoom,
+      section: locationChanged ? undefined : nextSection,
     });
     setEditing(false);
   };

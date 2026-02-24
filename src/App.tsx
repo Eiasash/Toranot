@@ -50,7 +50,15 @@ function ShiftProgress() {
 
 type ConfirmDialog =
   | { type: "none" }
-  | { type: "archive"; label: string; incompleteTasks: Array<{ name: string; room: string | null; task: string }>; patientsNoTasks: Array<{ name: string; room: string | null }>; abnormalLabs: Array<{ name: string; room: string | null; lab: string }>; openStatCount: number }
+  | {
+      type: "archive";
+      mode: "archive" | "end";
+      label: string;
+      incompleteTasks: Array<{ name: string; room: string | null; task: string }>;
+      patientsNoTasks: Array<{ name: string; room: string | null }>;
+      abnormalLabs: Array<{ name: string; room: string | null; lab: string }>;
+      openStatCount: number;
+    }
   | { type: "clear" };
 
 function ConfirmModal({
@@ -93,16 +101,22 @@ function ConfirmModal({
   const hasNoTasks = dialog.patientsNoTasks.length > 0;
   const hasAbnormalLabs = dialog.abnormalLabs.length > 0;
   const hasIssues = hasIncomplete || hasNoTasks || hasAbnormalLabs;
+  const isEndShift = dialog.mode === "end";
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center px-4 pb-8 sm:pb-0 bg-black/40">
       <div className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden max-h-[80vh] flex flex-col">
-        <div className="px-5 pt-5 pb-3 flex-shrink-0">
-          <div className="text-2xl mb-2">💾</div>
-          <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
-            שמור משמרת להיסטוריה
-          </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{dialog.label}</p>
-        </div>
+	        <div className="px-5 pt-5 pb-3 flex-shrink-0">
+	          <div className="text-2xl mb-2">{isEndShift ? "🏁" : "💾"}</div>
+	          <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
+	            {isEndShift ? "סיום משמרת" : "שמור משמרת להיסטוריה"}
+	          </h3>
+	          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{dialog.label}</p>
+	          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+	            {isEndShift
+	              ? "יישמר להיסטוריה ואז ינקה את הרשימות הנוכחיות."
+	              : "נשמר מקומית בדפדפן. תמונות לא נשמרות בהיסטוריה כדי לא לפוצץ את האחסון."}
+	          </p>
+	        </div>
 
         <div className="overflow-y-auto flex-1 px-5 pb-3 space-y-2.5">
           {/* Open STAT tasks — red */}
@@ -188,7 +202,17 @@ function ConfirmModal({
                 ? "text-amber-600 active:bg-amber-50 dark:active:bg-amber-900/20"
                 : "text-blue-600 active:bg-blue-50 dark:active:bg-blue-900/20"
           }`}>
-            {dialog.openStatCount > 0 ? "שמור למרות STAT פתוח" : hasIssues ? "שמור בכל זאת" : "שמור משמרת"}
+            {dialog.openStatCount > 0
+              ? isEndShift
+                ? "סיים ושמור למרות STAT פתוח"
+                : "שמור למרות STAT פתוח"
+              : hasIssues
+                ? isEndShift
+                  ? "סיים ושמור בכל זאת"
+                  : "שמור בכל זאת"
+                : isEndShift
+                  ? "סיים משמרת"
+                  : "שמור משמרת"}
           </button>
         </div>
       </div>
@@ -203,7 +227,7 @@ function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qrsync" |
   const { darkMode, showTomorrow, scanMode, patients } = usePatientsState();
   const dispatch = usePatientsDispatch();
 
-  const handleArchiveClick = () => {
+  const openArchiveDialog = (mode: "archive" | "end") => {
     setOpen(false);
     const now = new Date();
     const date = now.toLocaleDateString("he-IL");
@@ -256,8 +280,11 @@ function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qrsync" |
       )
     ).length;
 
-    setDialog({ type: "archive", label, incompleteTasks, patientsNoTasks, abnormalLabs, openStatCount });
+    setDialog({ type: "archive", mode, label, incompleteTasks, patientsNoTasks, abnormalLabs, openStatCount });
   };
+
+  const handleArchiveClick = () => openArchiveDialog("archive");
+  const handleEndShiftClick = () => openArchiveDialog("end");
 
   const [shareCopied, setShareCopied] = useState(false);
 
@@ -289,6 +316,9 @@ function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qrsync" |
     if (dialog.type === "archive") {
       dispatch({ type: "ARCHIVE_SHIFT", label: dialog.label });
       console.log("[Toranot] Shift archived:", dialog.label);
+      if (dialog.mode === "end") {
+        dispatch({ type: "CLEAR_ALL" });
+      }
     } else if (dialog.type === "clear") {
       dispatch({ type: "CLEAR_ALL" });
     }
@@ -358,6 +388,16 @@ function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qrsync" |
                 >
                   <span className="text-base">💾</span>
                   שמור משמרת
+                </button>
+              )}
+              {/* End shift (archive + clear) */}
+              {patients.length > 0 && (
+                <button
+                  onClick={handleEndShiftClick}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-slate-200 active:bg-slate-700 border-t border-slate-700 text-right"
+                >
+                  <span className="text-base">🏁</span>
+                  סיום משמרת
                 </button>
               )}
               {/* History */}

@@ -22,9 +22,19 @@ function detectUrgency(text: string): Urgency {
 
 // Try to extract room from "52/1" "52-1" "חדר 52" "חד' 52" patterns
 function extractRoom(text: string): string | null {
-  const m = text.match(/(?:חד[ר']?\s*'?(\d{2,3})|(\d{2,3})\s*[\/\-]\s*\d)/);
-  if (m) return m[1] ?? m[2] ?? null;
-  return null;
+  // Prefer keeping bed when present, to avoid ambiguous matches.
+  const m = text.match(
+    /(?:חד[ר']?\s*'?(\d{2,3})(?:\s*[\/\-]\s*(\d))?|\b(\d{2,3})\s*[\/\-]\s*(\d)\b)/,
+  );
+  if (!m) return null;
+  const room = m[1] ?? m[3];
+  const bed = m[2] ?? m[4];
+  if (!room) return null;
+  return bed ? `${room}/${bed}` : room;
+}
+
+function normRoom(s: string): string {
+  return s.replace(/\s+/g, "").replace(/-/g, "/");
 }
 
 export function QuickCaptureSheet({ onClose }: { onClose: () => void }) {
@@ -60,16 +70,20 @@ export function QuickCaptureSheet({ onClose }: { onClose: () => void }) {
     const room = extractRoom(trimmed);
 
     // Try to match a patient
-    let matched = room
-      ? patients.find(p => p.room === room)
-      : null;
+    let matched: typeof patients[number] | null = null;
+    if (room) {
+      const needle = normRoom(room);
+      const candidates = patients.filter((p) => !!p.room && normRoom(p.room).startsWith(needle));
+      if (candidates.length === 1) matched = candidates[0];
+    }
 
     // If no room match, try name substring (case-insensitive, RTL-safe)
     if (!matched) {
       const words = trimmed.split(/\s+/).filter(w => w.length > 2);
-      matched = patients.find(p =>
-        p.name && words.some(w => p.name!.includes(w))
-      ) ?? undefined;
+      const nameCandidates = patients.filter(
+        (p) => p.name && words.some((w) => p.name!.includes(w)),
+      );
+      if (nameCandidates.length === 1) matched = nameCandidates[0];
     }
 
     if (matched) {

@@ -108,6 +108,23 @@ describe("mergeScan", () => {
     );
   });
 
+  it("treats a bed/room move as the same patient (stable name+age match)", () => {
+    const firstScan = parsePatientList(`צד א
+101 כהן יוסף 72 דלקת ריאות`);
+    firstScan[0].tasks.push(makeManualTask("התקשר לבן"));
+    const originalId = firstScan[0].id;
+
+    const secondScan = parsePatientList(`צד ב
+202 כהן יוסף 72 דלקת ריאות`);
+
+    const merged = mergeScan(firstScan, secondScan);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].id).toBe(originalId);
+    expect(merged[0].section).toBe("SIDE_B");
+    expect(merged[0].room).toBe("202");
+    expect(merged[0].tasks.some((t) => t.text === "התקשר לבן")).toBe(true);
+  });
+
   // ─── New edge case tests ───
 
   it("new patient with no existing match is added fresh", () => {
