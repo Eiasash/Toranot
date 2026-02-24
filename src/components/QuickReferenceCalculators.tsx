@@ -461,3 +461,364 @@ export function InsulinReference() {
     </div>
   );
 }
+
+// ─────────────────────────────────────────────────────────
+// DELIRIUM — CAM + Prevention + Management
+// ─────────────────────────────────────────────────────────
+
+export function DeliriumReference() {
+  const [cam1, setCam1] = useState(false); // Acute onset / fluctuating
+  const [cam2, setCam2] = useState(false); // Inattention
+  const [cam3, setCam3] = useState(false); // Disorganized thinking
+  const [cam4, setCam4] = useState(false); // Altered consciousness
+
+  // CAM positive = (1 AND 2) AND (3 OR 4)
+  const camPositive = cam1 && cam2 && (cam3 || cam4);
+
+  return (
+    <div className="space-y-4">
+      <h3 className="font-bold text-sm">🧠 דליריום — הערכה וניהול</h3>
+
+      {/* CAM Tool */}
+      <div className="border border-gray-200 dark:border-[#1a1a2e] rounded-xl p-3 space-y-2">
+        <div className="font-bold text-sm text-purple-800 dark:text-purple-300">CAM — Confusion Assessment Method</div>
+        <div className="space-y-2">
+          {[
+            { val: cam1, set: setCam1, num: "1", label: "שינוי חריף / תנודתי", desc: "האם מצב ההכרה השתנה בצורה חריפה? האם משתנה במהלך היום?" },
+            { val: cam2, set: setCam2, num: "2", label: "חוסר קשב", desc: "האם המטופל מתקשה לשמור ריכוז? לספור לאחור? לעקוב אחרי שיחה?" },
+            { val: cam3, set: setCam3, num: "3", label: "חשיבה מפוזרת", desc: "דיבור לא מאורגן, קפיצות בין נושאים, תשובות לא רלוונטיות" },
+            { val: cam4, set: setCam4, num: "4", label: "שינוי רמת הכרה", desc: "היפראלרט, לתרגי, סטופורוזי, או קומטוזי (כל דבר שאינו Alert)" },
+          ].map((item) => (
+            <label key={item.num} className="flex items-start gap-2 text-sm cursor-pointer p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-[#111]">
+              <input type="checkbox" checked={item.val} onChange={() => item.set(!item.val)}
+                className="h-4 w-4 mt-0.5 rounded accent-purple-600 shrink-0" />
+              <div>
+                <span className="font-medium">{item.num}. {item.label}</span>
+                <div className="text-xs text-gray-500 mt-0.5">{item.desc}</div>
+              </div>
+            </label>
+          ))}
+        </div>
+        <div className={`text-center p-3 rounded-xl font-bold ${
+          camPositive ? "bg-red-100 text-red-800 dark:bg-red-950/30 dark:text-red-300" : "bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-300"
+        }`}>
+          CAM {camPositive ? "חיובי ✓ — דליריום" : "שלילי"}
+          <div className="text-xs font-normal mt-1">
+            {camPositive
+              ? "נדרש: (1) + (2) + (3 או 4). בצע בירור סיבתי!"
+              : "חובה: קריטריונים 1+2, ולפחות 3 או 4"}
+          </div>
+        </div>
+      </div>
+
+      {/* Prevention — HELP protocol */}
+      <div className="border border-gray-200 dark:border-[#1a1a2e] rounded-xl p-3 space-y-2">
+        <div className="font-bold text-sm text-blue-800 dark:text-blue-300">מניעה — פרוטוקול HELP</div>
+        <div className="text-xs space-y-1.5">
+          <div className="bg-blue-50 dark:bg-blue-950/20 p-2 rounded-lg">🕐 <span className="font-semibold">אוריינטציה:</span> שעון, לוח שנה, תמונות משפחה, חלון. הסבר לחולה איפה הוא ומה קורה.</div>
+          <div className="bg-blue-50 dark:bg-blue-950/20 p-2 rounded-lg">😴 <span className="font-semibold">שינה:</span> Melatonin 3-5mg HS. ❌ אוזניות/מסכת עיניים. הפחתת רעש/אור בלילה.</div>
+          <div className="bg-blue-50 dark:bg-blue-950/20 p-2 rounded-lg">🚶 <span className="font-semibold">ניידות:</span> קום מהמיטה x3/יום. פיזיותרפיה מוקדמת. הורד קתטרים מיותרים.</div>
+          <div className="bg-blue-50 dark:bg-blue-950/20 p-2 rounded-lg">👓 <span className="font-semibold">חושים:</span> ודא משקפיים + שמיעה. תאורה מספקת ביום.</div>
+          <div className="bg-blue-50 dark:bg-blue-950/20 p-2 rounded-lg">💧 <span className="font-semibold">תזונה/הידרציה:</span> עודד שתייה. בדוק עצירות. תקן אלקטרוליטים.</div>
+        </div>
+      </div>
+
+      {/* Workup */}
+      <div className="border border-gray-200 dark:border-[#1a1a2e] rounded-xl p-3 space-y-2">
+        <div className="font-bold text-sm text-orange-800 dark:text-orange-300">בירור — Think D-E-L-I-R-I-U-M-S</div>
+        <div className="text-xs space-y-1 text-gray-700 dark:text-gray-300">
+          <div><span className="font-bold">D</span>rugs — תרופות חדשות? BZD, אופיואידים, אנטיכולינרגיים, סטרואידים</div>
+          <div><span className="font-bold">E</span>lectrolytes — Na, K, Ca, Mg, גלוקוז, כליות, כבד</div>
+          <div><span className="font-bold">L</span>ack of drugs — גמילה מאלכוהול/BZD/אופיואידים?</div>
+          <div><span className="font-bold">I</span>nfection — UTI, CAP, cellulitis, C.diff, COVID</div>
+          <div><span className="font-bold">R</span>etention — עצירות חמורה, אצירת שתן (SCAN!)</div>
+          <div><span className="font-bold">I</span>ntracranial — CVA, SDH (בעיקר אחרי נפילה!)</div>
+          <div><span className="font-bold">U</span>nstable — MI, PE, hypo/hyperthyroid, hypoxia</div>
+          <div><span className="font-bold">M</span>etabolic — Uremia, הפטיק, DKA, CO2</div>
+          <div><span className="font-bold">S</span>ensory — כאב לא מטופל, עצירות, אצירה</div>
+        </div>
+      </div>
+
+      {/* Management */}
+      <div className="border border-gray-200 dark:border-[#1a1a2e] rounded-xl p-3 space-y-2">
+        <div className="font-bold text-sm text-red-800 dark:text-red-300">טיפול באגיטציה</div>
+        <div className="text-xs space-y-1.5">
+          <div className="bg-green-50 dark:bg-green-950/20 p-2 rounded-lg">🟢 <span className="font-semibold">קו ראשון:</span> De-escalation מילולי. הסבר רגוע. נוכחות משפחה. הורד restraints!</div>
+          <div className="bg-yellow-50 dark:bg-yellow-950/20 p-2 rounded-lg">🟡 <span className="font-semibold">קו שני:</span> Haloperidol 0.5-1mg PO/IV (❌ לא בפרקינסון/DLB!)</div>
+          <div className="bg-orange-50 dark:bg-orange-950/20 p-2 rounded-lg">🟠 <span className="font-semibold">אלטרנטיבה:</span> Quetiapine 12.5-25mg PO (מועדף ב-PD/DLB)</div>
+          <div className="bg-red-50 dark:bg-red-950/20 p-2 rounded-lg">🔴 <span className="font-semibold">Last resort:</span> Lorazepam 0.5mg IV (רק גמילת אלכוהול/BZD!)</div>
+          <div className="text-gray-500 italic mt-1">⚠ כל אנטיפסיכוטי בקשישים עם דמנציה = ↑ סיכון למוות (FDA Black Box)</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// FALLS — Risk Assessment + Prevention
+// ─────────────────────────────────────────────────────────
+
+export function FallsReference() {
+  const [history, setHistory] = useState(false);
+  const [secondaryDx, setSecondaryDx] = useState(false);
+  const [ambulatoryAid, setAmbulatoryAid] = useState(false);
+  const [ivLine, setIvLine] = useState(false);
+  const [gait, setGait] = useState<0 | 10 | 20>(0);
+  const [mental, setMental] = useState<0 | 15>(0);
+
+  // Morse Fall Scale
+  const score = (history ? 25 : 0) + (secondaryDx ? 15 : 0) + (ambulatoryAid ? 15 : 0)
+    + (ivLine ? 20 : 0) + gait + mental;
+
+  const risk = score >= 45 ? { label: "סיכון גבוה", color: "bg-red-100 text-red-800 dark:bg-red-950/30 dark:text-red-300" }
+    : score >= 25 ? { label: "סיכון בינוני", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-950/30 dark:text-yellow-300" }
+    : { label: "סיכון נמוך", color: "bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-300" };
+
+  return (
+    <div className="space-y-4">
+      <h3 className="font-bold text-sm">🦴 נפילות — הערכה ומניעה</h3>
+
+      {/* Morse Fall Scale */}
+      <div className="border border-gray-200 dark:border-[#1a1a2e] rounded-xl p-3 space-y-2">
+        <div className="font-bold text-sm text-orange-800 dark:text-orange-300">Morse Fall Scale</div>
+        <div className="space-y-2 text-sm">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={history} onChange={() => setHistory(!history)} className="h-4 w-4 rounded accent-orange-600" />
+            היסטוריה של נפילה (3 חודשים אחרונים) — 25
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={secondaryDx} onChange={() => setSecondaryDx(!secondaryDx)} className="h-4 w-4 rounded accent-orange-600" />
+            אבחנה משנית (≥2 אבחנות) — 15
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={ambulatoryAid} onChange={() => setAmbulatoryAid(!ambulatoryAid)} className="h-4 w-4 rounded accent-orange-600" />
+            עזר הליכה (קביים/ווקר/רהיטים) — 15
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={ivLine} onChange={() => setIvLine(!ivLine)} className="h-4 w-4 rounded accent-orange-600" />
+            עירוי IV / Heparin Lock — 20
+          </label>
+          <label className="text-xs text-gray-600 dark:text-gray-400">
+            הליכה
+            <select value={gait} onChange={(e) => setGait(Number(e.target.value) as 0|10|20)}
+              className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 dark:border-[#1a1a2e] rounded-lg bg-white dark:bg-[#111]">
+              <option value={0}>תקינה / מרותק למיטה / כיסא גלגלים — 0</option>
+              <option value={10}>חלשה — 10</option>
+              <option value={20}>מוגבלת / אחיזה ברהיטים — 20</option>
+            </select>
+          </label>
+          <label className="text-xs text-gray-600 dark:text-gray-400">
+            מצב מנטלי
+            <select value={mental} onChange={(e) => setMental(Number(e.target.value) as 0|15)}
+              className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 dark:border-[#1a1a2e] rounded-lg bg-white dark:bg-[#111]">
+              <option value={0}>מודע למגבלות — 0</option>
+              <option value={15}>שוכח / מעריך יתר את יכולותיו — 15</option>
+            </select>
+          </label>
+        </div>
+        <div className={`text-center p-3 rounded-xl font-bold ${risk.color}`}>
+          Morse = {score} — {risk.label}
+          <div className="text-xs font-normal mt-1">
+            {score >= 45 ? "התערבות מלאה: מיטה נמוכה, אזעקה, ליווי, הערכת סביבה" :
+             score >= 25 ? "התערבות בסיסית: תדרוך, נעליים מתאימות, מוט אחיזה" :
+             "אמצעי זהירות סטנדרטיים"}
+          </div>
+        </div>
+      </div>
+
+      {/* Prevention checklist */}
+      <div className="border border-gray-200 dark:border-[#1a1a2e] rounded-xl p-3 space-y-2">
+        <div className="font-bold text-sm text-blue-800 dark:text-blue-300">מניעה — צ׳קליסט</div>
+        <div className="text-xs space-y-1.5">
+          <div className="bg-blue-50 dark:bg-blue-950/20 p-2 rounded-lg">🛏️ <span className="font-semibold">סביבה:</span> מיטה נמוכה, מעקות למעלה, אור לילה, רצפה יבשה, פעמון בהישג יד</div>
+          <div className="bg-blue-50 dark:bg-blue-950/20 p-2 rounded-lg">👟 <span className="font-semibold">נעליים:</span> סגורות, נגד החלקה. ❌ לא גרביים בלבד!</div>
+          <div className="bg-blue-50 dark:bg-blue-950/20 p-2 rounded-lg">💊 <span className="font-semibold">תרופות:</span> הפחת BZD, אופיואידים, אנטיהיסטמינים. בדוק יל"ד אורתוסטטי</div>
+          <div className="bg-blue-50 dark:bg-blue-950/20 p-2 rounded-lg">👁️ <span className="font-semibold">ראייה:</span> ודא משקפיים. תאורה מספקת</div>
+          <div className="bg-blue-50 dark:bg-blue-950/20 p-2 rounded-lg">🚽 <span className="font-semibold">שירותים:</span> ליווי/כיסא שירותים ליד מיטה. הגב לפעמון מהר!</div>
+          <div className="bg-orange-50 dark:bg-orange-950/20 p-2 rounded-lg">📋 <span className="font-semibold">Vitamin D:</span> 800-1000 IU/d מוריד סיכון נפילה בקשישים (Cochrane)</div>
+        </div>
+      </div>
+
+      {/* Post-fall protocol */}
+      <div className="border border-gray-200 dark:border-[#1a1a2e] rounded-xl p-3 space-y-2">
+        <div className="font-bold text-sm text-red-800 dark:text-red-300">אחרי נפילה — פרוטוקול</div>
+        <div className="text-xs space-y-1.5">
+          <div className="bg-red-50 dark:bg-red-950/20 p-2 rounded-lg">1. בדיקה גופנית + vital signs + GCS</div>
+          <div className="bg-red-50 dark:bg-red-950/20 p-2 rounded-lg">2. על אנטיקואגולציה? → CT ראש (SDH!)</div>
+          <div className="bg-red-50 dark:bg-red-950/20 p-2 rounded-lg">3. צילום אגן + כל אזור כואב</div>
+          <div className="bg-red-50 dark:bg-red-950/20 p-2 rounded-lg">4. תיעוד: מנגנון, עדים, פציעות, vital signs</div>
+          <div className="bg-red-50 dark:bg-red-950/20 p-2 rounded-lg">5. בירור סיבה: יל"ד אורתוסטטי? סינקופה? מכנית?</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// BEERS CRITERIA — Potentially Inappropriate Meds in Elderly
+// ─────────────────────────────────────────────────────────
+
+export function BeersReference() {
+  const [searchText, setSearchText] = useState("");
+
+  const BEERS_LIST = [
+    { drug: "Benzodiazepines", drugHe: "בנזודיאזפינים", examples: "Lorazepam, Diazepam, Clonazepam", reason: "↑ נפילות, שברים, דליריום, תלות", alt: "Melatonin, Trazodone 25mg, היגיינת שינה" },
+    { drug: "First-gen Antihistamines", drugHe: "אנטיהיסטמינים דור 1", examples: "Diphenhydramine, Promethazine, Chlorpheniramine", reason: "אנטיכולינרגי חזק → בלבול, עצירות, אצירה", alt: "Cetirizine, Loratadine" },
+    { drug: "Anticholinergics", drugHe: "אנטיכולינרגיים", examples: "Oxybutynin, Tolterodine, Amitriptyline", reason: "בלבול, יובש, עצירות, אצירת שתן, QTc", alt: "Mirabegron (OAB), Duloxetine/Nortriptyline (pain)" },
+    { drug: "Long-acting Sulfonylureas", drugHe: "סולפונילאוריאות ארוכות", examples: "Glibenclamide (Glyburide)", reason: "היפוגליקמיה ממושכת — מסוכן בקשישים!", alt: "Gliclazide, DPP4i, SGLT2i" },
+    { drug: "NSAIDs — chronic", drugHe: "NSAIDs כרוני", examples: "Ibuprofen, Diclofenac, Naproxen", reason: "GI bleed, AKI, HTN, CHF exacerbation", alt: "Paracetamol, Topical NSAIDs, Duloxetine" },
+    { drug: "PPIs > 8 weeks", drugHe: "PPI מעל 8 שבועות", examples: "Omeprazole, Pantoprazole", reason: "C.diff, שברים ירך, היפומגנזמיה, CKD", alt: "הפסק אם אין אינדיקציה. H2RA?" },
+    { drug: "Metoclopramide", drugHe: "מטוקלופרמיד", examples: "Pramin, Reglan", reason: "EPS, tardive dyskinesia, פרקינסוניזם", alt: "Domperidone (בזהירות), Ondansetron" },
+    { drug: "Alpha-blockers (for HTN)", drugHe: "חוסמי אלפא ליל\"ד", examples: "Doxazosin, Prazosin, Terazosin", reason: "יל\"ד אורתוסטטי → נפילות!", alt: "ACEI, ARB, CCB, Thiazide (for HTN)" },
+    { drug: "Sliding scale only", drugHe: "Sliding scale בלבד", examples: "Regular insulin PRN ללא basal", reason: "ניהול סוכר גרוע, תנודות, ❌ לא מספיק", alt: "Basal-bolus regimen" },
+    { drug: "Digoxin > 0.125mg", drugHe: "דיגוקסין מעל 0.125mg", examples: "Digoxin 0.25mg", reason: "רעילות! CrCl↓ = T½↑↑. יעד 0.5-0.9 ng/ml", alt: "מינון 0.0625-0.125mg. בדוק רמות + K+" },
+    { drug: "Meperidine", drugHe: "מפרידין (Demerol)", examples: "Pethidine", reason: "מטבוליט נוירוטוקסי, פרכוסים", alt: "Morphine (מינון מופחת), Oxycodone" },
+  ];
+
+  const filtered = searchText.trim()
+    ? BEERS_LIST.filter(b =>
+        b.drug.toLowerCase().includes(searchText.toLowerCase()) ||
+        b.drugHe.includes(searchText) ||
+        b.examples.toLowerCase().includes(searchText.toLowerCase()) ||
+        b.alt.toLowerCase().includes(searchText.toLowerCase())
+      )
+    : BEERS_LIST;
+
+  return (
+    <div className="space-y-3">
+      <h3 className="font-bold text-sm">💊 Beers Criteria — תרופות בעייתיות בקשישים (AGS 2023)</h3>
+      <input
+        type="search"
+        value={searchText}
+        onChange={(e) => setSearchText(e.target.value)}
+        placeholder="חפש תרופה..."
+        dir="auto"
+        className="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-[#1a1a2e] rounded-xl bg-gray-50 dark:bg-[#111] dark:text-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
+      />
+      <div className="space-y-2">
+        {filtered.map((b, i) => (
+          <div key={i} className="border border-red-200 dark:border-red-900/30 rounded-xl p-3 space-y-1.5">
+            <div className="flex items-baseline justify-between gap-2">
+              <div>
+                <span className="font-bold text-sm text-red-800 dark:text-red-300">{b.drug}</span>
+                <span className="text-xs text-gray-500 mr-2">{b.drugHe}</span>
+              </div>
+              <span className="text-[10px] bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-300 px-1.5 py-0.5 rounded-full shrink-0">PIM</span>
+            </div>
+            <div className="text-xs text-gray-500" dir="ltr">{b.examples}</div>
+            <div className="text-xs text-red-700 dark:text-red-400">⚠ {b.reason}</div>
+            <div className="text-xs text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/20 p-1.5 rounded-lg">✅ חלופה: {b.alt}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// PRESSURE INJURY — Staging + Braden + Prevention
+// ─────────────────────────────────────────────────────────
+
+export function PressureInjuryReference() {
+  return (
+    <div className="space-y-4">
+      <h3 className="font-bold text-sm">🛏️ פצעי לחץ — דירוג ומניעה</h3>
+
+      {/* Staging */}
+      <div className="border border-gray-200 dark:border-[#1a1a2e] rounded-xl p-3 space-y-2">
+        <div className="font-bold text-sm text-purple-800 dark:text-purple-300">דירוג (NPUAP)</div>
+        <div className="text-xs space-y-1.5">
+          <div className="bg-yellow-50 dark:bg-yellow-950/20 p-2 rounded-lg"><span className="font-bold">Stage 1:</span> אודם שלא נעלם בלחיצה (non-blanchable erythema). עור שלם.</div>
+          <div className="bg-orange-50 dark:bg-orange-950/20 p-2 rounded-lg"><span className="font-bold">Stage 2:</span> אובדן עור חלקי — שלפוחית / שחיקה. דרמיס חשוף. אדום/ורוד.</div>
+          <div className="bg-red-50 dark:bg-red-950/20 p-2 rounded-lg"><span className="font-bold">Stage 3:</span> אובדן מלא של עובי העור. שומן תת-עורי נראה. ❌ שריר/עצם לא חשופים.</div>
+          <div className="bg-red-100 dark:bg-red-950/30 p-2 rounded-lg"><span className="font-bold">Stage 4:</span> אובדן מלא — שריר, גיד, או עצם חשופים. סכנת אוסטאומיאליטיס!</div>
+          <div className="bg-gray-100 dark:bg-gray-800 p-2 rounded-lg"><span className="font-bold">Unstageable:</span> כיסוי מלא ע"י eschar/slough. לא ניתן לדרג.</div>
+          <div className="bg-purple-50 dark:bg-purple-950/20 p-2 rounded-lg"><span className="font-bold">DTPI:</span> Deep Tissue Pressure Injury — שינוי צבע כהה/סגול. עור שלם אבל נזק עמוק.</div>
+        </div>
+      </div>
+
+      {/* Prevention */}
+      <div className="border border-gray-200 dark:border-[#1a1a2e] rounded-xl p-3 space-y-2">
+        <div className="font-bold text-sm text-blue-800 dark:text-blue-300">מניעה</div>
+        <div className="text-xs space-y-1.5">
+          <div className="bg-blue-50 dark:bg-blue-950/20 p-2 rounded-lg">🔄 <span className="font-semibold">הפיכות:</span> כל 2 שעות. תיעוד!</div>
+          <div className="bg-blue-50 dark:bg-blue-950/20 p-2 rounded-lg">🛏️ <span className="font-semibold">מזרן:</span> מזרן הפחתת לחץ (alternating pressure / foam)</div>
+          <div className="bg-blue-50 dark:bg-blue-950/20 p-2 rounded-lg">🧴 <span className="font-semibold">עור:</span> שמור יבש ונקי. קרם מגן. בדוק עקבים + סקרום + אוזניים</div>
+          <div className="bg-blue-50 dark:bg-blue-950/20 p-2 rounded-lg">🍖 <span className="font-semibold">תזונה:</span> חלבון 1.25-1.5g/kg/d. Vitamin C 500mg x2. Zinc 220mg/d</div>
+          <div className="bg-blue-50 dark:bg-blue-950/20 p-2 rounded-lg">🩹 <span className="font-semibold">חיכוך:</span> הרם ראש מיטה ≤30°. סדין חלק. הגנה על עקבים</div>
+        </div>
+      </div>
+
+      {/* Treatment by stage */}
+      <div className="border border-gray-200 dark:border-[#1a1a2e] rounded-xl p-3 space-y-2">
+        <div className="font-bold text-sm text-green-800 dark:text-green-300">טיפול לפי שלב</div>
+        <div className="text-xs space-y-1.5">
+          <div className="bg-green-50 dark:bg-green-950/20 p-2 rounded-lg"><span className="font-bold">Stage 1-2:</span> הסר לחץ. חבישה לחה (hydrocolloid / foam). ❌ אל תעשה debridement</div>
+          <div className="bg-yellow-50 dark:bg-yellow-950/20 p-2 rounded-lg"><span className="font-bold">Stage 3-4:</span> ניקוי + debridement. חבישה לחה. שקול VAC therapy. ייעוץ פלסטיקה</div>
+          <div className="bg-red-50 dark:bg-red-950/20 p-2 rounded-lg"><span className="font-bold">זיהום:</span> ABx סיסטמי רק אם cellulitis/ספסיס/אוסטאומיאליטיס. ❌ לא ABx טופיקלי שגרתי!</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// DISCHARGE CHECKLIST — Geriatric-focused
+// ─────────────────────────────────────────────────────────
+
+export function DischargeChecklist() {
+  const [checks, setChecks] = useState<Record<string, boolean>>({});
+  const toggle = (key: string) => setChecks(prev => ({ ...prev, [key]: !prev[key] }));
+
+  const ITEMS = [
+    { key: "meds", icon: "💊", text: "ריקונסיליאציה תרופתית — עדכון רשימת תרופות, הפסקת תרופות מיותרות" },
+    { key: "beers", icon: "⚠️", text: "בדיקת Beers — הסר/החלף PIMs שהתווספו באשפוז" },
+    { key: "followup", icon: "📅", text: "תור מעקב — רופא משפחה תוך 7 ימים, מומחה אם צריך" },
+    { key: "labs", icon: "🧪", text: "מעקב מעבדה — מתי לבדוק שוב (Cr, K, INR, CBC...)" },
+    { key: "pt", icon: "🚶", text: "פיזיותרפיה / שיקום — הפניה לשיקום בקהילה/יום אם צריך" },
+    { key: "fall_prev", icon: "🦴", text: "מניעת נפילות — Vitamin D, הערכת בית, עזרי הליכה" },
+    { key: "nutrition", icon: "🍽️", text: "תזונה — הוראות דיאטה, תוספים, דיאטנית קהילתית" },
+    { key: "cognitive", icon: "🧠", text: "מצב קוגניטיבי — האם יש דליריום? התייחסות לירידה תפקודית חדשה" },
+    { key: "goals", icon: "🎯", text: "יעדי טיפול — שיחת GOC אם יש ירידה משמעותית. יפוי כוח?" },
+    { key: "caregiver", icon: "👨‍👩‍👧", text: "הדרכת משפחה/מטפל — תרופות, סימני אזהרה, למי לפנות" },
+    { key: "home", icon: "🏠", text: "תנאי בית — מדרגות? מקלחת? עזרה 24/7? סידור סיעודי?" },
+    { key: "letter", icon: "📝", text: "מכתב שחרור — עם רשימת תרופות, סיכום, המלצות ברורות" },
+  ];
+
+  const doneCount = Object.values(checks).filter(Boolean).length;
+
+  return (
+    <div className="space-y-3">
+      <h3 className="font-bold text-sm">🏥 צ׳קליסט שחרור — גריאטרי</h3>
+      <div className={`text-center text-xs font-medium px-3 py-2 rounded-xl ${
+        doneCount === ITEMS.length ? "bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-300" :
+        doneCount > 0 ? "bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-300" :
+        "bg-gray-100 text-gray-500 dark:bg-[#111] dark:text-gray-400"
+      }`}>
+        {doneCount}/{ITEMS.length} בוצע
+      </div>
+      <div className="space-y-1.5">
+        {ITEMS.map((item) => (
+          <label
+            key={item.key}
+            className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition-colors ${
+              checks[item.key]
+                ? "bg-green-50 dark:bg-green-950/10 border-green-200 dark:border-green-900/30"
+                : "bg-white dark:bg-[#111] border-gray-200 dark:border-[#1a1a2e]"
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={!!checks[item.key]}
+              onChange={() => toggle(item.key)}
+              className="h-4 w-4 mt-0.5 rounded accent-green-600 shrink-0"
+            />
+            <div className={`text-xs ${checks[item.key] ? "text-green-800 dark:text-green-300" : "text-gray-700 dark:text-gray-300"}`}>
+              <span className="mr-1">{item.icon}</span> {item.text}
+            </div>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}

@@ -10,6 +10,11 @@ import {
   NEWS2Calculator,
   ElectrolyteReference,
   InsulinReference,
+  DeliriumReference,
+  FallsReference,
+  BeersReference,
+  PressureInjuryReference,
+  DischargeChecklist,
 } from "./QuickReferenceCalculators";
 
 // ─────────────────────────────────────────────────────────
@@ -42,6 +47,14 @@ const PROTOCOLS: ProtocolEntry[] = [
     empiric: "Piperacillin-Tazobactam 4.5g IV q6h",
     alternative: "Meropenem 1g IV q8h (אם ESBL/Pseudomonas)",
     notes: "שקול Vancomycin אם חשד MRSA. משך טיפול: 7-8 ימים (14d ל-Pseudomonas).",
+  },
+  {
+    condition: "Aspiration Pneumonia",
+    conditionHe: "דלקת ריאות שאיפתית",
+    category: "respiratory",
+    empiric: "Ampicillin-Sulbactam 3g IV q6h",
+    alternative: "Clindamycin 600mg IV q8h + Ceftriaxone 2g IV q24h",
+    notes: "שכיח בקשישים עם דיספגיה/CVA. בדוק בליעה! ❌ אין Metronidazole בד\"כ כ-monotherapy.",
   },
   {
     condition: "UTI — Uncomplicated",
@@ -115,6 +128,14 @@ const PROTOCOLS: ProtocolEntry[] = [
     alternative: "Cefepime 2g IV q8h",
     notes: "ANC<500 + T≥38.3°C. תרביות x2 + CXR + U/A. דחוף!",
   },
+  {
+    condition: "Infected Pressure Ulcer",
+    conditionHe: "פצע לחץ מזוהם",
+    category: "skin",
+    empiric: "Piperacillin-Tazobactam 4.5g IV q6h",
+    alternative: "Meropenem 1g IV q8h (אם ESBL/MDR)",
+    notes: "כולל anaerobes! ניקוז כירורגי אם מוגלה. תרבית מעמיקה (לא swab שטחי).",
+  },
 ];
 
 // ─────────────────────────────────────────────────────────
@@ -175,7 +196,7 @@ const PROTO_CATEGORIES = [
 ];
 
 // ─────────────────────────────────────────────────────────
-// RENAL DOSE ADJUSTMENT — maps extracted ABx names → dosing keys
+// RENAL DOSE ADJUSTMENT
 // ─────────────────────────────────────────────────────────
 
 const ABX_KEY_ALIASES: Record<string, keyof typeof DRUG_DOSING> = {
@@ -253,30 +274,63 @@ function getDoseLinesForPlan(
 }
 
 // ─────────────────────────────────────────────────────────
-// TABS
+// SECTION DEFINITIONS — grid home screen
 // ─────────────────────────────────────────────────────────
 
-type RefTab = "protocols" | "meds" | "crcl" | "curb65" | "news2" | "lytes" | "insulin";
+type SectionKey =
+  | "home"
+  | "protocols"
+  | "meds"
+  | "lytes"
+  | "insulin"
+  | "crcl"
+  | "news2"
+  | "curb65"
+  | "delirium"
+  | "falls"
+  | "beers"
+  | "pressure"
+  | "discharge";
 
-const TABS: { key: RefTab; label: string }[] = [
-  { key: "protocols", label: "ABx פרוטוקולים" },
-  { key: "meds", label: "תרופות תורן" },
-  { key: "lytes", label: "אלקטרוליטים" },
-  { key: "insulin", label: "אינסולין" },
-  { key: "news2", label: "NEWS2" },
-  { key: "crcl", label: "CrCl" },
-  { key: "curb65", label: "CURB-65" },
+interface SectionDef {
+  key: SectionKey;
+  icon: string;
+  label: string;
+  group: "geriatrics" | "protocols" | "calculators";
+}
+
+const SECTIONS: SectionDef[] = [
+  // ── Geriatric Syndromes (top priority) ──
+  { key: "delirium",  icon: "🧠", label: "דליריום",      group: "geriatrics" },
+  { key: "falls",     icon: "🦴", label: "נפילות",       group: "geriatrics" },
+  { key: "beers",     icon: "💊", label: "Beers / PIM",   group: "geriatrics" },
+  { key: "pressure",  icon: "🛏️", label: "פצעי לחץ",     group: "geriatrics" },
+  { key: "discharge", icon: "🏥", label: "צ׳קליסט שחרור", group: "geriatrics" },
+  // ── Protocols & Meds ──
+  { key: "protocols", icon: "🦠", label: "ABx פרוטוקולים",   group: "protocols" },
+  { key: "meds",      icon: "💉", label: "תרופות תורן",       group: "protocols" },
+  { key: "lytes",     icon: "⚡", label: "אלקטרוליטים",       group: "protocols" },
+  { key: "insulin",   icon: "🩸", label: "אינסולין",          group: "protocols" },
+  // ── Calculators & Scores ──
+  { key: "crcl",   icon: "🧪", label: "CrCl",    group: "calculators" },
+  { key: "news2",  icon: "📊", label: "NEWS2",   group: "calculators" },
+  { key: "curb65", icon: "🫁", label: "CURB-65", group: "calculators" },
 ];
+
+const GROUP_LABELS: Record<string, string> = {
+  geriatrics: "גריאטריה — תסמונות ומניעה",
+  protocols: "פרוטוקולים ותרופות",
+  calculators: "מחשבונים וסקורים",
+};
 
 // ─────────────────────────────────────────────────────────
 // MAIN COMPONENT
 // ─────────────────────────────────────────────────────────
 
 export function QuickReference({ onClose }: { onClose: () => void }) {
-  const [tab, setTab] = useState<RefTab>("protocols");
+  const [section, setSection] = useState<SectionKey>("home");
   const [search, setSearch] = useState("");
   const [protoCategory, setProtoCategory] = useState("all");
-  // Persist CrCl across sessions (survives app close during 26h shift)
   const [sharedCrCl, setSharedCrCl] = useState<number | null>(() => {
     const stored = safeGetItem("toranot_crcl");
     return stored ? Number(stored) : null;
@@ -351,84 +405,89 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
     );
   }, [search]);
 
+  const currentDef = SECTIONS.find(s => s.key === section);
+
+  // Navigate to adjacent section (prev/next arrows)
+  const flatOrder = SECTIONS.map(s => s.key);
+  const currentIdx = flatOrder.indexOf(section);
+  const goPrev = currentIdx > 0 ? () => { setSection(flatOrder[currentIdx - 1]); setSearch(""); } : null;
+  const goNext = currentIdx < flatOrder.length - 1 ? () => { setSection(flatOrder[currentIdx + 1]); setSearch(""); } : null;
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center" onClick={onClose}>
       <div
-        className="quick-ref bg-white dark:bg-[#0a0a0a] w-full sm:max-w-2xl sm:rounded-2xl rounded-t-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-xl"
+        className="bg-white dark:bg-[#0f0f1a] w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="bg-slate-800 dark:bg-[#050510] text-white px-4 py-3 flex items-center justify-between">
-          <button
-            onClick={onClose}
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center text-white/70 hover:text-white text-xl rounded-lg active:bg-slate-700"
-            aria-label="סגור"
-          >
-            ✕
-          </button>
-          <div className="text-right">
-            <h2 className="text-base font-bold">עזר קליני</h2>
-            <p className="text-xs text-slate-400">פרוטוקולי DAG ש\"צ + כלים</p>
-          </div>
-        </div>
-
-        {/* Tabs — dir=ltr so first tab is on LEFT, readable L→R in horizontal scroll */}
-        <div dir="ltr" className="flex border-b border-gray-200 dark:border-[#1a1a2e] bg-gray-50 dark:bg-[#050510] overflow-x-auto scrollbar-hide">
-          {TABS.map((t) => (
+        {/* ── Header ── */}
+        <div className="bg-gradient-to-r from-slate-800 to-slate-900 dark:from-[#0a0a18] dark:to-[#0f0f20] text-white px-3 py-3 flex items-center gap-2 shrink-0">
+          {section !== "home" ? (
             <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`flex-none px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                tab === t.key
-                  ? "border-blue-600 text-blue-700 dark:text-blue-400 bg-white dark:bg-[#0a0a0a]"
-                  : "border-transparent text-gray-500 dark:text-gray-400"
-              }`}
+              onClick={() => { setSection("home"); setSearch(""); }}
+              className="min-w-[40px] min-h-[40px] flex items-center justify-center text-white/80 hover:text-white text-lg rounded-xl active:bg-white/10 transition-colors"
+              aria-label="חזרה"
             >
-              {t.label}
+              ←
             </button>
-          ))}
+          ) : (
+            <button
+              onClick={onClose}
+              className="min-w-[40px] min-h-[40px] flex items-center justify-center text-white/60 hover:text-white text-lg rounded-xl active:bg-white/10 transition-colors"
+              aria-label="סגור"
+            >
+              ✕
+            </button>
+          )}
+          <div className="flex-1 text-right min-w-0">
+            <h2 className="text-base font-bold truncate">
+              {section === "home" ? "עזר קליני" : `${currentDef?.icon ?? ""} ${currentDef?.label ?? ""}`}
+            </h2>
+            <p className="text-[11px] text-slate-400 truncate">
+              {section === "home" ? "גריאטריה · פרוטוקולים · מחשבונים" : "עזר קליני"}
+            </p>
+          </div>
+          {section !== "home" && (
+            <button
+              onClick={onClose}
+              className="min-w-[40px] min-h-[40px] flex items-center justify-center text-white/40 hover:text-white text-sm rounded-xl active:bg-white/10 transition-colors"
+              aria-label="סגור"
+            >
+              ✕
+            </button>
+          )}
         </div>
 
-        {/* Search (for protocols & meds) */}
-        {(tab === "protocols" || tab === "meds") && (
-          <div className="px-4 py-2 border-b border-gray-100 dark:border-[#1a1a2e]">
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="חפש..."
-              dir="auto"
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-[#1a1a2e] rounded-lg bg-white dark:bg-[#111] dark:text-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-400 outline-none"
-            />
-          </div>
-        )}
+        {/* ── Content ── */}
+        <div className="flex-1 overflow-y-auto overscroll-contain">
+          {section === "home" && <HomeGrid onSelect={(k) => { setSection(k); setSearch(""); }} />}
 
-        {/* Protocol Category Filter */}
-        {tab === "protocols" && (
-          <div dir="ltr" className="px-4 py-2 flex gap-1.5 overflow-x-auto scrollbar-hide border-b border-gray-100 dark:border-[#1a1a2e]">
-            {PROTO_CATEGORIES.map((cat) => (
-              <button
-                key={cat.key}
-                onClick={() => setProtoCategory(cat.key)}
-                className={`flex-none px-3 py-1 text-xs rounded-full border transition-colors ${
-                  protoCategory === cat.key
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white dark:bg-[#111] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-[#1a1a2e]"
-                }`}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3 dark:bg-[#0a0a0a]">
-          {tab === "protocols" && (
-            <>
-              {/* CrCl status banner */}
+          {section === "protocols" && (
+            <div className="p-4 space-y-3">
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="חפש פרוטוקול..."
+                dir="auto"
+                className="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-[#1a1a2e] rounded-xl bg-gray-50 dark:bg-[#111] dark:text-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+              <div dir="ltr" className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
+                {PROTO_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.key}
+                    onClick={() => setProtoCategory(cat.key)}
+                    className={`flex-none px-3 py-1.5 text-xs rounded-full border transition-colors ${
+                      protoCategory === cat.key
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white dark:bg-[#111] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-[#1a1a2e]"
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
               {crclBucket ? (
-                <div className={`flex items-center justify-between rounded-lg px-3 py-2 text-xs font-medium ${
+                <div className={`flex items-center justify-between rounded-xl px-3 py-2 text-xs font-medium ${
                   crclBucket === "gt50" ? "bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400" :
                   crclBucket === "hd" ? "bg-purple-50 text-purple-700 dark:bg-purple-950/20 dark:text-purple-400" :
                   "bg-orange-50 text-orange-700 dark:bg-orange-950/20 dark:text-orange-400"
@@ -437,12 +496,12 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
                     {crclBucket === "hd" ? "💊 HD — מינונים מותאמים לדיאליזה" :
                      `💊 CrCl ${sharedCrCl} ml/min (${BUCKET_LABELS[crclBucket]}) — מינונים מותאמים`}
                   </span>
-                  <button onClick={() => setTab("crcl")} className="underline">שנה</button>
+                  <button onClick={() => setSection("crcl")} className="underline">שנה</button>
                 </div>
               ) : (
                 <button
-                  onClick={() => setTab("crcl")}
-                  className="w-full text-center text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20 rounded-lg px-3 py-2 hover:bg-blue-100 transition-colors"
+                  onClick={() => setSection("crcl")}
+                  className="w-full text-center text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20 rounded-xl px-3 py-2 active:bg-blue-100 transition-colors"
                 >
                   💊 הזן CrCl להתאמת מינונים →
                 </button>
@@ -454,7 +513,7 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
                   const doseLines = crclBucket ? getDoseLinesForPlan(p.empiric + " " + p.alternative, crclBucket) : [];
                   const hasAdjustments = doseLines.some(d => d.needsAdjustment);
                   return (
-                  <div key={i} className={`border rounded-xl p-3 space-y-2 ${hasAdjustments ? "border-orange-300 bg-orange-50/30 dark:bg-orange-950/10" : "border-gray-200"}`}>
+                  <div key={i} className={`border rounded-xl p-3 space-y-2 ${hasAdjustments ? "border-orange-300 bg-orange-50/30 dark:bg-orange-950/10" : "border-gray-200 dark:border-[#1a1a2e]"}`}>
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <div className="font-bold text-sm">{p.conditionHe}</div>
@@ -462,7 +521,7 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
                       </div>
                       <button
                         onClick={() => handleCopyProtocol(p, i)}
-                        className="flex-none text-xs px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                        className="flex-none text-xs px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 active:bg-gray-100 dark:active:bg-gray-800 transition-colors"
                         title="העתק פרוטוקול"
                       >
                         {copiedIdx === i ? "✓" : "📋"}
@@ -477,7 +536,6 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
                         <span className="text-xs font-semibold text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded">Alt</span>
                         <span className="mr-2 text-sm" dir="ltr">{p.alternative}</span>
                       </div>
-                      {/* Dose adjustment block */}
                       {crclBucket && doseLines.length > 0 && (
                         <div className={`mt-2 rounded-lg border p-2.5 text-xs space-y-1.5 ${
                           hasAdjustments
@@ -498,7 +556,7 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
                           ))}
                         </div>
                       )}
-                      <div className="text-xs text-gray-600 bg-gray-50 dark:bg-gray-900 rounded p-2">{p.notes}</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-[#111] rounded-lg p-2">{p.notes}</div>
                     </div>
                   </div>
                   );
@@ -512,39 +570,117 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
               >
                 פתח אתר DAG ש&quot;צ המלא →
               </a>
-            </>
+            </div>
           )}
 
-          {tab === "meds" && (
-            <div className="space-y-2">
+          {section === "meds" && (
+            <div className="p-4 space-y-2">
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="חפש תרופה..."
+                dir="auto"
+                className="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-[#1a1a2e] rounded-xl bg-gray-50 dark:bg-[#111] dark:text-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 outline-none mb-2"
+              />
               {filteredMeds.map((m, i) => (
-                <div key={i} className="border border-gray-200 rounded-lg p-2.5 flex flex-wrap gap-x-4 gap-y-1 items-baseline">
-                  <span className="font-bold text-sm text-blue-800 min-w-[120px]" dir="ltr">{m.name}</span>
-                  <span className="text-xs text-gray-500">{m.indication}</span>
-                  <span className="text-sm font-mono bg-blue-50 text-blue-900 px-1.5 py-0.5 rounded" dir="ltr">{m.dose} {m.route}</span>
-                  <span className="text-xs text-gray-600 w-full">{m.notes}</span>
+                <div key={i} className="border border-gray-200 dark:border-[#1a1a2e] rounded-xl p-3 space-y-1.5">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="font-bold text-sm text-blue-800 dark:text-blue-300" dir="ltr">{m.name}</span>
+                    <span className="text-xs text-gray-500 shrink-0">{m.indication}</span>
+                  </div>
+                  <div className="text-sm font-mono bg-blue-50 dark:bg-blue-950/20 text-blue-900 dark:text-blue-200 px-2 py-1 rounded-lg" dir="ltr">
+                    {m.dose} {m.route}
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">{m.notes}</div>
                 </div>
               ))}
             </div>
           )}
 
-          {tab === "crcl" && <CrClCalculator onCrClChange={(crcl, hd) => handleCrClChange(crcl, hd)} />}
-          {tab === "curb65" && <CURB65Calculator />}
-          {tab === "news2" && <NEWS2Calculator />}
-          {tab === "lytes" && <ElectrolyteReference />}
-          {tab === "insulin" && <InsulinReference />}
+          {section === "crcl" && <div className="p-4"><CrClCalculator onCrClChange={(crcl, hd) => handleCrClChange(crcl, hd)} /></div>}
+          {section === "curb65" && <div className="p-4"><CURB65Calculator /></div>}
+          {section === "news2" && <div className="p-4"><NEWS2Calculator /></div>}
+          {section === "lytes" && <div className="p-4"><ElectrolyteReference /></div>}
+          {section === "insulin" && <div className="p-4"><InsulinReference /></div>}
+          {section === "delirium" && <div className="p-4"><DeliriumReference /></div>}
+          {section === "falls" && <div className="p-4"><FallsReference /></div>}
+          {section === "beers" && <div className="p-4"><BeersReference /></div>}
+          {section === "pressure" && <div className="p-4"><PressureInjuryReference /></div>}
+          {section === "discharge" && <div className="p-4"><DischargeChecklist /></div>}
         </div>
 
-        {/* Bottom close — thumb reach */}
-        <div className="border-t border-gray-200 dark:border-[#1a1a2e] bg-white dark:bg-[#0a0a0a] px-4 py-2 shrink-0">
-          <button
-            onClick={onClose}
-            className="w-full min-h-[44px] rounded-xl text-sm font-medium text-gray-500 dark:text-gray-400 active:bg-gray-100 dark:active:bg-gray-800"
-          >
-            סגור
-          </button>
+        {/* ── Footer nav ── */}
+        <div className="border-t border-gray-200 dark:border-[#1a1a2e] bg-white dark:bg-[#0f0f1a] px-3 py-2 shrink-0">
+          {section === "home" ? (
+            <button
+              onClick={onClose}
+              className="w-full min-h-[44px] rounded-xl text-sm font-medium text-gray-500 dark:text-gray-400 active:bg-gray-100 dark:active:bg-gray-800"
+            >
+              סגור
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={goPrev ?? undefined}
+                disabled={!goPrev}
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-lg text-gray-400 dark:text-gray-500 active:bg-gray-100 dark:active:bg-gray-800 disabled:opacity-20 transition-opacity"
+                aria-label="הקודם"
+              >
+                →
+              </button>
+              <button
+                onClick={() => { setSection("home"); setSearch(""); }}
+                className="flex-1 min-h-[44px] rounded-xl text-sm font-medium text-gray-500 dark:text-gray-400 active:bg-gray-100 dark:active:bg-gray-800 flex items-center justify-center gap-1.5"
+              >
+                <span className="text-base">☰</span> תפריט
+              </button>
+              <button
+                onClick={goNext ?? undefined}
+                disabled={!goNext}
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-lg text-gray-400 dark:text-gray-500 active:bg-gray-100 dark:active:bg-gray-800 disabled:opacity-20 transition-opacity"
+                aria-label="הבא"
+              >
+                ←
+              </button>
+            </div>
+          )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// HOME GRID
+// ─────────────────────────────────────────────────────────
+
+function HomeGrid({ onSelect }: { onSelect: (key: SectionKey) => void }) {
+  const groups = ["geriatrics", "protocols", "calculators"] as const;
+  return (
+    <div className="p-4 space-y-5">
+      {groups.map((group) => {
+        const items = SECTIONS.filter((s) => s.group === group);
+        return (
+          <div key={group}>
+            <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2 px-1">
+              {GROUP_LABELS[group]}
+            </h3>
+            <div className={`grid gap-2.5 ${group === "calculators" ? "grid-cols-3" : "grid-cols-2"}`}>
+              {items.map((s) => (
+                <button
+                  key={s.key}
+                  onClick={() => onSelect(s.key)}
+                  className="flex flex-col items-center justify-center gap-1.5 py-4 px-2 rounded-2xl border border-gray-200 dark:border-[#1a1a2e] bg-gray-50 dark:bg-[#111] active:bg-gray-100 dark:active:bg-[#1a1a2e] transition-colors"
+                >
+                  <span className="text-2xl">{s.icon}</span>
+                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300 text-center leading-tight">{s.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
