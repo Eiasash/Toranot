@@ -359,21 +359,21 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
       >
         {/* Header */}
         <div className="bg-slate-800 dark:bg-[#050510] text-white px-4 py-3 flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-bold">עזר קליני</h2>
-            <p className="text-xs text-slate-400">פרוטוקולי DAG ש\"צ + כלים</p>
-          </div>
           <button
             onClick={onClose}
-            className="text-white/70 hover:text-white text-xl px-2"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center text-white/70 hover:text-white text-xl rounded-lg active:bg-slate-700"
             aria-label="סגור"
           >
             ✕
           </button>
+          <div className="text-right">
+            <h2 className="text-base font-bold">עזר קליני</h2>
+            <p className="text-xs text-slate-400">פרוטוקולי DAG ש\"צ + כלים</p>
+          </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-gray-200 dark:border-[#1a1a2e] bg-gray-50 dark:bg-[#050510] overflow-x-auto scrollbar-hide">
+        {/* Tabs — dir=ltr so first tab is on LEFT, readable L→R in horizontal scroll */}
+        <div dir="ltr" className="flex border-b border-gray-200 dark:border-[#1a1a2e] bg-gray-50 dark:bg-[#050510] overflow-x-auto scrollbar-hide">
           {TABS.map((t) => (
             <button
               key={t.key}
@@ -405,7 +405,7 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
 
         {/* Protocol Category Filter */}
         {tab === "protocols" && (
-          <div className="px-4 py-2 flex gap-1.5 overflow-x-auto scrollbar-hide border-b border-gray-100 dark:border-[#1a1a2e]">
+          <div dir="ltr" className="px-4 py-2 flex gap-1.5 overflow-x-auto scrollbar-hide border-b border-gray-100 dark:border-[#1a1a2e]">
             {PROTO_CATEGORIES.map((cat) => (
               <button
                 key={cat.key}
@@ -533,6 +533,16 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
           {tab === "news2" && <NEWS2Calculator />}
           {tab === "lytes" && <ElectrolyteReference />}
           {tab === "insulin" && <InsulinReference />}
+        </div>
+
+        {/* Bottom close — thumb reach */}
+        <div className="border-t border-gray-200 dark:border-[#1a1a2e] bg-white dark:bg-[#0a0a0a] px-4 py-2 shrink-0">
+          <button
+            onClick={onClose}
+            className="w-full min-h-[44px] rounded-xl text-sm font-medium text-gray-500 dark:text-gray-400 active:bg-gray-100 dark:active:bg-gray-800"
+          >
+            סגור
+          </button>
         </div>
       </div>
     </div>
