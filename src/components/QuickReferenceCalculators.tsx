@@ -822,3 +822,353 @@ export function DischargeChecklist() {
     </div>
   );
 }
+
+// ─────────────────────────────────────────────────────────
+// ORTHOGERIATRIC ADMISSION CHECKLIST
+// Dr. Zeidan Gued (152608) · SZMC
+// ─────────────────────────────────────────────────────────
+
+interface OrthoCheckItem {
+  key: string;
+  icon: string;
+  text: string;
+  sub?: string;
+}
+
+interface OrthoSection {
+  id: string;
+  title: string;
+  items: OrthoCheckItem[];
+}
+
+const ORTHO_SECTIONS: OrthoSection[] = [
+  {
+    id: "ortho",
+    title: "1) אורתופדית",
+    items: [
+      { key: "fx_type", icon: "🦴", text: "סוג שבר" },
+      { key: "surgery", icon: "🔪", text: "סוג ניתוח אם כבר בוצע" },
+    ],
+  },
+  {
+    id: "fall",
+    title: "2) נפילה",
+    items: [
+      { key: "fall_where", icon: "📍", text: "איפה נפלת? מתי? אתה זוכר את הנפילה?" },
+      { key: "fall_before", icon: "🕐", text: "מה עשית לפני הנפילה?" },
+      { key: "fall_prodrome", icon: "⚡", text: "תחושה מקדימה? חוסר יציבות? סחרחורת? כאב בחזה? פלפיטציות?" },
+      { key: "fall_how", icon: "🔍", text: "איך נפלת? מעדת? נתקלת במשהו על הרצפה?" },
+      { key: "fall_head", icon: "🤕", text: "האם הייתה חבלת ראש? איבוד הכרה?" },
+      { key: "fall_floor", icon: "⏱️", text: "כמה זמן היית על הרצפה לאחר הנפילה?" },
+      { key: "fall_hx", icon: "📋", text: "נפילות בעבר? כמה? איפה? מתי האחרונה? דומות או שונות?" },
+      { key: "fall_ddx", icon: "🧠", text: "חשוב: הפרעות קצב, פרקינסון, נוירופתיה, בעיית ראייה, תרופות וכו'" },
+    ],
+  },
+  {
+    id: "pain",
+    title: "3) כאבים",
+    items: [
+      { key: "pain_level", icon: "😣", text: "רמת כאב" },
+      { key: "pain_rx", icon: "💊", text: "משככי כאבים — לא לתת TRAMADOL", sub: "מתן אקמול ואופטלגין קבוע" },
+      { key: "pain_severe", icon: "🩹", text: "אם כואב מאוד → מדבקת BUTRANS או TARGIN פעמיים ביום" },
+      { key: "pain_prn", icon: "💉", text: "אפשר להוסיף פרקוסט 5 לפי צורך" },
+    ],
+  },
+  {
+    id: "osteo",
+    title: "4) אוסטיאופורוזיס",
+    items: [
+      { key: "osteo_rule", icon: "⚠️", text: "שבר צוואר ירך לאחר נפילה מגובה עצמית = אוסטיאופורוזיס" },
+      { key: "osteo_dx", icon: "❓", text: "האם אובחנת עם אוסטיאופורוזיס בעבר?" },
+      { key: "osteo_tx_hx", icon: "📝", text: "האם קיבלת טיפול? איזה? מתי המינון האחרון?" },
+      { key: "osteo_fx_tx", icon: "🎯", text: "שבר תחת טיפול מכוון → לציין בשל טיפולי, להמליץ על טיפול אחר" },
+      { key: "osteo_labs", icon: "🧪", text: "מעבדה כולל אנדו לבדוק Vit D" },
+      { key: "osteo_vitd", icon: "☀️", text: "Vitamin D 2000 יח' (יתכן ונוריד ל-1000 לאחר תוצאות)" },
+      { key: "osteo_ca", icon: "🥛", text: "Calcium Carbonate 600mg כל יום" },
+    ],
+  },
+  {
+    id: "function",
+    title: "5) תפקוד",
+    items: [
+      { key: "func_adl", icon: "🧑‍🦯", text: "ADLs" },
+      { key: "func_mobility", icon: "🚶", text: "ניידות קודמת — אביזרי עזר?" },
+      { key: "func_help", icon: "👨‍👩‍👧", text: "עזרה בבית?" },
+      { key: "func_home", icon: "🏠", text: "בית באיזה קומה? מדרגות מחוץ/בתוך הבית?" },
+    ],
+  },
+  {
+    id: "constipation",
+    title: "6) עצירות",
+    items: [
+      { key: "const_hx", icon: "🔄", text: "נטייה לעצירות? מקבל טיפול באופן קבוע?" },
+      { key: "const_last", icon: "📅", text: 'מתי פ"מ אחרונה?' },
+      { key: "const_xr", icon: "🩻", text: "עדות לעצירות בצילום אגן?" },
+      { key: "const_tx", icon: "💊", text: "לשקול נורמלקס +/- נר" },
+    ],
+  },
+  {
+    id: "other",
+    title: "7) בעיות פעילות אחרות",
+    items: [
+      { key: "other_issues", icon: "📝", text: "בעיות רפואיות פעילות נוספות שיש לטפל בהן" },
+    ],
+  },
+];
+
+export function OrthoGeriatricAdmission() {
+  const [checks, setChecks] = useState<Record<string, boolean>>({});
+  const toggle = (k: string) => setChecks((prev) => ({ ...prev, [k]: !prev[k] }));
+
+  const total = ORTHO_SECTIONS.reduce((n, s) => n + s.items.length, 0);
+  const done = Object.values(checks).filter(Boolean).length;
+
+  return (
+    <div className="space-y-4">
+      <h3 className="font-bold text-sm">🦴 קבלות אורתוגריאטריה</h3>
+      <div className="text-[10px] text-slate-400">ד"ר זיידאן גואד (152608) · שערי צדק</div>
+
+      <div className={`text-center text-xs font-medium px-3 py-2 rounded-xl ${
+        done === total
+          ? "bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-300"
+          : done > 0
+          ? "bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-300"
+          : "bg-gray-100 text-gray-500 dark:bg-[#111] dark:text-gray-400"
+      }`}>{done}/{total} בוצע</div>
+
+      {ORTHO_SECTIONS.map((sec) => (
+        <div key={sec.id} className="space-y-1">
+          <div className="text-xs font-bold text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 pb-1">
+            {sec.title}
+          </div>
+          {sec.items.map((item) => (
+            <label
+              key={item.key}
+              className={`flex items-start gap-2.5 p-2 rounded-xl border cursor-pointer transition-colors ${
+                checks[item.key]
+                  ? "bg-green-50 dark:bg-green-950/10 border-green-200 dark:border-green-900/30"
+                  : "bg-white dark:bg-[#111] border-gray-200 dark:border-[#1a1a2e]"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={!!checks[item.key]}
+                onChange={() => toggle(item.key)}
+                className="h-4 w-4 mt-0.5 rounded accent-green-600 shrink-0"
+              />
+              <div className={`text-xs ${
+                checks[item.key] ? "text-green-800 dark:text-green-300" : "text-gray-700 dark:text-gray-300"
+              }`}>
+                <span className="mr-1">{item.icon}</span> {item.text}
+                {item.sub && <div className="text-[10px] text-slate-400 mt-0.5">{item.sub}</div>}
+              </div>
+            </label>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// SZMC PHONE DIRECTORY
+// ─────────────────────────────────────────────────────────
+
+interface PhoneEntry {
+  name: string;
+  nameHe: string;
+  ext: string;
+  category: "lab" | "consult" | "support";
+}
+
+const PHONE_DIR: PhoneEntry[] = [
+  { name: "Micro (Blood+Sputum)", nameHe: "מיקרו (דם+ליחה)", ext: "66723", category: "lab" },
+  { name: "Micro (Urine)", nameHe: "מיקרו (שתן)", ext: "66623", category: "lab" },
+  { name: "Micro (Body Fluid)", nameHe: "מיקרו (תרבית נוזל גוף)", ext: "66523", category: "lab" },
+  { name: "Biochemistry", nameHe: "ביוכימיה", ext: "55522/66422/55291/64121", category: "lab" },
+  { name: "Hematology", nameHe: "מעבדת המוטולוגיה", ext: "55983", category: "lab" },
+  { name: "Endocrine Lab", nameHe: "מעבדת אנדו", ext: "55042", category: "lab" },
+  { name: "Blood Bank", nameHe: "בנק הדם", ext: "66221", category: "lab" },
+  { name: "Dialysis", nameHe: "דיאליזה", ext: "55545", category: "lab" },
+  { name: "CT", nameHe: "מכון CT", ext: "68724/55595/68187", category: "lab" },
+  { name: "Gastro On-Call", nameHe: "תורן גסטרו", ext: "68611", category: "consult" },
+  { name: "ICU On-Call", nameHe: "תורן ICU", ext: "68236", category: "consult" },
+  { name: "CCU On-Call", nameHe: "תורן CCU", ext: "68339/55583", category: "consult" },
+  { name: "Radiology On-Call", nameHe: "תורן רדיולוגי", ext: "68435", category: "consult" },
+  { name: "Anesthesia On-Call", nameHe: "תורן מרדם", ext: "68704", category: "consult" },
+  { name: "Ortho On-Call", nameHe: "תורן אורתופדיה", ext: "68482", category: "consult" },
+  { name: "Surgery On-Call", nameHe: "תורן כירורגיה", ext: "68483", category: "consult" },
+  { name: "Ophthalmology On-Call", nameHe: "תורן עיניים", ext: "68182", category: "consult" },
+  { name: "Neurosurgery On-Call", nameHe: "תורן נוירוכירורגי", ext: "68621", category: "consult" },
+  { name: "Cardiothoracic On-Call", nameHe: "תורן לב חזה", ext: "68069", category: "consult" },
+  { name: "Urology On-Call", nameHe: "תורן אורולוגי", ext: "68543", category: "consult" },
+  { name: "Plastic Surgery On-Call", nameHe: "תורן פלסטיקה", ext: "68165", category: "consult" },
+  { name: "Emergency Admission", nameHe: "אישורי אלישע", ext: "66223", category: "support" },
+];
+
+export function PhoneDirectory() {
+  const [filter, setFilter] = useState("");
+  const cats = ["lab", "consult", "support"] as const;
+  const catLabels: Record<string, string> = {
+    lab: "🧪 מעבדות ומכונים",
+    consult: "📞 תורנים / ייעוצים",
+    support: "🏥 שירותים",
+  };
+
+  const filtered = filter.trim()
+    ? PHONE_DIR.filter(
+        (e) =>
+          e.nameHe.includes(filter) ||
+          e.name.toLowerCase().includes(filter.toLowerCase()) ||
+          e.ext.includes(filter)
+      )
+    : PHONE_DIR;
+
+  return (
+    <div className="space-y-3">
+      <h3 className="font-bold text-sm">📞 שלוחות שערי צדק</h3>
+      <input
+        type="search"
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+        placeholder="חפש שלוחה..."
+        dir="auto"
+        className="w-full px-3 py-2.5 text-sm border border-gray-200 dark:border-[#1a1a2e] rounded-xl bg-gray-50 dark:bg-[#111] dark:text-gray-200 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 outline-none"
+      />
+
+      {cats.map((cat) => {
+        const items = filtered.filter((e) => e.category === cat);
+        if (items.length === 0) return null;
+        return (
+          <div key={cat}>
+            <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-1.5">
+              {catLabels[cat]}
+            </div>
+            <div className="space-y-1">
+              {items.map((e) => (
+                <div
+                  key={e.ext + e.nameHe}
+                  className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl border border-gray-200 dark:border-[#1a1a2e] bg-white dark:bg-[#111]"
+                >
+                  <div className="min-w-0">
+                    <div className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">{e.nameHe}</div>
+                    <div className="text-[10px] text-slate-400 truncate">{e.name}</div>
+                  </div>
+                  <a
+                    href={`tel:*${e.ext.split("/")[0]}`}
+                    className="shrink-0 text-xs font-mono font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 px-2.5 py-1.5 rounded-lg active:bg-blue-100 dark:active:bg-blue-900/50"
+                    dir="ltr"
+                  >
+                    {e.ext}
+                  </a>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// OSTEOPOROSIS TREATMENT PROTOCOL — SZMC
+// ─────────────────────────────────────────────────────────
+
+export function OsteoporosisProtocol() {
+  return (
+    <div className="space-y-4">
+      <h3 className="font-bold text-sm">🦴 אוסטאופורוזיס — פרוטוקול טיפול</h3>
+      <div className="text-[10px] text-slate-400">שערי צדק — אורתוגריאטריה</div>
+
+      {/* General rules */}
+      <div className="border border-blue-200 dark:border-blue-900/30 rounded-xl p-3 space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
+        <div className="font-bold text-blue-700 dark:text-blue-300">עקרונות כלליים</div>
+        <div>• הטיפול מבוסס על: תוספי ויטמין D, סידן, וטיפול מכוון לאוסטיאופורוזיס</div>
+        <div>• לכל מטופל עם שבר אוסטיאופורוטי → לבדוק באשפוז: <span className="font-semibold">סידן (מתוקן לאלבומין), פוספור, ויטמין D</span></div>
+        <div>• מומלץ סידן + ויטמין D לכל מטופל מעל גיל 50 (ללא קשר לאבחנה)</div>
+        <div>• <span className="font-semibold">CrCl&lt;45 ml/min</span> → בדוק PTH, שלול היפרקלצמיה לפני תוספת</div>
+        <div>• <span className="font-semibold">CrCl&lt;30 ml/min</span> → התייעץ נפרולוג לפני טיפול מכוון</div>
+        <div className="text-red-600 dark:text-red-400">❌ היפרקלצמיה (מעל 10.5 mg/dL) → אין תוספי סידן/ויטמין D, הפנה לאנדוקרינולוג</div>
+        <div>• סידן + ויטמין D — להתחיל כבר באשפוז</div>
+        <div>• טיפול מכוון — להמליץ בשחרור, יינתן בקהילה</div>
+      </div>
+
+      {/* 1. Calcium + Vitamin D */}
+      <div className="border border-green-200 dark:border-green-900/30 rounded-xl p-3 space-y-2">
+        <div className="font-bold text-sm text-green-700 dark:text-green-300">1. תוספי סידן וויטמין D</div>
+
+        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+          <div className="font-semibold text-red-600 dark:text-red-400">⚠️ אין לתת תרופה מכוונת אם:</div>
+          <div>• סידן מתחת ל-8.5 mg/dL</div>
+          <div>• ויטמין D מתחת ל-10 ng/mL (25 nmol/L)</div>
+          <div>מומלץ: סידן &gt;9 mg/dL + Vit D &gt;20 ng/mL לפני טיפול מכוון</div>
+          <div>• זהירות: נוטלים ביספוספונטים (אקלסטה) או פרוליה + אי-ספיקת כליות → סיכון להיפוקלצמיה</div>
+        </div>
+
+        <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-2.5 text-xs">
+          <div className="font-bold text-green-800 dark:text-green-300">סידן:</div>
+          <div className="text-slate-700 dark:text-slate-300">
+            Calcium Carbonate 600 מ"ג/יום + 600 מ"ג מהדיאטה (חלב, טחינה). ייעוץ דיאטנית במידת הצורך.
+          </div>
+        </div>
+
+        <div className="bg-yellow-50 dark:bg-yellow-950/20 rounded-lg p-2.5 text-xs">
+          <div className="font-bold text-yellow-800 dark:text-yellow-300 mb-1.5">ויטמין D — מינון לפי רמה:</div>
+          <table className="w-full text-[11px] border-collapse">
+            <thead>
+              <tr>
+                <th className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 px-2 py-1.5 text-right font-semibold">ערכים</th>
+                <th className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 px-2 py-1.5 text-right font-semibold">טיפול מומלץ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-t border-yellow-200 dark:border-yellow-800/30">
+                <td className="px-2 py-1.5 font-semibold">&lt;20 ng/mL</td>
+                <td className="px-2 py-1.5">
+                  <div>העמסה 50,000 יח' לפני שחרור</div>
+                  <div>המשך 2000 יח'/יום (או 14,000/שבוע)</div>
+                </td>
+              </tr>
+              <tr className="border-t border-yellow-200 dark:border-yellow-800/30 bg-yellow-50/50 dark:bg-yellow-950/10">
+                <td className="px-2 py-1.5 font-semibold">20-30 ng/mL</td>
+                <td className="px-2 py-1.5">2000 יח'/יום (או 14,000/שבוע)</td>
+              </tr>
+              <tr className="border-t border-yellow-200 dark:border-yellow-800/30">
+                <td className="px-2 py-1.5 font-semibold">&gt;30 ng/mL</td>
+                <td className="px-2 py-1.5">1000 יח'/יום (או 7000/שבוע)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* 2. Directed Treatment */}
+      <div className="border border-purple-200 dark:border-purple-900/30 rounded-xl p-3 space-y-2">
+        <div className="font-bold text-sm text-purple-700 dark:text-purple-300">2. טיפול מכוון לאוסטיאופורוזיס</div>
+
+        <div className="bg-purple-50 dark:bg-purple-950/20 rounded-lg p-2.5 text-xs space-y-1.5">
+          <div className="font-bold text-purple-800 dark:text-purple-300">שבר צוואר ירך:</div>
+          <div className="text-slate-700 dark:text-slate-300 space-y-1">
+            <div>• <span className="font-semibold">קו ראשון:</span> Zolendronic Acid (<span className="font-semibold">Aclasta</span>)</div>
+            <div>• <span className="font-semibold">קו שני:</span> Denosumab (<span className="font-semibold">Prolia</span>)</div>
+            <div>• <span className="font-semibold">קו שלישי:</span> Teriparatide (<span className="font-semibold">Forteo</span>) — במקרים:</div>
+            <div className="pr-4 text-[11px] space-y-0.5">
+              <div>- לא יכולים לקבל Aclasta או Prolia</div>
+              <div>- שבר קרה על טיפול אחר</div>
+              <div>- טיפול כרוני בסטרואידים</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-slate-50 dark:bg-slate-800/30 rounded-lg p-2.5 text-xs space-y-1">
+          <div className="font-bold text-slate-700 dark:text-slate-300">שבר אוסטיאופורוטי אחר (לא צוואר ירך):</div>
+          <div className="text-slate-600 dark:text-slate-400">
+            <div>• נאיבי → ביספוספונטים פומיים</div>
+            <div>• כבר על טיפול מכוון → להתייעץ</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

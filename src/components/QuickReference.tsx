@@ -15,6 +15,9 @@ import {
   BeersReference,
   PressureInjuryReference,
   DischargeChecklist,
+  OrthoGeriatricAdmission,
+  PhoneDirectory,
+  OsteoporosisProtocol,
 } from "./QuickReferenceCalculators";
 
 // ─────────────────────────────────────────────────────────
@@ -290,13 +293,16 @@ type SectionKey =
   | "falls"
   | "beers"
   | "pressure"
-  | "discharge";
+  | "discharge"
+  | "orthoAdmit"
+  | "osteoporosis"
+  | "phones";
 
 interface SectionDef {
   key: SectionKey;
   icon: string;
   label: string;
-  group: "geriatrics" | "protocols" | "calculators";
+  group: "geriatrics" | "ortho" | "protocols" | "calculators" | "quickaccess";
 }
 
 const SECTIONS: SectionDef[] = [
@@ -306,6 +312,9 @@ const SECTIONS: SectionDef[] = [
   { key: "beers",     icon: "💊", label: "Beers / PIM",   group: "geriatrics" },
   { key: "pressure",  icon: "🛏️", label: "פצעי לחץ",     group: "geriatrics" },
   { key: "discharge", icon: "🏥", label: "צ׳קליסט שחרור", group: "geriatrics" },
+  // ── Orthogeriatrics ──
+  { key: "orthoAdmit",   icon: "🦴", label: "קבלה אורתו",     group: "ortho" },
+  { key: "osteoporosis",  icon: "💎", label: "אוסטיאופורוזיס", group: "ortho" },
   // ── Protocols & Meds ──
   { key: "protocols", icon: "🦠", label: "ABx פרוטוקולים",   group: "protocols" },
   { key: "meds",      icon: "💉", label: "תרופות תורן",       group: "protocols" },
@@ -315,12 +324,16 @@ const SECTIONS: SectionDef[] = [
   { key: "crcl",   icon: "🧪", label: "CrCl",    group: "calculators" },
   { key: "news2",  icon: "📊", label: "NEWS2",   group: "calculators" },
   { key: "curb65", icon: "🫁", label: "CURB-65", group: "calculators" },
+  // ── Quick Access ──
+  { key: "phones", icon: "📞", label: "שלוחות",  group: "quickaccess" },
 ];
 
 const GROUP_LABELS: Record<string, string> = {
   geriatrics: "גריאטריה — תסמונות ומניעה",
+  ortho: "אורתוגריאטריה",
   protocols: "פרוטוקולים ותרופות",
   calculators: "מחשבונים וסקורים",
+  quickaccess: "גישה מהירה",
 };
 
 // ─────────────────────────────────────────────────────────
@@ -608,6 +621,9 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
           {section === "beers" && <div className="p-4"><BeersReference /></div>}
           {section === "pressure" && <div className="p-4"><PressureInjuryReference /></div>}
           {section === "discharge" && <div className="p-4"><DischargeChecklist /></div>}
+          {section === "orthoAdmit" && <div className="p-4"><OrthoGeriatricAdmission /></div>}
+          {section === "osteoporosis" && <div className="p-4"><OsteoporosisProtocol /></div>}
+          {section === "phones" && <div className="p-4"><PhoneDirectory /></div>}
         </div>
 
         {/* ── Footer nav ── */}
@@ -656,7 +672,7 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
 // ─────────────────────────────────────────────────────────
 
 function HomeGrid({ onSelect }: { onSelect: (key: SectionKey) => void }) {
-  const groups = ["geriatrics", "protocols", "calculators"] as const;
+  const groups = ["geriatrics", "ortho", "protocols", "calculators", "quickaccess"] as const;
   return (
     <div className="p-4 space-y-5">
       {groups.map((group) => {
@@ -666,7 +682,7 @@ function HomeGrid({ onSelect }: { onSelect: (key: SectionKey) => void }) {
             <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2 px-1">
               {GROUP_LABELS[group]}
             </h3>
-            <div className={`grid gap-2.5 ${group === "calculators" ? "grid-cols-3" : "grid-cols-2"}`}>
+            <div className={`grid gap-2.5 ${group === "calculators" || group === "quickaccess" ? "grid-cols-3" : "grid-cols-2"}`}>
               {items.map((s) => (
                 <button
                   key={s.key}
