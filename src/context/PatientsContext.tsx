@@ -12,6 +12,7 @@ import { mergeScan } from "../engine/mergeScan";
 import { applyRules } from "../engine/rules";
 import { generateId } from "../utils/id";
 import { safeGetItem, safeSetItem } from "../utils/storage";
+import { useToranotCloudSync, type ToranotCloudState } from "../cloudSync";
 
 // -----------------------------
 // Constants
@@ -201,7 +202,8 @@ export type Action =
   | { type: "NEW_ADMISSION"; patient: PatientEntry }
   | { type: "ADD_UNASSIGNED_TASK"; text: string; urgency: Urgency }
   | { type: "ASSIGN_TASK_TO_PATIENT"; taskId: string; patientId: string }
-  | { type: "TOGGLE_UNASSIGNED_TASK"; taskId: string };
+  | { type: "TOGGLE_UNASSIGNED_TASK"; taskId: string }
+  | { type: "IMPORT_CLOUD_STATE"; state: ToranotCloudState };
 
 export function inferUrgencyFromText(text: string): Urgency {
   const t = text.trim();
@@ -525,6 +527,33 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
     case "IMPORT_BACKUP":
       return { ...state, patients: action.patients.map(normalizePatient) };
 
+    case "IMPORT_CLOUD_STATE": {
+      const c = action.state;
+      return {
+        ...state,
+        patients: Array.isArray(c.patients)
+          ? c.patients.map((p) => normalizePatient(p as RawPatient))
+          : state.patients,
+        shiftHistory: Array.isArray(c.shiftHistory)
+          ? c.shiftHistory.map((s) => {
+              const snap = s as Record<string, unknown>;
+              return {
+                ...snap,
+                patients: Array.isArray(snap.patients)
+                  ? (snap.patients as unknown[]).map((p) => normalizePatient(p as RawPatient))
+                  : [],
+              } as ShiftSnapshot;
+            })
+          : state.shiftHistory,
+        events: Array.isArray(c.events) ? (c.events as WardEvent[]) : state.events,
+        unassignedTasks: Array.isArray(c.unassignedTasks)
+          ? c.unassignedTasks.map((t) => normalizeTask(t as RawTask))
+          : state.unassignedTasks,
+        darkMode: typeof c.darkMode === "boolean" ? c.darkMode : state.darkMode,
+        scanMode: typeof c.scanMode === "boolean" ? c.scanMode : state.scanMode,
+      };
+    }
+
     case "SYNC_SHIFT_HISTORY":
       return { ...state, shiftHistory: action.shiftHistory };
 
@@ -649,6 +678,9 @@ const PatientsDispatchContext = createContext<Dispatch<Action>>(() => {});
 
 export function PatientsProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined as unknown as PatientsState, initializer);
+
+  // ─── Cloud sync (one line, everything lives in the hook) ────
+  useToranotCloudSync(state, dispatch);
 
   // Persist patients to localStorage so data survives Android tab kills
   useEffect(() => {
