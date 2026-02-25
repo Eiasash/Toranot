@@ -194,6 +194,7 @@ export type Action =
   | { type: "TOGGLE_SHOW_TOMORROW" }
   | { type: "REAPPLY_RULES" }
   | { type: "IMPORT_BACKUP"; patients: PatientEntry[] }
+  | { type: "MERGE_PATIENTS"; patients: PatientEntry[] }
   | { type: "SYNC_SHIFT_HISTORY"; shiftHistory: ShiftSnapshot[] }
   | { type: "SYNC_PATIENTS"; patients: PatientEntry[] }
   | { type: "TOGGLE_SCAN_MODE" }
@@ -526,6 +527,14 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
 
     case "IMPORT_BACKUP":
       return { ...state, patients: action.patients.map(normalizePatient) };
+
+    case "MERGE_PATIENTS":
+      // Lossless merge: preserves manual tasks, done state, notes, photos
+      // from existing patients while folding in incoming edits/additions.
+      return {
+        ...state,
+        patients: mergeScan(state.patients, action.patients.map(normalizePatient)),
+      };
 
     case "IMPORT_CLOUD_STATE": {
       const c = action.state;
