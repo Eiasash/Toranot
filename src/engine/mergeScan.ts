@@ -42,6 +42,7 @@ function mergePatient(oldP: PatientEntry, newP: PatientEntry): PatientEntry {
   return {
     ...newP,
     id: oldP.id,
+    order: newP.order ?? oldP.order ?? 0,
     scannedAt: newP.scannedAt,
     tasks: [...mergedExtracted, ...manualKeep],
     generatedTasks: mergedGenerated,
@@ -156,9 +157,13 @@ export function mergeScan(
     merged.push(mergePatient(match, np));
   }
 
-  // Keep patients that weren't mentioned in the new scan
+  // Keep patients that weren't mentioned in the new scan.
+  // Assign them orders after the incoming patients so they sort to the end.
+  let tailOrder = incoming.length;
   for (const p of existing) {
-    if (!consumedIds.has(p.id)) merged.push(p);
+    if (!consumedIds.has(p.id)) {
+      merged.push({ ...p, order: tailOrder++ });
+    }
   }
 
   return merged;

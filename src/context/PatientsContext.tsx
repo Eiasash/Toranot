@@ -440,12 +440,11 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
       if (swapIdx < 0 || swapIdx >= sectionPatients.length) return state;
       const a = sectionPatients[idx];
       const b = sectionPatients[swapIdx];
-      // Swap the actual .order property values, not the array indices.
-      // idx/swapIdx are positions in the filtered subarray — using them
-      // directly as order values would corrupt ordering for all patients
-      // whose .order wasn't involved in this swap.
-      const aOrder = a.order ?? idx;
-      const bOrder = b.order ?? swapIdx;
+      // When both patients share the same order value (e.g. both 0),
+      // swapping identical values is a no-op. Fall back to array indices
+      // so the swap always produces a visible change.
+      const aOrder = (a.order != null && b.order != null && a.order !== b.order) ? a.order : idx;
+      const bOrder = (a.order != null && b.order != null && a.order !== b.order) ? b.order : swapIdx;
       return {
         ...state,
         patients: state.patients.map((p) => {

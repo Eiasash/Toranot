@@ -283,6 +283,7 @@ export function parsePatientList(text: string): PatientEntry[] {
     // Try to parse as patient line
     const patient = parsePatientLine(trimmed, currentSection, date);
     if (patient) {
+      patient.order = patients.length;
       patients.push(patient);
     }
   }
