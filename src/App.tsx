@@ -515,6 +515,17 @@ function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qrsync" |
                   מחק הכל
                 </button>
               )}
+              {/* IV Protocols */}
+              <a
+                href="/iv-protocols.html"
+                target="_blank"
+                rel="noopener"
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-amber-300 active:bg-slate-700 border-t border-slate-700 text-right no-underline"
+                onClick={() => setOpen(false)}
+              >
+                <span className="text-base">💉</span>
+                פרוטוקולי IV — שערי צדק
+              </a>
               {/* Cloud sync auth */}
               <CloudAuthPanel />
               {/* Build stamp */}
