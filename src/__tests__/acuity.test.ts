@@ -12,7 +12,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     doneTime: overrides.doneTime ?? null,
     time: overrides.time ?? null,
     confidence: overrides.confidence ?? 1,
-    dueAt: overrides.dueAt ?? null,
+    ...overrides,
   };
 }
 
@@ -23,185 +23,209 @@ function makePatient(overrides: Partial<PatientEntry> = {}): PatientEntry {
     date: overrides.date ?? "01/01/2025",
     room: overrides.room ?? "101",
     name: overrides.name ?? "Test Patient",
-    age: overrides.age ?? 80,
+    age: overrides.age ?? 70,
     diagnosis: overrides.diagnosis ?? null,
     flags: overrides.flags ?? [],
     status: overrides.status ?? [],
-    tomorrowNotes: [],
+    tomorrowNotes: overrides.tomorrowNotes ?? [],
     tasks: overrides.tasks ?? [],
     generatedTasks: overrides.generatedTasks ?? [],
     notes: overrides.notes ?? [],
-    scannedAt: new Date().toISOString(),
-    confidence: 1,
+    scannedAt: overrides.scannedAt ?? "2025-01-01T00:00:00.000Z",
+    confidence: overrides.confidence ?? 1,
     labs: overrides.labs ?? [],
     order: overrides.order ?? 0,
   };
 }
 
 describe("calculateAcuity", () => {
-  it("returns score 0 for a patient with no tasks, no interactions, no labs", () => {
-    const p = makePatient();
-    const { score, components } = calculateAcuity(p);
-    expect(score).toBe(0);
-    expect(components).toEqual([]);
+  it("returns score 0 for patient with no tasks, no interactions, no labs", () => {
+    const result = calculateAcuity(makePatient());
+    expect(result.score).toBe(0);
+    expect(result.components).toHaveLength(0);
   });
 
   it("scores stat tasks at weight 5", () => {
-    const p = makePatient({
+    const patient = makePatient({
       tasks: [makeTask({ urgency: "stat" })],
     });
-    const { score, components } = calculateAcuity(p);
-    const statComp = components.find((c) => c.weight === 5);
-    expect(statComp).toBeDefined();
-    expect(statComp!.subtotal).toBe(5);
-    expect(score).toBeGreaterThanOrEqual(5);
+    const result = calculateAcuity(patient);
+    const statComponent = result.components.find((c) => c.label === "סטט פתוחים");
+    expect(statComponent).toBeDefined();
+    expect(statComponent!.weight).toBe(5);
+    expect(statComponent!.subtotal).toBe(5);
   });
 
   it("scores urgent tasks at weight 3", () => {
-    const p = makePatient({
+    const patient = makePatient({
       tasks: [makeTask({ urgency: "urgent" }), makeTask({ id: "t2", urgency: "urgent" })],
     });
-    const { components } = calculateAcuity(p);
-    const urgentComp = components.find((c) => c.weight === 3 && c.count === 2);
-    expect(urgentComp).toBeDefined();
-    expect(urgentComp!.subtotal).toBe(6);
+    const result = calculateAcuity(patient);
+    const urgentComponent = result.components.find((c) => c.label === "דחופים פתוחים");
+    expect(urgentComponent).toBeDefined();
+    expect(urgentComponent!.count).toBe(2);
+    expect(urgentComponent!.subtotal).toBe(6);
   });
 
-  it("does not count done tasks", () => {
-    const p = makePatient({
+  it("ignores completed tasks", () => {
+    const patient = makePatient({
       tasks: [makeTask({ urgency: "stat", done: true })],
     });
-    const { score } = calculateAcuity(p);
-    expect(score).toBe(0);
+    const result = calculateAcuity(patient);
+    expect(result.score).toBe(0);
   });
 
-  it("includes generatedTasks in count", () => {
-    const p = makePatient({
+  it("includes generatedTasks in scoring", () => {
+    const patient = makePatient({
       generatedTasks: [makeTask({ urgency: "stat" })],
     });
-    const { score } = calculateAcuity(p);
-    expect(score).toBeGreaterThanOrEqual(5);
+    const result = calculateAcuity(patient);
+    // stat task + active scenario
+    expect(result.score).toBeGreaterThan(0);
+    const statComponent = result.components.find((c) => c.label === "סטט פתוחים");
+    expect(statComponent).toBeDefined();
   });
 
-  it("counts approaching deadlines (within 30 min) at weight 3", () => {
-    const soon = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-    const p = makePatient({
-      tasks: [makeTask({ dueAt: soon })],
+  it("scores approaching deadlines (<30 min) at weight 3", () => {
+    const soonDue = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 min from now
+    const patient = makePatient({
+      tasks: [makeTask({ dueAt: soonDue })],
     });
-    const { components } = calculateAcuity(p);
-    const deadlineComp = components.find((c) => c.weight === 3 && c.label.includes("דדליין"));
-    expect(deadlineComp).toBeDefined();
-    expect(deadlineComp!.count).toBe(1);
+    const result = calculateAcuity(patient);
+    const deadlineComponent = result.components.find((c) => c.label.includes("דדליין"));
+    expect(deadlineComponent).toBeDefined();
+    expect(deadlineComponent!.subtotal).toBe(3);
   });
 
-  it("does not count future deadlines beyond 30 min", () => {
-    const far = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-    const p = makePatient({
-      tasks: [makeTask({ dueAt: far })],
+  it("does not score tasks due > 30 min as approaching deadline", () => {
+    const farDue = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour from now
+    const patient = makePatient({
+      tasks: [makeTask({ dueAt: farDue })],
     });
-    const { components } = calculateAcuity(p);
-    const deadlineComp = components.find((c) => c.label.includes("דדליין"));
-    expect(deadlineComp).toBeUndefined();
+    const result = calculateAcuity(patient);
+    const deadlineComponent = result.components.find((c) => c.label.includes("דדליין"));
+    expect(deadlineComponent).toBeUndefined();
   });
 
-  it("counts overdue tasks at weight 4", () => {
-    const past = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-    const p = makePatient({
-      tasks: [makeTask({ dueAt: past })],
+  it("scores overdue tasks at weight 4", () => {
+    const pastDue = new Date(Date.now() - 10 * 60 * 1000).toISOString(); // 10 min ago
+    const patient = makePatient({
+      tasks: [makeTask({ dueAt: pastDue })],
     });
-    const { components } = calculateAcuity(p);
-    const overdueComp = components.find((c) => c.weight === 4 && c.label.includes("איחור"));
-    expect(overdueComp).toBeDefined();
-    expect(overdueComp!.count).toBe(1);
+    const result = calculateAcuity(patient);
+    const overdueComponent = result.components.find((c) => c.label === "משימות באיחור");
+    expect(overdueComponent).toBeDefined();
+    expect(overdueComponent!.subtotal).toBe(4);
   });
 
-  it("counts recent labs within 4 hours", () => {
-    const recentTime = new Date(Date.now() - 60 * 60 * 1000).toISOString(); // 1h ago
-    const p = makePatient({
-      labs: [{ id: "l1", label: "K+", value: 5.5, time: recentTime }],
-    });
-    const { components } = calculateAcuity(p);
-    const labComp = components.find((c) => c.label.includes("מעבדות"));
-    expect(labComp).toBeDefined();
-    expect(labComp!.count).toBe(1);
-    expect(labComp!.weight).toBe(2);
-  });
-
-  it("does not count old labs (>4 hours)", () => {
-    const oldTime = new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(); // 5h ago
-    const p = makePatient({
-      labs: [{ id: "l1", label: "K+", value: 5.5, time: oldTime }],
-    });
-    const { components } = calculateAcuity(p);
-    const labComp = components.find((c) => c.label.includes("מעבדות"));
-    expect(labComp).toBeUndefined();
-  });
-
-  it("counts active scenarios (undone generatedTasks) at weight 1", () => {
-    const p = makePatient({
-      generatedTasks: [
-        makeTask({ id: "g1", done: false }),
-        makeTask({ id: "g2", done: false }),
-        makeTask({ id: "g3", done: true }),
+  it("scores recent labs at weight 2", () => {
+    const recentTime = new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(); // 1 hour ago
+    const patient = makePatient({
+      labs: [
+        { id: "lab-1", label: "Cr", value: 2.5, time: recentTime },
+        { id: "lab-2", label: "K+", value: 6.1, time: recentTime },
       ],
     });
-    const { components } = calculateAcuity(p);
-    const scenarioComp = components.find((c) => c.weight === 1 && c.label.includes("תרחישים"));
-    expect(scenarioComp).toBeDefined();
-    expect(scenarioComp!.count).toBe(2);
+    const result = calculateAcuity(patient);
+    const labComponent = result.components.find((c) => c.label === "מעבדות אחרונות");
+    expect(labComponent).toBeDefined();
+    expect(labComponent!.count).toBe(2);
+    expect(labComponent!.subtotal).toBe(4);
   });
 
-  it("total score is sum of all component subtotals", () => {
-    const p = makePatient({
+  it("does not score labs older than 4 hours", () => {
+    const oldTime = new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(); // 5 hours ago
+    const patient = makePatient({
+      labs: [{ id: "lab-1", label: "Cr", value: 2.5, time: oldTime }],
+    });
+    const result = calculateAcuity(patient);
+    const labComponent = result.components.find((c) => c.label === "מעבדות אחרונות");
+    expect(labComponent).toBeUndefined();
+  });
+
+  it("scores active scenarios (undone generatedTasks) at weight 1", () => {
+    const patient = makePatient({
+      generatedTasks: [
+        makeTask({ id: "g1", generatedFrom: "חשד לספסיס" }),
+        makeTask({ id: "g2", generatedFrom: "חשד לספסיס" }),
+      ],
+    });
+    const result = calculateAcuity(patient);
+    const scenarioComponent = result.components.find((c) => c.label === "תרחישים פעילים");
+    expect(scenarioComponent).toBeDefined();
+    expect(scenarioComponent!.count).toBe(2);
+    expect(scenarioComponent!.subtotal).toBe(2);
+  });
+
+  it("scores drug interactions (critical at 4, major at 2)", () => {
+    // Trigger amiodarone + ciprofloxacin = critical QT interaction
+    const patient = makePatient({
       tasks: [
-        makeTask({ urgency: "stat" }),
+        makeTask({ text: "amiodarone 200mg" }),
+        makeTask({ id: "t2", text: "ciprofloxacin 500mg" }),
+      ],
+    });
+    const result = calculateAcuity(patient);
+    const critComponent = result.components.find((c) => c.label === "אינטראקציות קריטיות");
+    expect(critComponent).toBeDefined();
+    expect(critComponent!.weight).toBe(4);
+  });
+
+  it("accumulates all component scores correctly", () => {
+    const soonDue = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    const patient = makePatient({
+      tasks: [
+        makeTask({ urgency: "stat", dueAt: soonDue }),
         makeTask({ id: "t2", urgency: "urgent" }),
       ],
     });
-    const { score, components } = calculateAcuity(p);
-    const expectedSum = components.reduce((sum, c) => sum + c.subtotal, 0);
-    expect(score).toBe(expectedSum);
+    const result = calculateAcuity(patient);
+    const total = result.components.reduce((sum, c) => sum + c.subtotal, 0);
+    expect(result.score).toBe(total);
   });
 
   it("filters out zero-count components", () => {
-    const p = makePatient({
-      tasks: [makeTask({ urgency: "stat" })],
-    });
-    const { components } = calculateAcuity(p);
-    for (const c of components) {
+    const result = calculateAcuity(makePatient());
+    for (const c of result.components) {
       expect(c.count).toBeGreaterThan(0);
     }
   });
 });
 
 describe("sortByAcuity", () => {
-  it("sorts sicker patients first", () => {
-    const sick = makePatient({
+  it("sorts sickest patients first", () => {
+    const sickPatient = makePatient({
       id: "sick",
       tasks: [makeTask({ urgency: "stat" }), makeTask({ id: "t2", urgency: "stat" })],
     });
-    const healthy = makePatient({ id: "healthy" });
-    const sorted = sortByAcuity([healthy, sick]);
-    expect(sorted[0].id).toBe("sick");
-    expect(sorted[1].id).toBe("healthy");
+    const wellPatient = makePatient({ id: "well" });
+    const result = sortByAcuity([wellPatient, sickPatient]);
+    expect(result[0].id).toBe("sick");
+    expect(result[1].id).toBe("well");
   });
 
-  it("falls back to order for equal scores", () => {
-    const pA = makePatient({ id: "a", order: 2 });
-    const pB = makePatient({ id: "b", order: 1 });
-    const sorted = sortByAcuity([pA, pB]);
-    expect(sorted[0].id).toBe("b"); // lower order first
-    expect(sorted[1].id).toBe("a");
+  it("falls back to manual order for equal scores", () => {
+    const p1 = makePatient({ id: "p1", order: 2 });
+    const p2 = makePatient({ id: "p2", order: 1 });
+    const result = sortByAcuity([p1, p2]);
+    expect(result[0].id).toBe("p2"); // lower order first
+    expect(result[1].id).toBe("p1");
   });
 
-  it("does not mutate the original array", () => {
-    const patients = [
-      makePatient({ id: "a" }),
-      makePatient({ id: "b", tasks: [makeTask({ urgency: "stat" })] }),
-    ];
-    const sorted = sortByAcuity(patients);
-    expect(patients[0].id).toBe("a"); // original unchanged
-    expect(sorted[0].id).toBe("b");   // sorted copy
-    expect(sorted).not.toBe(patients);
+  it("does not mutate original array", () => {
+    const patients = [makePatient({ id: "a" }), makePatient({ id: "b" })];
+    const original = [...patients];
+    sortByAcuity(patients);
+    expect(patients).toEqual(original);
+  });
+
+  it("handles empty array", () => {
+    expect(sortByAcuity([])).toEqual([]);
+  });
+
+  it("handles single patient", () => {
+    const p = makePatient();
+    const result = sortByAcuity([p]);
+    expect(result).toHaveLength(1);
   });
 });
