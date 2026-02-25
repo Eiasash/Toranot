@@ -5,6 +5,7 @@ import { SectionTabs } from "./components/SectionTabs";
 import { InputArea } from "./components/InputArea";
 import { PatientList } from "./components/PatientList";
 import { QuickReference } from "./components/QuickReference";
+import { IVProtocols } from "./components/IVProtocols";
 import { HandoffSheet } from "./components/HandoffSheet";
 import { TaskDashboard } from "./components/TaskDashboard";
 import { ShiftHistory } from "./components/ShiftHistory";
@@ -300,7 +301,7 @@ function CloudAuthPanel() {
 }
 
 // ─── Overflow menu (secondary actions) ────────────────────
-function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qrsync" | "capture" | "morning") => void }) {
+function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qrsync" | "capture" | "morning" | "ivprotocols") => void }) {
   const [open, setOpen] = useState(false);
   const [dialog, setDialog] = useState<ConfirmDialog>({ type: "none" });
   const { darkMode, showTomorrow, scanMode, patients } = usePatientsState();
@@ -516,16 +517,13 @@ function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qrsync" |
                 </button>
               )}
               {/* IV Protocols */}
-              <a
-                href="/iv-protocols.html"
-                target="_blank"
-                rel="noopener"
-                className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-amber-300 active:bg-slate-700 border-t border-slate-700 text-right no-underline"
-                onClick={() => setOpen(false)}
+              <button
+                onClick={() => { onOpenModal("ivprotocols"); setOpen(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-amber-300 active:bg-slate-700 border-t border-slate-700 text-right"
               >
                 <span className="text-base">💉</span>
                 פרוטוקולי IV — שערי צדק
-              </a>
+              </button>
               {/* Cloud sync auth */}
               <CloudAuthPanel />
               {/* Build stamp */}
@@ -654,7 +652,7 @@ function useShakeDetector(onShake: () => void) {
 }
 
 // ─── Main App ──────────────────────────────────────────────
-type Modal = "none" | "reference" | "handoff" | "dashboard" | "history" | "search" | "qrsync" | "capture" | "morning";
+type Modal = "none" | "reference" | "handoff" | "dashboard" | "history" | "search" | "qrsync" | "capture" | "morning" | "ivprotocols";
 
 function AppInner() {
   const [modal, setModal] = useState<Modal>("none");
@@ -748,6 +746,7 @@ function AppInner() {
       {modal === "qrsync"     && <QRSync          onClose={() => setModal("none")} />}
       {modal === "capture"    && <QuickCaptureSheet onClose={() => setModal("none")} />}
       {modal === "morning"    && <MorningReport   onClose={() => setModal("none")} />}
+      {modal === "ivprotocols" && <IVProtocols    onClose={() => setModal("none")} />}
     </div>
   );
 }
