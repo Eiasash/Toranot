@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildPatientKey, buildPatientLooseKey } from "../utils/patientKey";
+import { buildPatientKey, buildPatientLooseKey, buildPatientStableKey } from "../utils/patientKey";
 
 describe("buildPatientKey (strict)", () => {
   it("returns section|room|name format", () => {
@@ -88,6 +88,57 @@ describe("buildPatientLooseKey", () => {
   it("normalizes whitespace and case like strict key", () => {
     const a = buildPatientLooseKey("101", "כהן  יוסף");
     const b = buildPatientLooseKey("101", "כהן יוסף");
+    expect(a).toBe(b);
+  });
+});
+
+describe("buildPatientStableKey", () => {
+  it("returns name|age format", () => {
+    const key = buildPatientStableKey("כהן יוסף", 72);
+    const parts = key.split("|");
+    expect(parts).toHaveLength(2);
+    expect(parts[1]).toBe("72");
+  });
+
+  it("matches same patient regardless of room or section", () => {
+    const a = buildPatientStableKey("כהן יוסף", 72);
+    const b = buildPatientStableKey("כהן יוסף", 72);
+    expect(a).toBe(b);
+  });
+
+  it("differentiates patients with different ages", () => {
+    const a = buildPatientStableKey("כהן יוסף", 72);
+    const b = buildPatientStableKey("כהן יוסף", 65);
+    expect(a).not.toBe(b);
+  });
+
+  it("differentiates patients with different names", () => {
+    const a = buildPatientStableKey("כהן יוסף", 72);
+    const b = buildPatientStableKey("לוי שרה", 72);
+    expect(a).not.toBe(b);
+  });
+
+  it("handles null name", () => {
+    const key = buildPatientStableKey(null, 72);
+    expect(key).toBeDefined();
+    expect(key.startsWith("|")).toBe(true);
+  });
+
+  it("handles null age", () => {
+    const key = buildPatientStableKey("כהן יוסף", null);
+    expect(key).toBeDefined();
+    expect(key.endsWith("|")).toBe(true);
+  });
+
+  it("handles undefined age", () => {
+    const key = buildPatientStableKey("כהן יוסף", undefined);
+    expect(key).toBeDefined();
+    expect(key.endsWith("|")).toBe(true);
+  });
+
+  it("normalizes whitespace and case", () => {
+    const a = buildPatientStableKey("כהן  יוסף", 72);
+    const b = buildPatientStableKey("כהן יוסף", 72);
     expect(a).toBe(b);
   });
 });

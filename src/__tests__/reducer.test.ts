@@ -501,6 +501,71 @@ describe("reducer", () => {
       // p1 is the only patient in SIDE_A, so no swap happens
       expect(next.patients.find((p) => p.id === "p1")!.order).toBe(0);
     });
+
+    it("swaps tied orders using array indices instead of no-op", () => {
+      // Both patients have order=0 — this used to be a silent no-op
+      const p1 = makePatient({ id: "p1", section: "SIDE_A", order: 0 });
+      const p2 = makePatient({ id: "p2", section: "SIDE_A", order: 0 });
+      const state = makeState([p1, p2]);
+
+      const next = reducer(state, {
+        type: "REORDER_PATIENT",
+        patientId: "p2",
+        direction: "up",
+      });
+      // After swap, orders must differ so the reorder is visible
+      const o1 = next.patients.find((p) => p.id === "p1")!.order!;
+      const o2 = next.patients.find((p) => p.id === "p2")!.order!;
+      expect(o1).not.toBe(o2);
+      // p2 moved up, so p2.order < p1.order
+      expect(o2).toBeLessThan(o1);
+    });
+
+    it("moves patient down within section", () => {
+      const p1 = makePatient({ id: "p1", section: "SIDE_A", order: 0 });
+      const p2 = makePatient({ id: "p2", section: "SIDE_A", order: 1 });
+      const p3 = makePatient({ id: "p3", section: "SIDE_A", order: 2 });
+      const state = makeState([p1, p2, p3]);
+
+      const next = reducer(state, {
+        type: "REORDER_PATIENT",
+        patientId: "p1",
+        direction: "down",
+      });
+      expect(next.patients.find((p) => p.id === "p1")!.order).toBe(1);
+      expect(next.patients.find((p) => p.id === "p2")!.order).toBe(0);
+      // p3 is untouched
+      expect(next.patients.find((p) => p.id === "p3")!.order).toBe(2);
+    });
+
+    it("does not move last patient down", () => {
+      const p1 = makePatient({ id: "p1", section: "SIDE_A", order: 0 });
+      const p2 = makePatient({ id: "p2", section: "SIDE_A", order: 1 });
+      const state = makeState([p1, p2]);
+
+      const next = reducer(state, {
+        type: "REORDER_PATIENT",
+        patientId: "p2",
+        direction: "down",
+      });
+      expect(next.patients.find((p) => p.id === "p2")!.order).toBe(1);
+    });
+
+    it("handles three patients with all tied orders", () => {
+      const p1 = makePatient({ id: "p1", section: "SIDE_A", order: 0 });
+      const p2 = makePatient({ id: "p2", section: "SIDE_A", order: 0 });
+      const p3 = makePatient({ id: "p3", section: "SIDE_A", order: 0 });
+      const state = makeState([p1, p2, p3]);
+
+      const next = reducer(state, {
+        type: "REORDER_PATIENT",
+        patientId: "p3",
+        direction: "up",
+      });
+      const o2 = next.patients.find((p) => p.id === "p2")!.order!;
+      const o3 = next.patients.find((p) => p.id === "p3")!.order!;
+      expect(o3).toBeLessThan(o2);
+    });
   });
 
   describe("EDIT_PATIENT", () => {

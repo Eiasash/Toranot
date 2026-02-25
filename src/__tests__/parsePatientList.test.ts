@@ -283,4 +283,61 @@ describe("parsePatientList", () => {
       expect(result[0].section).toBe("SIDE_A"); // default, no header
     });
   });
+
+  describe("order assignment", () => {
+    it("assigns sequential order starting from 0", () => {
+      const result = parsePatientList(`צד א
+101 כהן יוסף 72
+102 לוי שרה 65
+103 אברהם דוד 80`);
+      expect(result).toHaveLength(3);
+      expect(result[0].order).toBe(0);
+      expect(result[1].order).toBe(1);
+      expect(result[2].order).toBe(2);
+    });
+
+    it("order is cumulative across sections (not reset per section)", () => {
+      const result = parsePatientList(`צד א
+101 כהן יוסף 72
+צד ב
+201 לוי שרה 65`);
+      expect(result).toHaveLength(2);
+      expect(result[0].order).toBe(0);
+      expect(result[1].order).toBe(1);
+    });
+
+    it("single patient gets order 0", () => {
+      const result = parsePatientList("101 כהן יוסף 72");
+      expect(result).toHaveLength(1);
+      expect(result[0].order).toBe(0);
+    });
+
+    it("empty input produces no patients (no order needed)", () => {
+      const result = parsePatientList("");
+      expect(result).toHaveLength(0);
+    });
+
+    it("all orders are unique", () => {
+      const result = parsePatientList(`צד א
+101 כהן יוסף 72
+102 לוי שרה 65
+צד ב
+201 אברהם דוד 80
+202 משה יעקב 60
+צד ג
+301 דני כהן 55`);
+      const orders = result.map(p => p.order);
+      const unique = new Set(orders);
+      expect(unique.size).toBe(orders.length);
+    });
+
+    it("order matches position in the list", () => {
+      const result = parsePatientList(`101 כהן יוסף 72
+102 לוי שרה 65
+103 אברהם דוד 80`);
+      for (let i = 0; i < result.length; i++) {
+        expect(result[i].order).toBe(i);
+      }
+    });
+  });
 });
