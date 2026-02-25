@@ -35,20 +35,9 @@ export function InputArea() {
   function confirmImport(editedPatients?: PatientEntry[]) {
     if (!preview) return;
     if (editedPatients) {
-      // Merge edited patients into existing list via IMPORT_TEXT on their
-      // reconstructed text — preserves existing patients.
-      // Rebuild a minimal text representation so mergeScan can do its job.
-      const reconstructed = editedPatients
-        .map((p) => {
-          const flags = (p.flags ?? []).join(" ");
-          const tasks = (p.tasks ?? []).map((t) => `תורן: ${t.text}`).join(" | ");
-          const tomorrow = (p.tomorrowNotes ?? []).join(" | ");
-          return [p.room, p.name, p.age, p.diagnosis, flags, tasks, tomorrow ? `מחר: ${tomorrow}` : ""]
-            .filter(Boolean)
-            .join(" ");
-        })
-        .join("\n");
-      dispatch({ type: "IMPORT_TEXT", text: reconstructed });
+      // Lossless path: pass PatientEntry[] directly to mergeScan via
+      // MERGE_PATIENTS — no text round-trip, preserves tasks/notes/photos.
+      dispatch({ type: "MERGE_PATIENTS", patients: editedPatients });
     } else {
       dispatch({ type: "IMPORT_TEXT", text: preview.text });
     }
