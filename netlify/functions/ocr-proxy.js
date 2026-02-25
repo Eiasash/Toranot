@@ -43,24 +43,50 @@ exports.handler = async (event, context) => {
   try {
     const body = JSON.parse(event.body || "{}");
 
-    // Forward to Anthropic API
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify(body),
-    });
+    // Retry on 429 / 529 with exponential backoff (server-side)
+    const RETRY_DELAYS_MS = [2000, 6000, 15000];
+    let lastResponse = null;
 
-    const data = await response.json();
+    for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify(body),
+      });
 
+      const isOverloaded = response.status === 429 || response.status === 529;
+
+      if (!isOverloaded) {
+        // Success or non-retryable error — return immediately
+        const data = await response.json();
+        return {
+          statusCode: response.status,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        };
+      }
+
+      lastResponse = response;
+      const delay = RETRY_DELAYS_MS[attempt];
+      if (delay === undefined) break; // exhausted retries
+
+      const jitter = Math.random() * 1000;
+      console.warn(`Anthropic overloaded (${response.status}). Retry ${attempt + 1}/${RETRY_DELAYS_MS.length} in ${Math.round((delay + jitter) / 1000)}s`);
+      await new Promise((r) => setTimeout(r, delay + jitter));
+    }
+
+    // All retries exhausted — return the last overloaded response
+    const data = await lastResponse.json().catch(() => ({ error: { message: `API overloaded (${lastResponse.status})` } }));
     return {
-      statusCode: response.status,
+      statusCode: lastResponse.status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       body: JSON.stringify(data),
     };
+
   } catch (err) {
     console.error("Proxy error:", err);
     const message = err instanceof Error ? err.message : "Unknown error";
