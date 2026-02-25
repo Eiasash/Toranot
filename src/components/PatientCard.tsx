@@ -6,6 +6,7 @@ import { usePatientsDispatch, usePatientsState } from "../context/PatientsContex
 import { LabBadges, AddLabForm } from "./LabTracker";
 import { LabChart } from "./LabChart";
 import { DrugSafetyAlerts } from "./DrugSafetyAlerts";
+import { IVProtocolAlerts } from "./IVProtocolAlerts";
 import { PhotoAttachments } from "./PhotoAttachments";
 import { QuickScenario } from "./QuickScenario";
 import { MedFlagBadges } from "./MedFlags";
@@ -523,6 +524,9 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
 
       {/* Drug interaction & renal dose warnings */}
       <DrugSafetyAlerts patient={patient} />
+
+      {/* IV Protocol alerts — matched from patient data against SZMC protocols */}
+      <IVProtocolAlerts patient={patient} />
 
       {/* Clinical hints — diagnosis-based FYI, NOT tasks */}
       {(() => {
