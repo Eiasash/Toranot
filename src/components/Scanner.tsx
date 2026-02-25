@@ -22,7 +22,7 @@ type ScanState =
   | { step: "idle" }
   | { step: "preview"; imageUrl: string; file: File }
   | { step: "batchPreview"; items: Array<{ imageUrl: string; file: File }> }
-  | { step: "scanning"; imageUrl: string; progress?: { current: number; total: number } }
+  | { step: "scanning"; imageUrl: string; progress?: { current: number; total: number }; retryMsg?: string }
   | { step: "done"; imageUrl: string; text: string }
   | { step: "error"; message: string };
 
@@ -71,6 +71,38 @@ interface ClaudeAPIError {
   error?: { message?: string };
 }
 
+// ---------------------------------------------------------------------------
+// Retry helper — exponential backoff for 429 / 529 (rate-limit / overloaded)
+// ---------------------------------------------------------------------------
+const RETRY_DELAYS_MS = [2000, 5000, 12000]; // 3 attempts: 2 s, 5 s, 12 s
+
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  isRetryable: (status: number) => boolean = (s) => s === 429 || s === 529,
+): Promise<Response> {
+  let lastResponse: Response | null = null;
+
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    const res = await fetch(url, init);
+
+    if (!isRetryable(res.status)) return res; // success or non-retryable error
+
+    lastResponse = res;
+    const delay = RETRY_DELAYS_MS[attempt];
+    if (delay === undefined) break; // exhausted retries
+
+    const jitter = Math.random() * 1000;
+    console.warn(
+      `Claude overloaded (${res.status}). Retry ${attempt + 1}/${RETRY_DELAYS_MS.length} in ${Math.round((delay + jitter) / 1000)}s…`,
+    );
+    await new Promise((r) => setTimeout(r, delay + jitter));
+  }
+
+  // Return the last overloaded response so caller can surface a proper error
+  return lastResponse!;
+}
+
 async function runClaudeOCR(file: File, apiKey: string): Promise<string> {
   const base64 = await fileToBase64(file);
   const VALID_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
@@ -98,7 +130,7 @@ async function runClaudeOCR(file: File, apiKey: string): Promise<string> {
   const proxyUrl = `${window.location.origin}/.netlify/functions/ocr-proxy`;
   
   try {
-    const proxyRes = await fetch(proxyUrl, {
+    const proxyRes = await fetchWithRetry(proxyUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body,
@@ -110,9 +142,9 @@ async function runClaudeOCR(file: File, apiKey: string): Promise<string> {
       throw new Error("Proxy not available");
     }
   } catch {
-    // Fallback: direct API call with user-provided key
+    // Fallback: direct API call with user-provided key + retry
     if (!apiKey) throw new Error("נדרש מפתח API (הפרוקסי לא זמין)");
-    response = await fetch("https://api.anthropic.com/v1/messages", {
+    response = await fetchWithRetry("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -131,7 +163,14 @@ async function runClaudeOCR(file: File, apiKey: string): Promise<string> {
     } catch (parseErr) {
       console.warn("Failed to parse API error response:", parseErr);
     }
-    throw new Error(errBody.error?.message || `API error ${response.status}`);
+    const status = response.status;
+    const isOverload = status === 429 || status === 529;
+    const msg = errBody.error?.message || `API error ${status}`;
+    throw new Error(
+      isOverload
+        ? `Claude עמוס כרגע – נסה שוב בעוד דקה (${msg})`
+        : msg,
+    );
   }
 
   const data = (await response.json()) as ClaudeAPIResponse;
@@ -447,9 +486,9 @@ export function Scanner({ onTextExtracted, onCancel }: ScannerProps) {
       <div className="flex flex-col gap-4 items-center py-6">
         <img src={state.imageUrl} alt="סורק..." className="w-full max-h-[30vh] rounded-xl border border-gray-200 object-contain opacity-50" />
         <div className="flex items-center gap-3 text-blue-700 font-medium">
-          <Spinner /> <span>Claude Vision קורא את הדף...</span>
+          <Spinner /> <span>{state.retryMsg ?? "Claude Vision קורא את הדף..."}</span>
         </div>
-        <p className="text-xs text-gray-400">בדרך כלל 5–10 שניות</p>
+        <p className="text-xs text-gray-400">{state.retryMsg ? "ממתין ומנסה שוב..." : "בדרך כלל 5–10 שניות"}</p>
         {"progress" in state && state.progress && (
           <p className="text-xs text-gray-500">{state.progress.current}/{state.progress.total}</p>
         )}
