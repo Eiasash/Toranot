@@ -40,7 +40,12 @@ export const supabase: SupabaseClient | null =
 export async function signInWithEmailOtp(email: string) {
   if (!supabase)
     throw new Error("Supabase not configured (missing env vars)");
-  const { error } = await supabase.auth.signInWithOtp({ email });
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: window.location.origin + window.location.pathname,
+    },
+  });
   if (error) throw error;
 }
 
