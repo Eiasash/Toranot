@@ -43,6 +43,14 @@ const COMFORT_SUPPRESSED_GROUPS = new Set([
   "preop",        // pre-op workup
   "anemia",       // type & screen, workup
   "newadmit",     // full admission workup
+  // IV protocols suppressed in comfort care (aggressive monitoring)
+  "iv_insulin",
+  "iv_heparin",
+  "iv_vasopressor",
+  "iv_dopamine",
+  "iv_amiodarone",
+  "iv_kphos",
+  // NOT suppressed: opioids, midazolam, propofol, magnesium — used for comfort
 ]);
 
 const RULES: Rule[] = [
@@ -81,16 +89,17 @@ const RULES: Rule[] = [
     ],
   },
 
-  // ═══ BLOOD PRODUCTS ═══
+  // ═══ BLOOD PRODUCTS / TRANSFUSION ═══
   {
-    trigger: /עירוי דם|מנת דם|PRBCs?|מנות דם|packed\s*cells/i,
+    trigger: /עירוי\s*(?:דם|טסיות|פלזמה)|(?:מנת|מנות)\s*דם|PRBCs?|FFP|packed\s*cells|platelets?\s*transfusion|blood\s*transfusion|טרנספוזיה/i,
     source: "עירוי דם",
     group: "transfusion",
+    triggerField: "all",
     tasks: [
       { text: "סוג ושתלב (Type & Screen)", urgency: "stat", category: "labs" },
-      { text: "הכנת גישה ורידית", urgency: "urgent", category: "procedure" },
-      { text: "ניטור סימנים חיוניים כל 15 דק' בזמן עירוי", urgency: "stat", category: "other" },
-      { text: "CBC לאחר מנת דם", urgency: "routine", category: "labs" },
+      { text: "Vitals q15min ×4 during transfusion, then q1h", urgency: "stat", category: "procedure" },
+      { text: "Watch for transfusion reaction: fever, rash, dyspnea, flank pain", urgency: "stat", category: "other" },
+      { text: "Post-transfusion CBC 1h after completion", urgency: "urgent", category: "labs" },
     ],
   },
 
@@ -568,6 +577,141 @@ const RULES: Rule[] = [
       { text: "אם Hb<7 סימפטומטי → עירוי PRBC (Hb<8 אם cardiac)", urgency: "stat", category: "meds" },
     ],
   },
+
+  // ═══════════════════════════════════════════════════════════════
+  // IV PROTOCOL MONITORING — on-call tasks for active IV drips
+  // ═══════════════════════════════════════════════════════════════
+
+  // ── IV Insulin (Actrapid drip) ──
+  {
+    trigger: /אינסולין\s*(?:מתמשך|ווריד|IV|drip|infusion)|insulin\s*(?:drip|infusion|gtt|iv)|actrapid\s*(?:drip|infusion|iv)/i,
+    source: "אינסולין IV",
+    group: "iv_insulin",
+    triggerField: "all",
+    tasks: [
+      { text: "BS q2h (q1h after rate change)", urgency: "urgent", category: "procedure" },
+      { text: "אם BS<70 → STOP drip, D50% 50ml IV, recheck q15min", urgency: "stat", category: "meds" },
+      { text: "Target BS 140-180; titrate per protocol", urgency: "routine", category: "meds" },
+    ],
+  },
+
+  // ── Heparin (UFH) drip ──
+  {
+    trigger: /הפרין\s*(?:מתמשך|ווריד|IV|drip|infusion|gtt)|heparin\s*(?:drip|infusion|gtt|iv|protocol)|UFH\b/i,
+    source: "הפרין IV",
+    group: "iv_heparin",
+    triggerField: "all",
+    tasks: [
+      { text: "PTT q6h — titrate per nomogram", urgency: "urgent", category: "labs" },
+      { text: "CBC + platelets daily (HIT watch)", urgency: "routine", category: "labs" },
+      { text: "בדוק סימני דימום: guaiac, hemoglobin, sites", urgency: "routine", category: "other" },
+    ],
+  },
+
+  // ── Noradrenaline / Vasopressors ──
+  {
+    trigger: /נוראדרנלין|noradrenaline|norepinephrine|levophed|vasopressor|ואזופרסור/i,
+    source: "נוראדרנלין / vasopressor",
+    group: "iv_vasopressor",
+    triggerField: "all",
+    tasks: [
+      { text: "BP q15-30min, target MAP ≥65", urgency: "stat", category: "procedure" },
+      { text: "Lactate q4-6h — trend for perfusion", urgency: "urgent", category: "labs" },
+      { text: "Urine output q1h — target ≥0.5 ml/kg/h", urgency: "urgent", category: "procedure" },
+      { text: "Verify central line access + functioning", urgency: "routine", category: "other" },
+    ],
+  },
+
+  // ── Dopamine ──
+  {
+    trigger: /דופמין|dopamine\s*(?:drip|infusion|gtt|iv)/i,
+    source: "דופמין IV",
+    group: "iv_dopamine",
+    triggerField: "all",
+    tasks: [
+      { text: "BP + HR q15-30min; titrate to target", urgency: "stat", category: "procedure" },
+      { text: "Monitor for tachyarrhythmia", urgency: "urgent", category: "other" },
+      { text: "Urine output q1h", urgency: "urgent", category: "procedure" },
+    ],
+  },
+
+  // ── Amiodarone (Procor) IV ──
+  {
+    trigger: /אמיודרון|amiodarone|procor|פרוקור/i,
+    source: "אמיודרון IV",
+    group: "iv_amiodarone",
+    triggerField: "all",
+    tasks: [
+      { text: "Continuous telemetry — watch QTc + HR", urgency: "stat", category: "procedure" },
+      { text: "BP q30min during loading (hypotension risk)", urgency: "urgent", category: "procedure" },
+      { text: "Check K+, Mg2+ — correct before/during infusion", urgency: "urgent", category: "labs" },
+    ],
+  },
+
+  // ── Propofol ──
+  {
+    trigger: /פרופופול|propofol|diprivan/i,
+    source: "פרופופול IV",
+    group: "iv_propofol",
+    triggerField: "all",
+    tasks: [
+      { text: "Sedation score (Ramsay) q2h — target 3-5", urgency: "urgent", category: "procedure" },
+      { text: "TG level q48h if >48h infusion (propofol infusion syndrome)", urgency: "routine", category: "labs" },
+      { text: "Change syringe q12h", urgency: "routine", category: "meds" },
+    ],
+  },
+
+  // ── Opioid drips (Morphine / Fentanyl) ──
+  {
+    trigger: /מורפין\s*(?:מתמשך|ווריד|IV|drip|infusion)|morphine\s*(?:drip|infusion|gtt|iv|PCA)|פנטניל\s*(?:מתמשך|ווריד|IV|drip)|fentanyl\s*(?:drip|infusion|gtt|iv|PCA)/i,
+    source: "אופיואידים IV",
+    group: "iv_opioid",
+    triggerField: "all",
+    tasks: [
+      { text: "RR + sedation score q2h — hold if RR<10", urgency: "stat", category: "procedure" },
+      { text: "Naloxone 0.4mg IV bedside (emergency reversal)", urgency: "routine", category: "meds" },
+      { text: "Bowel protocol — עצירות צפויה", urgency: "routine", category: "meds" },
+    ],
+  },
+
+  // ── Midazolam (Dormicum) drip ──
+  {
+    trigger: /מידזולם|midazolam|dormicum\s*(?:מתמשך|drip|infusion|gtt|iv)/i,
+    source: "דורמיקום IV",
+    group: "iv_midazolam",
+    triggerField: "all",
+    tasks: [
+      { text: "Sedation score q2h — target Ramsay 3-4", urgency: "urgent", category: "procedure" },
+      { text: "RR + SpO2 q2h — respiratory depression risk", urgency: "stat", category: "procedure" },
+      { text: "Flumazenil 0.2mg IV bedside (emergency reversal)", urgency: "routine", category: "meds" },
+    ],
+  },
+
+  // ── Magnesium IV ──
+  {
+    trigger: /מגנזיום\s*(?:IV|ווריד|infusion|drip)|magnesium\s*(?:iv|infusion|drip|sulfate\s*iv)/i,
+    source: "מגנזיום IV",
+    group: "iv_magnesium",
+    triggerField: "all",
+    tasks: [
+      { text: "Mg2+ level post-infusion (recheck 2h after)", urgency: "urgent", category: "labs" },
+      { text: "Monitor DTRs during infusion (loss = toxicity)", urgency: "urgent", category: "procedure" },
+      { text: "BP + HR during infusion (hypotension/bradycardia)", urgency: "routine", category: "procedure" },
+    ],
+  },
+
+  // ── K Phosphate IV ──
+  {
+    trigger: /אשלגן\s*פוספט|potassium\s*phosphate\s*(?:iv|infusion)|KPhos\b|K.?phosphate/i,
+    source: "K-Phosphate IV",
+    group: "iv_kphos",
+    triggerField: "all",
+    tasks: [
+      { text: "Phosphate + Ca2+ + K+ recheck 2h post-infusion", urgency: "urgent", category: "labs" },
+      { text: "Infuse over ≥4h via central line if available", urgency: "routine", category: "meds" },
+    ],
+  },
+
 ];
 
 export function applyRules(patient: PatientEntry): Task[] {
@@ -588,7 +732,8 @@ export function applyRules(patient: PatientEntry): Task[] {
     ...patient.flags,
     ...patient.tasks.map((t) => t.text),
   ].join(" ");
-  const allText = [tasksText, diagnosisText].join(" ");
+  const planText = [...(patient.planNotes ?? []), ...(patient.tomorrowNotes ?? [])].join(" ");
+  const allText = [tasksText, diagnosisText, planText].join(" ");
 
   for (const rule of RULES) {
     if (rule.group && matchedGroups.has(rule.group)) continue;

@@ -8,6 +8,7 @@ function makePatient(overrides: {
   flags?: string[];
   status?: string[];
   tasks?: Array<{ text: string }>;
+  planNotes?: string[];
 }): PatientEntry {
   return {
     id: "test-pt",
@@ -20,6 +21,7 @@ function makePatient(overrides: {
     flags: overrides.flags ?? [],
     status: overrides.status ?? [],
     tomorrowNotes: [],
+    planNotes: overrides.planNotes ?? [],
     tasks: (overrides.tasks ?? []).map((t) => ({
       id: "t-1",
       text: t.text,
@@ -712,11 +714,133 @@ describe("rules engine — cross-cutting behavior", () => {
   });
 
   it("RULES array has expected number of rules", () => {
-    expect(RULES.length).toBe(37);
+    expect(RULES.length).toBe(47);
   });
 
   it("every rule has a unique group", () => {
     const groups = RULES.map((r) => r.group).filter(Boolean);
     expect(new Set(groups).size).toBe(groups.length);
+  });
+
+  // ═══ IV Protocol Monitoring Rules ═══
+
+  describe("IV Insulin", () => {
+    it("triggers on 'insulin drip' in planNotes", () => {
+      const tasks = applyRules(makePatient({ planNotes: ["insulin drip 2cc/hr"] }));
+      expect(generatedSources(tasks)).toContain("אינסולין IV");
+      expect(tasks.some(t => t.text.includes("BS q2h"))).toBe(true);
+    });
+
+    it("triggers on 'אינסולין מתמשך' in status", () => {
+      const tasks = applyRules(makePatient({ status: ["אינסולין מתמשך ווריד"] }));
+      expect(generatedSources(tasks)).toContain("אינסולין IV");
+    });
+  });
+
+  describe("IV Heparin", () => {
+    it("triggers on 'heparin drip'", () => {
+      const tasks = applyRules(makePatient({ planNotes: ["heparin drip per protocol"] }));
+      expect(generatedSources(tasks)).toContain("הפרין IV");
+      expect(tasks.some(t => t.text.includes("PTT q6h"))).toBe(true);
+    });
+
+    it("triggers on 'UFH'", () => {
+      const tasks = applyRules(makePatient({ status: ["UFH infusion"] }));
+      expect(generatedSources(tasks)).toContain("הפרין IV");
+    });
+  });
+
+  describe("IV Vasopressors", () => {
+    it("triggers on noradrenaline", () => {
+      const tasks = applyRules(makePatient({ planNotes: ["noradrenaline 0.1 mcg/kg/min"] }));
+      expect(generatedSources(tasks)).toContain("נוראדרנלין / vasopressor");
+      expect(tasks.some(t => t.text.includes("MAP ≥65"))).toBe(true);
+    });
+
+    it("triggers on נוראדרנלין in Hebrew", () => {
+      const tasks = applyRules(makePatient({ status: ["נוראדרנלין"] }));
+      expect(generatedSources(tasks)).toContain("נוראדרנלין / vasopressor");
+    });
+  });
+
+  describe("IV Amiodarone", () => {
+    it("triggers on amiodarone", () => {
+      const tasks = applyRules(makePatient({ planNotes: ["amiodarone loading"] }));
+      expect(generatedSources(tasks)).toContain("אמיודרון IV");
+      expect(tasks.some(t => t.text.includes("QTc"))).toBe(true);
+    });
+
+    it("triggers on procor/פרוקור", () => {
+      const tasks = applyRules(makePatient({ status: ["פרוקור IV"] }));
+      expect(generatedSources(tasks)).toContain("אמיודרון IV");
+    });
+  });
+
+  describe("IV Opioids", () => {
+    it("triggers on morphine drip", () => {
+      const tasks = applyRules(makePatient({ planNotes: ["morphine drip 2mg/hr"] }));
+      expect(generatedSources(tasks)).toContain("אופיואידים IV");
+      expect(tasks.some(t => t.text.includes("RR"))).toBe(true);
+    });
+
+    it("triggers on fentanyl infusion", () => {
+      const tasks = applyRules(makePatient({ planNotes: ["fentanyl infusion"] }));
+      expect(generatedSources(tasks)).toContain("אופיואידים IV");
+    });
+
+    it("NOT suppressed in comfort care (used for symptom relief)", () => {
+      const tasks = applyRules(makePatient({
+        flags: ["comfort care"],
+        planNotes: ["morphine drip"],
+      }));
+      expect(generatedSources(tasks)).toContain("אופיואידים IV");
+    });
+  });
+
+  describe("Blood Transfusion", () => {
+    it("triggers on עירוי דם", () => {
+      const tasks = applyRules(makePatient({ planNotes: ["עירוי דם PRBC"] }));
+      expect(generatedSources(tasks)).toContain("עירוי דם");
+      expect(tasks.some(t => t.text.includes("q15min"))).toBe(true);
+    });
+
+    it("triggers on PRBC", () => {
+      const tasks = applyRules(makePatient({ status: ["PRBC x2 ordered"] }));
+      expect(generatedSources(tasks)).toContain("עירוי דם");
+    });
+
+    it("suppressed in comfort care", () => {
+      const tasks = applyRules(makePatient({
+        flags: ["palliative"],
+        planNotes: ["עירוי דם"],
+      }));
+      expect(generatedSources(tasks)).not.toContain("עירוי דם");
+    });
+  });
+
+  describe("IV protocol + comfort care suppression", () => {
+    it("insulin drip suppressed in comfort care", () => {
+      const tasks = applyRules(makePatient({
+        flags: ["comfort care"],
+        planNotes: ["insulin drip"],
+      }));
+      expect(generatedSources(tasks)).not.toContain("אינסולין IV");
+    });
+
+    it("vasopressor suppressed in comfort care", () => {
+      const tasks = applyRules(makePatient({
+        flags: ["טיפול מנחם"],
+        planNotes: ["noradrenaline"],
+      }));
+      expect(generatedSources(tasks)).not.toContain("נוראדרנלין / vasopressor");
+    });
+
+    it("midazolam NOT suppressed in comfort care", () => {
+      const tasks = applyRules(makePatient({
+        flags: ["פליאטיב"],
+        planNotes: ["dormicum drip"],
+      }));
+      expect(generatedSources(tasks)).toContain("דורמיקום IV");
+    });
   });
 });
