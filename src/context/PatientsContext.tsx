@@ -598,25 +598,34 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
       };
     }
 
-    case "ADD_PATIENT":
+    case "ADD_PATIENT": {
+      const normalized = normalizePatient(action.patient as RawPatient);
+      const exists = state.patients.some((p) => p.id === normalized.id);
       return {
         ...state,
-        patients: [...state.patients, normalizePatient(action.patient as RawPatient)],
+        patients: exists
+          ? state.patients.map((p) => (p.id === normalized.id ? normalized : p))
+          : [...state.patients, normalized],
       };
+    }
 
     case "NEW_ADMISSION": {
+      const admitted = normalizePatient(action.patient as RawPatient);
       const event: WardEvent = {
         id: generateId("ev-"),
         type: "ADMISSION",
         at: new Date().toISOString(),
-        patientId: action.patient.id,
-        patientName: action.patient.name,
-        room: action.patient.room,
+        patientId: admitted.id,
+        patientName: admitted.name,
+        room: admitted.room,
       };
+      const existsAlready = state.patients.some((p) => p.id === admitted.id);
       return {
         ...state,
         events: [event, ...state.events].slice(0, MAX_EVENTS),
-        patients: [...state.patients, action.patient],
+        patients: existsAlready
+          ? state.patients.map((p) => (p.id === admitted.id ? admitted : p))
+          : [...state.patients, admitted],
       };
     }
 

@@ -11,9 +11,10 @@ const SIDE_TO_SECTION: Record<"A" | "B" | "C", Section> = {
 
 interface Props {
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-export function AddAdmissionModal({ onClose }: Props) {
+export function AddAdmissionModal({ onClose, onSuccess }: Props) {
   const { patients } = usePatientsState();
   const dispatch = usePatientsDispatch();
 
@@ -36,7 +37,7 @@ export function AddAdmissionModal({ onClose }: Props) {
 
   function isDuplicateBed(): boolean {
     const section = SIDE_TO_SECTION[side as "A" | "B" | "C"];
-    const roomStr = `${room.trim()}/${bed}`;
+    const roomStr = room.trim().includes("/") ? room.trim() : `${room.trim()}/${bed}`;
     return patients.some((p: PatientEntry) => p.section === section && p.room === roomStr);
   }
 
@@ -53,7 +54,8 @@ export function AddAdmissionModal({ onClose }: Props) {
     }
 
     const section = SIDE_TO_SECTION[side as "A" | "B" | "C"];
-    const roomStr = `${room.trim()}/${bed}`;
+    // Use room as-is if it already contains a slash, otherwise append bed
+    const roomStr = room.trim().includes("/") ? room.trim() : `${room.trim()}/${bed}`;
 
     const patient: PatientEntry = {
       id: generateId("pt-"),
@@ -63,7 +65,6 @@ export function AddAdmissionModal({ onClose }: Props) {
         return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
       })(),
       room: roomStr,
-      bed: bed,
       name: name.trim(),
       age: undefined,
       diagnosis: diagnosis.trim(),
@@ -81,6 +82,7 @@ export function AddAdmissionModal({ onClose }: Props) {
     } as unknown as PatientEntry;
 
     dispatch({ type: "ADD_PATIENT", patient });
+    onSuccess?.();
     onClose();
   }
 

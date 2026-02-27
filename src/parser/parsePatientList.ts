@@ -29,31 +29,26 @@ const URGENCY_MARKERS: Record<string, import("../types").Urgency> = {
 
 const TIME_PATTERN = /\b(\d{1,2}:\d{2})\b/;
 
-const DAY_REF_PATTERN =
+const PLAN_DAY_REF_PATTERN =
   /\b(?:ביום\s*[א-ת]|ביום\s*(?:ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)|(?:ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת))\b/;
 
 const PLAN_NOTE_PATTERN =
-  /(פיזיו|פיזיותרפ|משלשל|דיאט|תזונ|להמשיך|המשך|לשקול|לפי\s*הצורך|prn|סיכות|הוכנס|הוצא|סטאף|staff|plan)/i;
+  /(פיזיו|פיזיותרפ|דיאט|תזונ|קלינאית|בליעה|ריפוי\s*בעיסוק|עו"?ס|עוס|סוציאלי|staff|סטאף|פרוטוקול|לפי\s*הצורך|prn|להמשיך|המשך|שיקום|פצע|טיפול\s*פצע|פיזיותרפיה|דיבור)/i;
 
-function hasExplicitUrgency(text: string): boolean {
-  const lower = text.toLowerCase();
-  return Object.keys(URGENCY_MARKERS).some(
-    (m) => lower.includes(m.toLowerCase()) || text.includes(m),
-  );
-}
+const PLAN_STRONG_ORDER_PATTERN =
+  /(?:\bCT\b|\bUS\b|\bMRI\b|\bECHO\b|דימות|צילום|ב"?ד|בדיקת\s*דם|מעבדה|גזים|\bBS\b|Bladder\s*Scan|קטטר|פולי|להזמין|לבצע|למדוד|לשלוח|לתת\s|אנטיביוטיקה|ואנקו|vanco|מרופנם)/i;
+
+const PLAN_URGENCY_PATTERN =
+  /(דחוף|סטט|asap|urgent|עכשיו)/i;
 
 function isPlanNote(text: string): boolean {
-  if (hasExplicitUrgency(text)) return false;
-  const hasDayRef = DAY_REF_PATTERN.test(text);
+  const lower = text.toLowerCase();
+  if (PLAN_URGENCY_PATTERN.test(lower)) return false;
+  const hasDayRef = PLAN_DAY_REF_PATTERN.test(text);
   const hasPlanWords = PLAN_NOTE_PATTERN.test(text);
   if (!(hasDayRef || hasPlanWords)) return false;
-
-  const strongOrder =
-    /(?:\bCT\b|\bUS\b|דימות|צילום|ב"?ד|בדיקת\s*דם|מעבדה|גזים|\bBS\b|Bladder\s*Scan|קטטר|פולי|להזמין|לבצע|למדוד|לשלוח|לתת\s)/i.test(
-      text,
-    );
-
-  return !strongOrder;
+  if (PLAN_STRONG_ORDER_PATTERN.test(text)) return false;
+  return true;
 }
 
 function detectUrgency(text: string): import("../types").Urgency {
@@ -210,8 +205,8 @@ function parsePatientLine(
       continue;
     }
 
-    // Explicit plan prefix (תוכנית / תכנון / הערכה / סטאף / staff / plan) → planNotes
-    const planPrefix = part.match(/^(?:תוכנית|תכנון|הערכה|סטאף|staff|plan)\s*[:\-]\s*(.*)/i);
+    // Explicit plan prefix (תוכנית / תכנון / הערכה / סטאף / staff) → planNotes
+    const planPrefix = part.match(/^(?:תוכנית|תכנון|הערכה|סטאף|staff)\s*[:\-]\s*(.*)/i);
     if (planPrefix) {
       const body = planPrefix[1].trim();
       const chunks = (body || part).split(/\s*[;\n•]+\s*/).map((c) => c.trim()).filter(Boolean);
@@ -219,15 +214,8 @@ function parsePatientLine(
       continue;
     }
 
-    // Plan-ish heuristic (physio, diet, continue, PRN, etc.) → planNotes
+    // Plan-ish heuristic (physio, diet, speech, PRN, day-of-week, etc.) → planNotes
     if (isPlanNote(part)) {
-      planNotes.push(part);
-      continue;
-    }
-
-    // Catch-all for morning staff phrases → planNotes
-    const isMorningStaff = /\bסטאף\b|\bstaff\b|\bביקור רופא\b|\bביקור בוקר\b|\bהערכת בוקר\b|\bתוכנית\s+(?:טיפול|עבודה|יום)\b|\bplan\b/i.test(part);
-    if (isMorningStaff) {
       planNotes.push(part);
       continue;
     }

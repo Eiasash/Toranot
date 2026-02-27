@@ -68,7 +68,8 @@ export function InputArea() {
   if (mode === "admission") {
     return (
       <AddAdmissionModal
-        onClose={() => setMode("closed")}
+        onClose={() => setMode("choose")}
+        onSuccess={() => setMode("closed")}
       />
     );
   }
