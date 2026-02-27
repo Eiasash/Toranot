@@ -509,10 +509,10 @@ describe("rules engine — all rules", () => {
       expect(generatedSources(tasks)).toContain("דליריום");
     });
 
-    it("generates 7 delirium tasks", () => {
+    it("generates 13 delirium tasks (workup + non-pharm + treatment ladder)", () => {
       const tasks = applyRules(makePatient({ status: ["דליריום"] }));
       const delTasks = tasks.filter((t) => t.generatedFrom === "דליריום");
-      expect(delTasks).toHaveLength(7);
+      expect(delTasks).toHaveLength(13);
     });
   });
 
@@ -714,7 +714,7 @@ describe("rules engine — cross-cutting behavior", () => {
   });
 
   it("RULES array has expected number of rules", () => {
-    expect(RULES.length).toBe(47);
+    expect(RULES.length).toBe(54);
   });
 
   it("every rule has a unique group", () => {
@@ -841,6 +841,118 @@ describe("rules engine — cross-cutting behavior", () => {
         planNotes: ["dormicum drip"],
       }));
       expect(generatedSources(tasks)).toContain("דורמיקום IV");
+    });
+  });
+
+  // ═══ DELIRIUM DRUG PROTOCOLS ═══
+
+  describe("Haloperidol protocol", () => {
+    it("triggers on הלופרידול in planNotes", () => {
+      const tasks = applyRules(makePatient({ planNotes: ["הלופרידול 0.5mg IV"] }));
+      expect(generatedSources(tasks)).toContain("הלופרידול");
+      expect(tasks.some(t => t.text.includes("QTc"))).toBe(true);
+    });
+
+    it("triggers on haldol in status", () => {
+      const tasks = applyRules(makePatient({ status: ["haldol 1mg PRN"] }));
+      expect(generatedSources(tasks)).toContain("הלופרידול");
+    });
+
+    it("warns about Parkinson/DLB", () => {
+      const tasks = applyRules(makePatient({ planNotes: ["haloperidol"] }));
+      expect(tasks.some(t => t.text.includes("DLB") && t.text.includes("Quetiapine"))).toBe(true);
+    });
+
+    it("NOT suppressed in comfort care (agitation management is comfort care)", () => {
+      const tasks = applyRules(makePatient({
+        flags: ["comfort care"],
+        planNotes: ["haloperidol"],
+      }));
+      expect(generatedSources(tasks)).toContain("הלופרידול");
+    });
+  });
+
+  describe("Quetiapine protocol", () => {
+    it("triggers on quetiapine", () => {
+      const tasks = applyRules(makePatient({ planNotes: ["quetiapine 25mg HS"] }));
+      expect(generatedSources(tasks)).toContain("קווטיאפין");
+      expect(tasks.some(t => t.text.includes("אורתוסטטי"))).toBe(true);
+    });
+
+    it("triggers on סרוקוול", () => {
+      const tasks = applyRules(makePatient({ status: ["סרוקוול 12.5mg"] }));
+      expect(generatedSources(tasks)).toContain("קווטיאפין");
+    });
+
+    it("NOT suppressed in comfort care (comfort drug)", () => {
+      const tasks = applyRules(makePatient({
+        flags: ["palliative"],
+        planNotes: ["quetiapine 12.5mg"],
+      }));
+      expect(generatedSources(tasks)).toContain("קווטיאפין");
+    });
+  });
+
+  describe("Olanzapine protocol", () => {
+    it("triggers on olanzapine", () => {
+      const tasks = applyRules(makePatient({ planNotes: ["olanzapine 2.5mg IM"] }));
+      expect(generatedSources(tasks)).toContain("אולנזפין");
+      expect(tasks.some(t => t.text.includes("benzodiazepines"))).toBe(true);
+    });
+
+    it("triggers on zyprexa", () => {
+      const tasks = applyRules(makePatient({ status: ["zyprexa 5mg"] }));
+      expect(generatedSources(tasks)).toContain("אולנזפין");
+    });
+  });
+
+  describe("Risperidone protocol", () => {
+    it("triggers on risperidone", () => {
+      const tasks = applyRules(makePatient({ planNotes: ["risperidone 0.5mg"] }));
+      expect(generatedSources(tasks)).toContain("ריספרידון");
+      expect(tasks.some(t => t.text.includes("EPS"))).toBe(true);
+    });
+
+    it("includes FDA Black Box warning", () => {
+      const tasks = applyRules(makePatient({ planNotes: ["risperdal"] }));
+      expect(tasks.some(t => t.text.includes("Black Box"))).toBe(true);
+    });
+  });
+
+  describe("Dexmedetomidine protocol", () => {
+    it("triggers on precedex", () => {
+      const tasks = applyRules(makePatient({ planNotes: ["precedex infusion"] }));
+      expect(generatedSources(tasks)).toContain("דקסמדטומידין (Precedex)");
+      expect(tasks.some(t => t.text.includes("bradycardia"))).toBe(true);
+    });
+
+    it("triggers on דקסמדטומידין", () => {
+      const tasks = applyRules(makePatient({ status: ["דקסמדטומידין"] }));
+      expect(generatedSources(tasks)).toContain("דקסמדטומידין (Precedex)");
+    });
+
+    it("NOT suppressed in comfort care (sedation for terminal agitation)", () => {
+      const tasks = applyRules(makePatient({
+        flags: ["EOL"],
+        planNotes: ["precedex"],
+      }));
+      expect(generatedSources(tasks)).toContain("דקסמדטומידין (Precedex)");
+    });
+  });
+
+  describe("Trazodone protocol", () => {
+    it("triggers on trazodone", () => {
+      const tasks = applyRules(makePatient({ planNotes: ["trazodone 50mg HS"] }));
+      expect(generatedSources(tasks)).toContain("טרזודון");
+      expect(tasks.some(t => t.text.includes("orthostatic"))).toBe(true);
+    });
+
+    it("NOT suppressed in comfort care", () => {
+      const tasks = applyRules(makePatient({
+        flags: ["comfort care"],
+        planNotes: ["טרזודון 25mg"],
+      }));
+      expect(generatedSources(tasks)).toContain("טרזודון");
     });
   });
 });

@@ -51,6 +51,7 @@ const COMFORT_SUPPRESSED_GROUPS = new Set([
   "iv_amiodarone",
   "iv_kphos",
   // NOT suppressed: opioids, midazolam, propofol, magnesium — used for comfort
+  // NOT suppressed: delirium rules — agitation management IS comfort care
 ]);
 
 const RULES: Rule[] = [
@@ -342,18 +343,126 @@ const RULES: Rule[] = [
 
   // ═══ DELIRIUM ═══
   {
-    trigger: /דליריום|delirium|בלבול חריף|agitat|ערפול.*הכרה|acute\s*confusion/i,
+    trigger: /דליריום|delirium|בלבול חריף|agitat|ערפול.*הכרה|acute\s*confusion|חוסר\s*שקט|אי\s*שקט|restless|sundowning/i,
     source: "דליריום",
     group: "delirium",
-    triggerField: "tasks",  // Chronic confusion vs acute delirium
+    triggerField: "all",
     tasks: [
-      { text: "בירור: זיהום? תרופות? מטבולי? היפוקסיה? עצירות? אצירה?", urgency: "stat", category: "other" },
-      { text: "הפסקת anticholinergics, benzos, opioids", urgency: "stat", category: "meds" },
-      { text: "מעבדה: CBC, CMP, Ca2+, TSH, B12, U/A, גזים", urgency: "urgent", category: "labs" },
-      { text: "BS (שלילת אצירה)", urgency: "urgent", category: "procedure" },
-      { text: "❌ לא בנזודיאזפינים! (מחמיר דליריום)", urgency: "stat", category: "meds" },
-      { text: "אגיטציה → Haloperidol 0.5-1mg IV/PO (זהירות קשישים)", urgency: "urgent", category: "meds" },
-      { text: "אמצעים לא-תרופתיים: תאורה, שעון, משקפיים, משפחה", urgency: "routine", category: "other" },
+      // ── WORKUP (find the cause) ──
+      { text: "⚡ בירור דחוף: זיהום? תרופות? מטבולי? היפוקסיה? עצירות? אצירת שתן?", urgency: "stat", category: "other" },
+      { text: "מעבדה: CBC, BMP, Ca2+, Mg2+, PO4, גלוקוז, U/A+תרבית, גזים", urgency: "stat", category: "labs" },
+      { text: "Bladder Scan — שלילת אצירה (>300ml → קטטר)", urgency: "stat", category: "procedure" },
+      { text: "סקור תרופות: STOP anticholinergics, benzos, opioids, steroids", urgency: "stat", category: "meds" },
+      // ── NON-PHARM (always first) ──
+      { text: "🔦 אמצעים לא-תרופתיים: תאורה, שעון, משקפיים, שמיעה, שתייה, משפחה", urgency: "urgent", category: "other" },
+      { text: "הימנע מקשירה! (מחמיר אגיטציה + סיכון)", urgency: "urgent", category: "other" },
+      // ── PHARMACOTHERAPY LADDER (if agitated + danger) ──
+      { text: "📋 סולם טיפול אגיטציה (מהקל לכבד):", urgency: "urgent", category: "meds" },
+      { text: "1️⃣ Quetiapine 12.5-25mg PO (בטוח בפרקינסון/DLB)", urgency: "urgent", category: "meds" },
+      { text: "2️⃣ Haloperidol 0.5mg PO/IV (❌ לא בפרקינסון/DLB, בדוק QTc)", urgency: "urgent", category: "meds" },
+      { text: "3️⃣ Olanzapine 2.5mg PO/IM (חלופה אם QTc ארוך)", urgency: "urgent", category: "meds" },
+      { text: "4️⃣ אגיטציה קשה → Haloperidol 0.5mg IV + חזור q30min (max 3mg/24h)", urgency: "stat", category: "meds" },
+      { text: "🌙 לילה: Trazodone 25-50mg PO / Melatonin 3mg (שיקום שינה)", urgency: "routine", category: "meds" },
+      { text: "❌❌ לא בנזודיאזפינים! (מחמיר דליריום — חריג: גמילה מאלכוהול/בנזו)", urgency: "stat", category: "meds" },
+    ],
+  },
+
+  // ═══ DELIRIUM DRUG PROTOCOLS ═══
+  // These fire when a specific antipsychotic/sedative is mentioned,
+  // generating drug-specific monitoring tasks for the on-call doctor.
+
+  // ── Haloperidol (Haldol) ──
+  {
+    trigger: /הלופרידול|הלדול|haloperidol|haldol/i,
+    source: "הלופרידול",
+    group: "delirium_haloperidol",
+    triggerField: "all",
+    tasks: [
+      { text: "א.ק.ג לפני ואחרי מתן — QTc >500ms → STOP", urgency: "stat", category: "procedure" },
+      { text: "ניטור EPS: נוקשות, טרמור, אקתיזיה, דיסטוניה", urgency: "urgent", category: "other" },
+      { text: "❌ אם פרקינסון/DLB → החלף ל-Quetiapine 12.5-25mg", urgency: "stat", category: "meds" },
+      { text: "מינון קשישים: 0.5-1mg PO/IV. ❌ לא >3mg/24h", urgency: "routine", category: "meds" },
+    ],
+  },
+
+  // ── Quetiapine (Seroquel) ──
+  {
+    trigger: /קווטיאפין|סרוקוול|quetiapine|seroquel/i,
+    source: "קווטיאפין",
+    group: "delirium_quetiapine",
+    triggerField: "all",
+    tasks: [
+      { text: "BP שכיבה + עמידה (אורתוסטטי!) — לפני ואחרי מתן", urgency: "urgent", category: "procedure" },
+      { text: "מינון התחלתי: 12.5-25mg PO HS. Max 50mg/d בקשישים", urgency: "routine", category: "meds" },
+      { text: "ניטור סדציה מוגזמת — סיכון נפילות", urgency: "urgent", category: "other" },
+      { text: "BS בבוקר (hyperglycemia risk)", urgency: "routine", category: "labs" },
+    ],
+  },
+
+  // ── Olanzapine (Zyprexa) ──
+  {
+    trigger: /אולנזפין|זיפרקסה|olanzapine|zyprexa/i,
+    source: "אולנזפין",
+    group: "delirium_olanzapine",
+    triggerField: "all",
+    tasks: [
+      { text: "❌ לא עם IM benzodiazepines! (respiratory depression)", urgency: "stat", category: "meds" },
+      { text: "BP — סיכון להיפוטנציה אורתוסטטית", urgency: "urgent", category: "procedure" },
+      { text: "מינון קשישים: 2.5-5mg PO/IM. Max 10mg/d", urgency: "routine", category: "meds" },
+      { text: "BS — hyperglycemia + metabolic effects", urgency: "routine", category: "labs" },
+    ],
+  },
+
+  // ── Risperidone (Risperdal) ──
+  {
+    trigger: /ריספרידון|ריספרדל|risperidone|risperdal/i,
+    source: "ריספרידון",
+    group: "delirium_risperidone",
+    triggerField: "all",
+    tasks: [
+      { text: "BP שכיבה + עמידה — orthostatic hypotension", urgency: "urgent", category: "procedure" },
+      { text: "מינון קשישים: 0.25-0.5mg PO BID. Max 2mg/d", urgency: "routine", category: "meds" },
+      { text: "ניטור EPS (סיכון גבוה יותר מ-quetiapine)", urgency: "urgent", category: "other" },
+      { text: "⚠ FDA Black Box: ↑ mortality בדמנציה", urgency: "routine", category: "other" },
+    ],
+  },
+
+  // ── Dexmedetomidine (Precedex) ──
+  {
+    trigger: /דקסמדטומידין|precedex|dexmedetomidine/i,
+    source: "דקסמדטומידין (Precedex)",
+    group: "delirium_dexmedetomidine",
+    triggerField: "all",
+    tasks: [
+      { text: "HR + BP q15min — bradycardia + hypotension common", urgency: "stat", category: "procedure" },
+      { text: "Sedation score (RASS) q1-2h — target 0 to -2", urgency: "urgent", category: "procedure" },
+      { text: "Loading dose: 1mcg/kg over 10min → 0.2-0.7 mcg/kg/h", urgency: "routine", category: "meds" },
+      { text: "ICU/ניטור setting only — continuous telemetry required", urgency: "stat", category: "other" },
+    ],
+  },
+
+  // ── Trazodone (for delirium insomnia/sundowning) ──
+  {
+    trigger: /טרזודון|trazodone|דסירל|desyrel/i,
+    source: "טרזודון",
+    group: "delirium_trazodone",
+    triggerField: "all",
+    tasks: [
+      { text: "BP — orthostatic hypotension risk, especially nocturnal", urgency: "urgent", category: "procedure" },
+      { text: "מינון: 25-50mg PO HS. ❌ לא >100mg בקשישים", urgency: "routine", category: "meds" },
+      { text: "ניטור סדציה יתרה בבוקר — סיכון נפילות", urgency: "routine", category: "other" },
+    ],
+  },
+
+  // ── Melatonin (delirium prevention protocol) ──
+  {
+    trigger: /מלטונין\s*(?:\d|delirium|דליריום|prevention)|melatonin\s*(?:\d|delirium|prevention)/i,
+    source: "מלטונין (מניעת דליריום)",
+    group: "delirium_melatonin",
+    triggerField: "all",
+    tasks: [
+      { text: "Melatonin 3-5mg PO HS — מניעת דליריום (HELP protocol)", urgency: "routine", category: "meds" },
+      { text: "ודא: אין סדציה מוגזמת בבוקר", urgency: "routine", category: "other" },
     ],
   },
 
