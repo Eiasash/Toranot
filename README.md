@@ -1,20 +1,26 @@
 # Toranot (תורנות)
 
-**[Live App](https://toranot.netlify.app)**
+**[Live App — Netlify](https://toranot.netlify.app)** · **[Mirror — GitHub Pages](https://eiasash.github.io/Toranot)**
 
-Hospital ward shift management app for on-call doctors. Import patient lists via camera OCR or text input, track tasks per patient, and let the rule engine generate follow-up tasks automatically.
+Hospital ward shift management app for on-call doctors at Shaare Zedek Medical Center. Import patient lists via camera OCR or text input, track tasks per patient, and let the rule engine generate follow-up tasks automatically.
 
 Built as a mobile-first PWA with Hebrew RTL support so it works directly from a phone on the ward floor.
 
 ## Features
 
 - **Patient import** -- Scan a physical ward sheet with the camera (OCR via Claude Vision), pick an image from the gallery, or paste/type text manually. Parse preview screen lets you verify before committing.
-- **Section tabs** -- Patients organized into Side A, Side B, Side C, Rehabilitation, and Monitor
-- **Task extraction** -- Tasks, urgency levels, and medical flags (DNR, NPO, ISO, FALL, etc.) are parsed automatically from the input text
-- **Rule engine** -- Generates additional tasks based on detected conditions (discharge, pre-surgery, blood transfusion, diabetes, isolation, catheter, fall risk, and more)
+- **Section tabs** -- Patients organized into Side A, Side B, Side C, Rehabilitation, Monitor, and an "All" view across sections
+- **Task extraction** -- Tasks, urgency levels, and medical flags (DNR, NPO, ISO, FALL, etc.) are parsed automatically from the input text. Only tasks prefixed with `תורן:` are assigned to the on-call doctor.
+- **Rule engine (47 rules)** -- Generates additional tasks based on detected conditions: discharge, pre-surgery, blood transfusion, diabetes, isolation, catheter, fall risk, sepsis, AKI, PE/DVT, delirium with a full treatment ladder, and more
+- **IV protocol monitoring** -- Detects active IV drips (insulin, heparin, noradrenaline, dopamine, amiodarone, propofol, opioids, midazolam, magnesium, K-phosphate) and generates appropriate monitoring tasks
+- **Delirium management** -- Full pharmacotherapy ladder: workup → non-pharmacological → Quetiapine → Haloperidol IM → Olanzapine → Lorazepam IV rescue. With drug-specific monitoring for each antipsychotic.
+- **Clinical hints (36 conditions)** -- Background awareness tips based on diagnosis: PE, DVT, CHF, COPD, CKD, diabetes, dementia, Parkinson's, sepsis, AKI, falls, hyponatremia, hyperkalemia, C.diff, alcohol withdrawal, and more
 - **Drug safety alerts** -- Checks for dangerous drug interactions (QT prolongation, bleeding risk, hyperkalemia, serotonin syndrome), renal dose adjustments based on Cockcroft-Gault CrCl, and Beers 2023 criteria for geriatric patients
 - **Lab trend monitoring** -- Tracks lab value trajectories with KDIGO AKI staging for creatinine, percentage-based Hb drop alerts, and threshold alerts for K+, Na, WBC, PLT, CRP, Lactate, INR, Glucose
+- **Comfort care awareness** -- Patients flagged as palliative/comfort care get aggressive workup tasks suppressed, while comfort drugs (opioids, sedatives, agitation management) remain active
+- **Bed collision prevention** -- Prevents two patients from occupying the same room+section across all entry points
 - **Smart rescan** -- Re-importing a section preserves manually added tasks and completion state; detects patient transfers between sections
+- **AI clinical reasoning** -- Claude-powered differential diagnosis and workup recommendations per patient
 - **Urgency color coding** -- Tasks are color-coded by urgency: stat, urgent, morning, routine, extra
 - **Dark mode** -- Toggle between light and dark themes for comfortable viewing
 - **Task timers** -- Set countdown timers with notifications for time-sensitive tasks
@@ -124,19 +130,20 @@ You can rescan a section at any time. The merge logic will:
 | OCR | Claude Vision API |
 | Build | Vite 7 |
 | Tests | Vitest |
-| Deploy | Netlify |
+| Deploy | Netlify + GitHub Pages |
 
 ## Project Structure
 
 ```
 src/
-  components/    UI components (InputArea, Scanner, PatientCard, etc.)
+  components/    UI components (PatientCard, Scanner, InputArea, etc.)
   context/       React context + useReducer state management
-  engine/        Rule engine, drug safety, lab deltas, rescan merge
+  engine/        Rule engine (47 rules), clinical hints (36 conditions),
+                 drug safety, lab deltas, rescan merge
   parser/        Hebrew patient list text parser
   types/         TypeScript type definitions
   utils/         ID generation and patient key helpers
-  __tests__/     Unit tests
+  __tests__/     Unit tests (635+)
 ```
 
 ## License
