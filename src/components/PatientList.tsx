@@ -18,7 +18,20 @@ export function PatientList() {
     } else if (sortMode === "name") {
       sorted.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "", "he"));
     } else {
-      sorted.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      // Deterministic: side (implicit — same section) → room number → bed number
+      sorted.sort((a, b) => {
+        const parseRoom = (r: string | null) => {
+          if (!r) return { room: Infinity, bed: Infinity };
+          const match = r.match(/^(\d+)[\/\-](\d+)$/);
+          if (match) return { room: parseInt(match[1], 10), bed: parseInt(match[2], 10) };
+          const num = parseInt(r, 10);
+          return { room: isNaN(num) ? Infinity : num, bed: 0 };
+        };
+        const ar = parseRoom(a.room);
+        const br = parseRoom(b.room);
+        if (ar.room !== br.room) return ar.room - br.room;
+        return ar.bed - br.bed;
+      });
     }
     return sorted;
   }, [patients, activeSection, sortMode]);

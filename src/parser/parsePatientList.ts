@@ -29,6 +29,33 @@ const URGENCY_MARKERS: Record<string, import("../types").Urgency> = {
 
 const TIME_PATTERN = /\b(\d{1,2}:\d{2})\b/;
 
+const DAY_REF_PATTERN =
+  /\b(?:ביום\s*[א-ת]|ביום\s*(?:ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)|(?:ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת))\b/;
+
+const PLAN_NOTE_PATTERN =
+  /(פיזיו|פיזיותרפ|משלשל|דיאט|תזונ|להמשיך|המשך|לשקול|לפי\s*הצורך|prn|סיכות|הוכנס|הוצא|סטאף|staff|plan)/i;
+
+function hasExplicitUrgency(text: string): boolean {
+  const lower = text.toLowerCase();
+  return Object.keys(URGENCY_MARKERS).some(
+    (m) => lower.includes(m.toLowerCase()) || text.includes(m),
+  );
+}
+
+function isPlanNote(text: string): boolean {
+  if (hasExplicitUrgency(text)) return false;
+  const hasDayRef = DAY_REF_PATTERN.test(text);
+  const hasPlanWords = PLAN_NOTE_PATTERN.test(text);
+  if (!(hasDayRef || hasPlanWords)) return false;
+
+  const strongOrder =
+    /(?:\bCT\b|\bUS\b|דימות|צילום|ב"?ד|בדיקת\s*דם|מעבדה|גזים|\bBS\b|Bladder\s*Scan|קטטר|פולי|להזמין|לבצע|למדוד|לשלוח|לתת\s)/i.test(
+      text,
+    );
+
+  return !strongOrder;
+}
+
 function detectUrgency(text: string): import("../types").Urgency {
   const lower = text.toLowerCase();
   for (const [marker, urgency] of Object.entries(URGENCY_MARKERS)) {
@@ -132,16 +159,17 @@ function parsePatientLine(
 
   const finalSection: Section = section;
 
-  // Parse extra segments into status and tasks
+  // Parse extra segments into status, tasks, tomorrowNotes, planNotes
   const status: string[] = [];
   const tasks: Task[] = [];
   const tomorrowNotes: string[] = [];
+  const planNotes: string[] = [];
 
   for (const rawPart of extraParts) {
     const part = rawPart.trim();
     if (!part) continue;
 
-    // If OCR labels columns, respect them.
+    // Explicit תורן: label → tasks
     const toranMatch = part.match(/^(?:תורן)\s*[:\-]\s*(.*)$/);
     if (toranMatch) {
       const body = toranMatch[1].trim();
@@ -163,6 +191,7 @@ function parsePatientLine(
       continue;
     }
 
+    // Explicit מחר: label → tomorrowNotes
     const macharMatch = part.match(/^(?:מחר)\s*[:\-]\s*(.*)$/);
     if (macharMatch) {
       const body = macharMatch[1].trim();
@@ -173,37 +202,37 @@ function parsePatientLine(
       }
       continue;
     }
-    // Heuristic: if segment mentions מחר/לבוקר, treat as tomorrow note (not an on-call task)
+
+    // Real tomorrow indicators (מחר / בבוקר) → tomorrowNotes
     const implicitMachar = /\bמחר\b|\bלבוקר\b|\bבבוקר\b/.test(part);
     if (implicitMachar) {
-      // strip the word מחר if it prefixes the segment
-      tomorrowNotes.push(part.replace(/^מחר\s*[:\-]?\s*/,"").trim() || part);
+      tomorrowNotes.push(part.replace(/^מחר\s*[:\-]?\s*/, "").trim() || part);
       continue;
     }
 
-    // ── Morning staff / plan / assessment → NOT on-call tasks ──
-    // These are plans for the morning team, not for the overnight on-call doctor.
-    const planPrefix = part.match(/^(?:תוכנית|תכנון|הערכה|סטאף|staff|plan)\s*[:\-]\s*(.*)$/i);
+    // Explicit plan prefix (תוכנית / תכנון / הערכה / סטאף / staff / plan) → planNotes
+    const planPrefix = part.match(/^(?:תוכנית|תכנון|הערכה|סטאף|staff|plan)\s*[:\-]\s*(.*)/i);
     if (planPrefix) {
       const body = planPrefix[1].trim();
-      if (body) {
-        for (const chunk of body.split(/\s*[;\n•]+\s*/).map((c) => c.trim()).filter(Boolean)) {
-          tomorrowNotes.push(chunk);
-        }
-      } else {
-        tomorrowNotes.push(part);
-      }
+      const chunks = (body || part).split(/\s*[;\n•]+\s*/).map((c) => c.trim()).filter(Boolean);
+      for (const chunk of chunks) planNotes.push(chunk);
       continue;
     }
 
-    // Content referencing morning team activities → tomorrowNotes, not tasks
+    // Plan-ish heuristic (physio, diet, continue, PRN, etc.) → planNotes
+    if (isPlanNote(part)) {
+      planNotes.push(part);
+      continue;
+    }
+
+    // Catch-all for morning staff phrases → planNotes
     const isMorningStaff = /\bסטאף\b|\bstaff\b|\bביקור רופא\b|\bביקור בוקר\b|\bהערכת בוקר\b|\bתוכנית\s+(?:טיפול|עבודה|יום)\b|\bplan\b/i.test(part);
     if (isMorningStaff) {
-      tomorrowNotes.push(part);
+      planNotes.push(part);
       continue;
     }
 
-    // Heuristic: if it contains an action verb, time, or known shorthand, treat as task
+    // Actionable task heuristic
     const isTask =
       /(?:בדיק|ב"ד|CT|US|\bBS\b|Bladder\s*Scan|תור |לתת |להזמין|לבצע|למדוד|לשלוח|טיפול|ניקוז|עירוי|צילום|דימות|ייעוץ|שיחה|א\.?ק\.?ג)/i.test(
         part,
@@ -249,6 +278,7 @@ function parsePatientLine(
     flags: [...new Set(flags)],
     status,
     tomorrowNotes,
+    planNotes,
     tasks,
     generatedTasks: [],
     notes: [],

@@ -57,6 +57,7 @@ export type PatientEntry = {
   flags: string[]; // e.g., ["DNI", "DNR", "NPO"] or raw if written oddly
   status: string[]; // informational notes (not actionable)
   tomorrowNotes: string[]; // 'מחר' column notes (not on-call tasks)
+  planNotes?: string[];    // morning-team plan items (physio, diet, continue X, staff notes)
   tasks: Task[]; // explicit actionable tasks
   generatedTasks: Task[]; // rule-engine tasks created from status triggers
 

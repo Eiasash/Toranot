@@ -3,9 +3,10 @@ import { usePatientsDispatch } from "../context/PatientsContext";
 import { Scanner } from "./Scanner";
 import { ParsePreview } from "./ParsePreview";
 import { parsePatientList } from "../parser/parsePatientList";
+import { AddAdmissionModal } from "./AddAdmissionModal";
 import type { PatientEntry } from "../types";
 
-type InputMode = "closed" | "choose" | "scan" | "text";
+type InputMode = "closed" | "choose" | "scan" | "text" | "admission";
 
 const PLACEHOLDER = `הדביקו רשימת חולים כאן, לדוגמה:\n\nצד א\n101 כהן יוסף 72 דלקת ריאות DNR | משתחרר היום\n102 לוי שרה 65 אי ספיקת לב NPO | א.ק.ג דחוף`;
 
@@ -63,6 +64,15 @@ export function InputArea() {
     );
   }
 
+  // ── Admission modal ──
+  if (mode === "admission") {
+    return (
+      <AddAdmissionModal
+        onClose={() => setMode("closed")}
+      />
+    );
+  }
+
   // ── Collapsed bar ──
   if (mode === "closed") {
     return (
@@ -95,6 +105,12 @@ export function InputArea() {
         >
           <TextIcon />
           הקלד / הדבק טקסט
+        </button>
+        <button
+          onClick={() => setMode("admission")}
+          className="flex items-center justify-center gap-3 w-full py-4 bg-blue-50 text-blue-700 rounded-xl text-base font-medium border border-blue-200 active:bg-blue-100 active:scale-[0.98] transition-transform"
+        >
+          🏥 הוסף קבלה חדשה
         </button>
       </div>
     );

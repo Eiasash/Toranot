@@ -71,6 +71,7 @@ export function normalizePatient(p: RawPatient): PatientEntry {
     flags: Array.isArray(p.flags) ? p.flags : [],
     status: Array.isArray(p.status) ? p.status : [],
     tomorrowNotes: Array.isArray(p.tomorrowNotes) ? p.tomorrowNotes : [],
+    planNotes: Array.isArray(p.planNotes) ? p.planNotes : [],
     tasks: Array.isArray(p.tasks) ? p.tasks.map(normalizeTask) : [],
     generatedTasks: Array.isArray(p.generatedTasks)
       ? p.generatedTasks.map(normalizeTask)
@@ -201,6 +202,7 @@ export type Action =
   | { type: "LOG_EVENT"; event: WardEvent }
   | { type: "MOVE_PATIENT"; patientId: string; toRoom: string; toSection?: Section }
   | { type: "NEW_ADMISSION"; patient: PatientEntry }
+  | { type: "ADD_PATIENT"; patient: PatientEntry }
   | { type: "ADD_UNASSIGNED_TASK"; text: string; urgency: Urgency }
   | { type: "ASSIGN_TASK_TO_PATIENT"; taskId: string; patientId: string }
   | { type: "TOGGLE_UNASSIGNED_TASK"; taskId: string }
@@ -595,6 +597,12 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
         ),
       };
     }
+
+    case "ADD_PATIENT":
+      return {
+        ...state,
+        patients: [...state.patients, normalizePatient(action.patient as RawPatient)],
+      };
 
     case "NEW_ADMISSION": {
       const event: WardEvent = {

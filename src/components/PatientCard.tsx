@@ -468,18 +468,38 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
           )}
 
           {showTomorrow && patient.tomorrowNotes.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {patient.tomorrowNotes.map((s, i) => (
-                <span
-                  key={i}
-                  dir="auto"
-                  className="text-xs bg-green-50 text-green-900 dark:bg-green-900/30 dark:text-green-300 px-2 py-0.5 rounded border border-green-200 dark:border-green-800"
-                  style={{ unicodeBidi: "plaintext" }}
-                  title="מחר (לא תורן)"
-                >
-                  מחר: {s}
-                </span>
-              ))}
+            <div className="space-y-1">
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-green-700 dark:text-green-400">מחר</div>
+              <div className="flex flex-wrap gap-1.5">
+                {patient.tomorrowNotes.map((s, i) => (
+                  <span
+                    key={i}
+                    dir="auto"
+                    className="text-xs bg-green-50 text-green-900 dark:bg-green-900/30 dark:text-green-300 px-2 py-0.5 rounded border border-green-200 dark:border-green-800"
+                    style={{ unicodeBidi: "plaintext" }}
+                  >
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(patient.planNotes?.length ?? 0) > 0 && (
+            <div className="space-y-1">
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">תכנית</div>
+              <div className="flex flex-wrap gap-1.5">
+                {patient.planNotes!.map((s, i) => (
+                  <span
+                    key={i}
+                    dir="auto"
+                    className="text-xs bg-indigo-50 text-indigo-900 dark:bg-indigo-900/30 dark:text-indigo-300 px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-800"
+                    style={{ unicodeBidi: "plaintext" }}
+                  >
+                    {s}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
 
@@ -870,18 +890,38 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
               )}
 
               {showTomorrow && patient.tomorrowNotes.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {patient.tomorrowNotes.map((s, i) => (
-                    <span
-                      key={i}
-                      dir="auto"
-                      className="text-xs bg-green-50 text-green-900 dark:bg-green-900/30 dark:text-green-300 px-2 py-0.5 rounded border border-green-200 dark:border-green-800"
-                      style={{ unicodeBidi: "plaintext" }}
-                      title="מחר (לא תורן)"
-                    >
-                      מחר: {s}
-                    </span>
-                  ))}
+                <div className="space-y-1">
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-green-700 dark:text-green-400">מחר</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {patient.tomorrowNotes.map((s, i) => (
+                      <span
+                        key={i}
+                        dir="auto"
+                        className="text-xs bg-green-50 text-green-900 dark:bg-green-900/30 dark:text-green-300 px-2 py-0.5 rounded border border-green-200 dark:border-green-800"
+                        style={{ unicodeBidi: "plaintext" }}
+                      >
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(patient.planNotes?.length ?? 0) > 0 && (
+                <div className="space-y-1">
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">תכנית</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {patient.planNotes!.map((s, i) => (
+                      <span
+                        key={i}
+                        dir="auto"
+                        className="text-xs bg-indigo-50 text-indigo-900 dark:bg-indigo-900/30 dark:text-indigo-300 px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-800"
+                        style={{ unicodeBidi: "plaintext" }}
+                      >
+                        {s}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
 
