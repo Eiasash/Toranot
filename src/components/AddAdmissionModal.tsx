@@ -1,9 +1,9 @@
 import { useState } from "react";
-import type { PatientEntry, Section } from "../types";
+import type { PatientEntry, PatientSection } from "../types";
 import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
 import { generateId } from "../utils/id";
 
-const SIDE_TO_SECTION: Record<"A" | "B" | "C", Section> = {
+const SIDE_TO_SECTION: Record<"A" | "B" | "C", PatientSection> = {
   A: "SIDE_A",
   B: "SIDE_B",
   C: "SIDE_C",

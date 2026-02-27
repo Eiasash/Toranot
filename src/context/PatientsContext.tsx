@@ -6,7 +6,7 @@ import {
   type ReactNode,
   type Dispatch,
 } from "react";
-import type { PatientEntry, Section, Task, Urgency, LabEntry, WardEvent } from "../types";
+import type { PatientEntry, Section, PatientSection, Task, Urgency, LabEntry, WardEvent } from "../types";
 import { parsePatientList } from "../parser/parsePatientList";
 import { mergeScan } from "../engine/mergeScan";
 import { applyRules } from "../engine/rules";
@@ -161,7 +161,7 @@ function loadUnassignedTasks(): Task[] {
 
 const initializer = (): PatientsState => ({
   patients: loadSavedPatients(),
-  activeSection: "SIDE_A",
+  activeSection: "ALL",
   showTomorrow: false,
   darkMode: loadDarkMode(),
   shiftHistory: loadShiftHistory(),
@@ -185,7 +185,7 @@ export type Action =
   | { type: "ADD_PHOTO"; patientId: string; photo: import("../types").PatientPhoto }
   | { type: "REMOVE_PHOTO"; patientId: string; photoId: string }
   | { type: "REORDER_PATIENT"; patientId: string; direction: "up" | "down" }
-  | { type: "EDIT_PATIENT"; patientId: string; name?: string; room?: string; section?: Section; diagnosis?: string }
+  | { type: "EDIT_PATIENT"; patientId: string; name?: string; room?: string; section?: PatientSection; diagnosis?: string }
   | { type: "REMOVE_PATIENT"; patientId: string }
   | { type: "ARCHIVE_SHIFT"; label: string }
   | { type: "RESTORE_SHIFT"; snapshotId: string }
@@ -200,7 +200,7 @@ export type Action =
   | { type: "SYNC_PATIENTS"; patients: PatientEntry[] }
   | { type: "TOGGLE_SCAN_MODE" }
   | { type: "LOG_EVENT"; event: WardEvent }
-  | { type: "MOVE_PATIENT"; patientId: string; toRoom: string; toSection?: Section }
+  | { type: "MOVE_PATIENT"; patientId: string; toRoom: string; toSection?: PatientSection }
   | { type: "NEW_ADMISSION"; patient: PatientEntry }
   | { type: "ADD_PATIENT"; patient: PatientEntry }
   | { type: "ADD_UNASSIGNED_TASK"; text: string; urgency: Urgency }
@@ -691,7 +691,7 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
 // -----------------------------
 const PatientsStateContext = createContext<PatientsState>({
   patients: [],
-  activeSection: "SIDE_A",
+  activeSection: "ALL",
   showTomorrow: false,
   darkMode: false,
   shiftHistory: [],

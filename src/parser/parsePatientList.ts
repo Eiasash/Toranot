@@ -1,5 +1,5 @@
 import type { PatientEntry, Task, TaskCategory } from "../types";
-import { Section, detectSectionFromHeader, detectSectionFromRoom } from "../types";
+import { type PatientSection, detectSectionFromHeader, detectSectionFromRoom } from "../types";
 import { generateId } from "../utils/id";
 import { applyRules } from "../engine/rules";
 
@@ -136,13 +136,13 @@ function parseAge(token: string): number | null {
   return !isNaN(n) && n > 0 && n < 150 ? n : null;
 }
 
-function isSectionHeader(line: string): Section | null {
+function isSectionHeader(line: string): PatientSection | null {
   return detectSectionFromHeader(line);
 }
 
 function parsePatientLine(
   line: string,
-  section: Section,
+  section: PatientSection,
   date: string,
 ): PatientEntry | null {
   const trimmed = line.trim();
@@ -205,7 +205,7 @@ function parsePatientLine(
   const diagTokens = tokens.slice(idx);
   const diagnosis = diagTokens.length > 0 ? diagTokens.join(" ") : null;
 
-  const finalSection: Section = section;
+  const finalSection: PatientSection = section;
 
   // Parse extra segments into status, tasks, tomorrowNotes, planNotes
   const status: string[] = [];
@@ -340,7 +340,7 @@ function parsePatientLine(
 export function parsePatientList(text: string): PatientEntry[] {
   const lines = text.split("\n");
   const patients: PatientEntry[] = [];
-  let currentSection: Section = "SIDE_A";
+  let currentSection: PatientSection = "SIDE_A";
   const today = new Date();
   const date = `${String(today.getDate()).padStart(2, "0")}/${String(today.getMonth() + 1).padStart(2, "0")}/${today.getFullYear()}`;
 

@@ -6,7 +6,9 @@ export function SectionTabs() {
   const dispatch = usePatientsDispatch();
 
   function countForSection(section: Section): number {
-    return patients.filter((p) => p.section === section).length;
+    return section === "ALL"
+      ? patients.length
+      : patients.filter((p) => p.section === section).length;
   }
 
   return (

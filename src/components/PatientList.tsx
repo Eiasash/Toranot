@@ -1,10 +1,15 @@
-import { useCallback, useState, useMemo } from "react";
+import React, { useCallback, useState, useMemo } from "react";
 import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
-import { SECTION_LABEL } from "../types";
+import { SECTION_LABEL, PATIENT_SECTIONS } from "../types";
 import { PatientCard, PatientRow } from "./PatientCard";
 import { PullToRefresh } from "./PullToRefresh";
 import { calculateAcuity } from "../engine/acuity";
 import { comparePatientsByRoom } from "../utils/sortPatients";
+
+// Section ordering for ALL view
+const SECTION_ORDER: Record<string, number> = Object.fromEntries(
+  PATIENT_SECTIONS.map((s, i) => [s, i])
+);
 
 export function PatientList() {
   const { patients, activeSection } = usePatientsState();
@@ -12,15 +17,26 @@ export function PatientList() {
   const [sortMode, setSortMode] = useState<"room" | "severity" | "name">("room");
 
   const filtered = useMemo(() => {
-    const sectionPatients = patients.filter((p) => p.section === activeSection);
+    const sectionPatients = activeSection === "ALL"
+      ? patients
+      : patients.filter((p) => p.section === activeSection);
     const sorted = [...sectionPatients];
     if (sortMode === "severity") {
       sorted.sort((a, b) => calculateAcuity(b).score - calculateAcuity(a).score || (a.order ?? 0) - (b.order ?? 0));
     } else if (sortMode === "name") {
       sorted.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "", "he"));
     } else {
-      // Deterministic: room number → bed number → order (▲▼ tiebreaker)
-      sorted.sort(comparePatientsByRoom);
+      if (activeSection === "ALL") {
+        // Group by section order, then room within each section
+        sorted.sort((a, b) => {
+          const secDiff = (SECTION_ORDER[a.section] ?? 99) - (SECTION_ORDER[b.section] ?? 99);
+          if (secDiff !== 0) return secDiff;
+          return comparePatientsByRoom(a, b);
+        });
+      } else {
+        // Deterministic: room number → bed number → order (▲▼ tiebreaker)
+        sorted.sort(comparePatientsByRoom);
+      }
     }
     return sorted;
   }, [patients, activeSection, sortMode]);
@@ -36,7 +52,9 @@ export function PatientList() {
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 5h6" />
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 14l2 2 4-4" />
         </svg>
-        <p className="text-lg font-medium">אין חולים ב{SECTION_LABEL[activeSection]}</p>
+        <p className="text-lg font-medium">
+          {activeSection === "ALL" ? "אין חולים במחלקה" : `אין חולים ב${SECTION_LABEL[activeSection]}`}
+        </p>
         <p className="text-sm mt-2 text-center leading-relaxed">
           צלמו דף תורן או הדביקו רשימה למעלה
           <br />
@@ -53,7 +71,7 @@ export function PatientList() {
         <div className="sticky top-0 z-10 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 space-y-1.5">
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
-              {filtered.length} חולים ב{SECTION_LABEL[activeSection]}
+              {filtered.length} חולים {activeSection === "ALL" ? "במחלקה" : `ב${SECTION_LABEL[activeSection]}`}
             </span>
             <select
               value={sortMode}
@@ -106,9 +124,22 @@ export function PatientList() {
       <div className="lg:hidden">
         <PullToRefresh onRefresh={handleRefresh}>
           <div className="space-y-2 p-2 pb-20">
-            {filtered.map((patient) => (
-              <PatientCard key={patient.id} patient={patient} />
-            ))}
+            {filtered.map((patient, idx) => {
+              const showDivider = activeSection === "ALL" && (idx === 0 || patient.section !== filtered[idx - 1].section);
+              return (
+                <div key={patient.id}>
+                  {showDivider && (
+                    <div className="flex items-center gap-2 py-1.5 px-1 mt-1">
+                      <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap">
+                        {SECTION_LABEL[patient.section] ?? patient.section}
+                      </span>
+                      <div className="flex-1 border-t border-blue-200 dark:border-blue-800" />
+                    </div>
+                  )}
+                  <PatientCard patient={patient} />
+                </div>
+              );
+            })}
           </div>
         </PullToRefresh>
       </div>
@@ -127,9 +158,21 @@ export function PatientList() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((patient) => (
-              <PatientRow key={patient.id} patient={patient} />
-            ))}
+            {filtered.map((patient, idx) => {
+              const showDivider = activeSection === "ALL" && (idx === 0 || patient.section !== filtered[idx - 1].section);
+              return (
+                <React.Fragment key={patient.id}>
+                  {showDivider && (
+                    <tr className="bg-blue-50 dark:bg-blue-900/20">
+                      <td colSpan={6} className="py-1.5 px-4 text-xs font-semibold text-blue-700 dark:text-blue-400">
+                        {SECTION_LABEL[patient.section] ?? patient.section}
+                      </td>
+                    </tr>
+                  )}
+                  <PatientRow patient={patient} />
+                </React.Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>

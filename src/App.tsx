@@ -21,7 +21,9 @@ import { requestNotificationPermission, syncReminders } from "./utils/taskRemind
 // ─── Shift Progress Bar ────────────────────────────────────
 function ShiftProgress() {
   const { patients, activeSection } = usePatientsState();
-  const sectionPatients = patients.filter((p) => p.section === activeSection);
+  const sectionPatients = activeSection === "ALL"
+    ? patients
+    : patients.filter((p) => p.section === activeSection);
   const allTasks = sectionPatients.flatMap((p) => [...p.tasks, ...p.generatedTasks]);
   const total = allTasks.length;
   const done = allTasks.filter((t) => t.done).length;

@@ -1,10 +1,15 @@
 // Single source of truth for your top-level navigation sections.
 // "Rehab" is NOT a filter. It's its own section.
 
-export const SECTIONS = ["SIDE_A", "SIDE_B", "SIDE_C", "REHAB", "MONITOR"] as const;
+export const SECTIONS = ["ALL", "SIDE_A", "SIDE_B", "SIDE_C", "REHAB", "MONITOR"] as const;
 export type Section = (typeof SECTIONS)[number];
 
+// Sections that patients can actually belong to (ALL is view-only filter)
+export const PATIENT_SECTIONS = ["SIDE_A", "SIDE_B", "SIDE_C", "REHAB", "MONITOR"] as const;
+export type PatientSection = (typeof PATIENT_SECTIONS)[number];
+
 export const SECTION_LABEL: Record<Section, string> = {
+  ALL: "הכל",
   SIDE_A: "צד א",
   SIDE_B: "צד ב",
   SIDE_C: "צד ג",
@@ -47,7 +52,7 @@ export type Task = {
 
 export type PatientEntry = {
   id: string; // stable key (room+name hash)
-  section: Section; // SIDE_A / SIDE_B / SIDE_C / REHAB / MONITOR
+  section: PatientSection; // SIDE_A / SIDE_B / SIDE_C / REHAB / MONITOR (never ALL)
   date: string; // "DD/MM/YYYY"
   room: string | null;
   name: string | null;
@@ -104,7 +109,7 @@ export type LabEntry = {
  * - Should tolerate trailing ":" / "-" etc.
  * - May have spaces in section names like "צד א"
  */
-export function detectSectionFromHeader(headerText: string): Section | null {
+export function detectSectionFromHeader(headerText: string): PatientSection | null {
   const raw = headerText.trim();
   if (!raw) return null;
 
@@ -159,7 +164,7 @@ export function detectSectionFromHeader(headerText: string): Section | null {
  * This function returns null for all cases since we cannot infer
  * section from room alone. Section must come from explicit headers.
  */
-export function detectSectionFromRoom(_room: string | null): Section | null {
+export function detectSectionFromRoom(_room: string | null): PatientSection | null {
   // Rooms NEVER determine sections. Section comes ONLY from explicit headers.
   // A room like "ניטור 1" can be under צד א, צד ב, or ניטור depending on
   // which section header it appears under in the patient list.

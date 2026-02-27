@@ -6,7 +6,7 @@ import { safeGetItem, safeSetItem } from "../utils/storage";
 // -----------------------------
 const API_KEY_STORAGE_KEY = "toranot_anthropic_key";
 const OCR_MODEL = "claude-sonnet-4-6";
-const OCR_MAX_TOKENS = 2048;
+const OCR_MAX_TOKENS = 4096;
 const IMAGE_MAX_EDGE = 2400;
 const IMAGE_JPEG_QUALITY = 0.82;
 
@@ -37,31 +37,53 @@ CRITICAL: The ward has 5 SECTIONS. Identify the section from the PAGE TITLE at t
 
 IMPORTANT: Room numbers (49-70) appear in MULTIPLE sections! Rooms like "ניטור 1", "ניטור 3" in the table belong to the ניטור sub-section but the regular room numbers (49/2, 53/1, etc.) belong to the section indicated in the page title.
 
+TABLE STRUCTURE:
+The sheet is typically a table with columns. Common column headers include:
+- חדר/מיטה (Room/Bed) — always the leftmost or rightmost column
+- שם (Name) + גיל (Age) or combined
+- אבחנה (Diagnosis) — medical condition
+- תורן (On-call doctor tasks) — CRITICAL: extract these carefully
+- מחר / הערות (Tomorrow / Notes)
+- Flags may appear as stamps, annotations, or text: DNR, DNI, NPO, ISO, FALL, MRSA, BiPAP
+
+OCR RECOVERY RULES:
+- If text is partially occluded or blurry, make your best guess based on medical context
+- Room numbers like "49/2" may OCR as "49|2" or "49\\2" — normalize to "49/2"
+- Hebrew names may have minor OCR errors — preserve as-is, do not guess corrections
+- Medical abbreviations should be kept in English: CT, MRI, ABG, BiPAP, CPAP, IV, PO, NPO
+- Numbers that look like ages (50-110) adjacent to Hebrew names are ages
+- "ד\\"ר" or "דר" = doctor reference, not patient data
+
 OUTPUT FORMAT:
 1. First, output the main section header based on page title (צד א / צד ב / צד ג / שיקום)
 2. List all regular room patients under that section
 3. If there are ניטור rooms on the page, output "ניטור" header then list those patients
 
+Each patient line format:
+ROOM NAME AGE DIAGNOSIS FLAGS | STATUS_NOTES | תורן: TASKS | מחר: TOMORROW_PLANS
+
 Example - if page title is "גריאטריה (ב) - 16/02/2026":
 צד ב
-49/2 כהן אביבה 64 ... | | תורן: | מחר:
-52/2 גולדנברג צפורה 93 ... | | תורן: | מחר:
-53/1 בן פורת שלום 100 ... | DNR | תורן: | מחר:
+49/2 כהן אביבה 64 דלקת ריאות | מצב יציב | תורן: בדיקת דם בערב | מחר: צילום חזה
+52/2 גולדנברג צפורה 93 CHF | | תורן: | מחר:
+53/1 בן פורת שלום 100 UTI DNR | | תורן: | מחר:
 
 ניטור
-ניטור 1 קרצר גרי 85 ... | | תורן: תרביות דם בערב | מחר:
-ניטור 3 קין מרדכי 79 ... | | תורן: | מחר:
+ניטור 1 קרצר גרי 85 SEPSIS | BiPAP | תורן: תרביות דם בערב; ABG | מחר:
+ניטור 3 קין מרדכי 79 AKI | | תורן: | מחר:
 
 Rules:
 - room: e.g. 57/1, 49-3, ניטור 1, ניטור 3
 - full_name: Hebrew name as written
 - age: number only
-- diagnosis: as written, keep English medical terms
-- status_flags: DNR, DNI, NPO, BIPAP, ISOLATION, etc. if present
+- diagnosis: as written, keep English medical terms (CHF, UTI, COPD, AKI, etc.)
+- status_flags: DNR, DNI, NPO, BIPAP, ISOLATION, FALL, MRSA, etc. if present
 - תורן: ONLY tasks for the on-call doctor tonight
 - מחר: plans for morning team
-- Use | to separate segments
+- Use | to separate segments. Use ; to separate multiple items within a segment.
+- If a cell is empty, still include the | separator with empty content
 - Output ONLY the structured text, no explanations, no markdown
+- Output ALL patients visible on the page — do not skip any rows
 `;
 interface ClaudeAPIResponse {
   content: Array<{ type: string; text?: string }>;
@@ -180,7 +202,7 @@ async function runClaudeOCR(file: File, apiKey: string): Promise<string> {
     .join("\n");
 }
 
-// Resize + compress image to stay under Anthropic's 5MB base64 limit
+// Resize + compress + sharpen image for optimal OCR accuracy
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -196,7 +218,17 @@ function fileToBase64(file: File): Promise<string> {
       canvas.height = height;
       const ctx = canvas.getContext("2d");
       if (!ctx) { reject(new Error("Failed to get canvas 2D context")); return; }
+
+      // Draw base image
       ctx.drawImage(img, 0, 0, width, height);
+
+      // Apply light sharpening via unsharp mask for OCR clarity
+      // Boost contrast slightly — helps with faded printouts and phone photos
+      ctx.filter = "contrast(1.15) brightness(1.02)";
+      ctx.globalCompositeOperation = "source-over";
+      ctx.drawImage(canvas, 0, 0);
+      ctx.filter = "none";
+
       URL.revokeObjectURL(url);
       const dataUrl = canvas.toDataURL("image/jpeg", IMAGE_JPEG_QUALITY);
       resolve(dataUrl.split(",")[1]);

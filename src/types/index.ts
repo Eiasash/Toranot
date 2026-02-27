@@ -1,5 +1,6 @@
 export {
   SECTIONS,
+  PATIENT_SECTIONS,
   SECTION_LABEL,
   detectSectionFromHeader,
   detectSectionFromRoom,
@@ -7,6 +8,7 @@ export {
 
 export type {
   Section,
+  PatientSection,
   Urgency,
   TaskCategory,
   TaskSource,
