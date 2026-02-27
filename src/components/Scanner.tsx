@@ -26,64 +26,53 @@ type ScanState =
   | { step: "done"; imageUrl: string; text: string }
   | { step: "error"; message: string };
 
-const OCR_PROMPT = `You are reading a Hebrew geriatrics ward shift sheet (דף תורן גריאטריה).
+const OCR_PROMPT = `You are reading a Hebrew hospital ward sheet. It may be a printed table, a handwritten list, a typed document, or any other format used in Israeli hospitals.
 
-CRITICAL: The ward has 5 SECTIONS. Identify the section from the PAGE TITLE at the top:
-- "דף תורן גריאטריה צד א" or "גריאטריה (א)" or "צד א" = צד א (Side A)
-- "גריאטריה (ב)" or "צד ב" = צד ב (Side B)
-- "גריאטריה (ג)" or "צד ג" = צד ג (Side C)
-- "שיקום" = שיקום (Rehab)
-- "ניטור" = ניטור (Monitor/ICU)
+YOUR JOB: Extract every patient visible on the page into a structured text format. Adapt to whatever layout you see.
 
-IMPORTANT: Room numbers (49-70) appear in MULTIPLE sections! Rooms like "ניטור 1", "ניטור 3" in the table belong to the ניטור sub-section but the regular room numbers (49/2, 53/1, etc.) belong to the section indicated in the page title.
+SECTION DETECTION:
+Look for any indication of ward section in headers, titles, or annotations:
+- צד א / גריאטריה (א) / Side A → output "צד א"
+- צד ב / גריאטריה (ב) / Side B → output "צד ב"  
+- צד ג / גריאטריה (ג) / Side C → output "צד ג"
+- שיקום / Rehab → output "שיקום"
+- ניטור / Monitor / ICU → output "ניטור"
+- If no section is identifiable, output "צד א" as default.
+- If multiple sections appear on one page, output each header before its patients.
 
-TABLE STRUCTURE:
-The sheet is typically a table with columns. Common column headers include:
-- חדר/מיטה (Room/Bed) — always the leftmost or rightmost column
-- שם (Name) + גיל (Age) or combined
-- אבחנה (Diagnosis) — medical condition
-- תורן (On-call doctor tasks) — CRITICAL: extract these carefully
-- מחר / הערות (Tomorrow / Notes)
-- Flags may appear as stamps, annotations, or text: DNR, DNI, NPO, ISO, FALL, MRSA, BiPAP
+WHAT TO EXTRACT PER PATIENT:
+- Room/bed number (any format: 49/2, 49-3, ניטור 1, bed 3, חדר 12, etc.)
+- Full name (Hebrew as written)
+- Age (number)
+- Diagnosis (keep English medical terms: CHF, UTI, COPD, AKI, PNEUMONIA, etc.)
+- Flags: DNR, DNI, NPO, ISO, FALL, MRSA, BiPAP, CPAP, etc.
+- On-call tasks: items explicitly assigned to תורן / on-call / tonight's doctor
+- Tomorrow plans: items marked מחר / morning / tomorrow
+- Everything else: status notes, general plans, nursing observations
 
-OCR RECOVERY RULES:
-- If text is partially occluded or blurry, make your best guess based on medical context
-- Room numbers like "49/2" may OCR as "49|2" or "49\\2" — normalize to "49/2"
-- Hebrew names may have minor OCR errors — preserve as-is, do not guess corrections
-- Medical abbreviations should be kept in English: CT, MRI, ABG, BiPAP, CPAP, IV, PO, NPO
-- Numbers that look like ages (50-110) adjacent to Hebrew names are ages
-- "ד\\"ר" or "דר" = doctor reference, not patient data
+CRITICAL DISTINCTION — תורן vs everything else:
+- ONLY items explicitly written under a "תורן" column or clearly marked as on-call tasks go after "תורן:"
+- Morning team work, general plans, nursing tasks, pending consultations NOT marked for tonight → put after the last | as general notes
+- When in doubt, do NOT put it under תורן:
 
-OUTPUT FORMAT:
-1. First, output the main section header based on page title (צד א / צד ב / צד ג / שיקום)
-2. List all regular room patients under that section
-3. If there are ניטור rooms on the page, output "ניטור" header then list those patients
+OUTPUT FORMAT (one line per patient):
+ROOM NAME AGE DIAGNOSIS FLAGS | STATUS/NOTES | תורן: ON_CALL_TASKS | מחר: TOMORROW
 
-Each patient line format:
-ROOM NAME AGE DIAGNOSIS FLAGS | STATUS_NOTES | תורן: TASKS | מחר: TOMORROW_PLANS
-
-Example - if page title is "גריאטריה (ב) - 16/02/2026":
+Example:
 צד ב
-49/2 כהן אביבה 64 דלקת ריאות | מצב יציב | תורן: בדיקת דם בערב | מחר: צילום חזה
-52/2 גולדנברג צפורה 93 CHF | | תורן: | מחר:
-53/1 בן פורת שלום 100 UTI DNR | | תורן: | מחר:
+49/2 כהן אביבה 64 דלקת ריאות | מצב יציב; BiPAP | תורן: תרביות דם בערב; ABG | מחר: צילום חזה
+52/2 גולדנברג צפורה 93 CHF DNR | | תורן: | מחר:
 
-ניטור
-ניטור 1 קרצר גרי 85 SEPSIS | BiPAP | תורן: תרביות דם בערב; ABG | מחר:
-ניטור 3 קין מרדכי 79 AKI | | תורן: | מחר:
-
-Rules:
-- room: e.g. 57/1, 49-3, ניטור 1, ניטור 3
-- full_name: Hebrew name as written
-- age: number only
-- diagnosis: as written, keep English medical terms (CHF, UTI, COPD, AKI, etc.)
-- status_flags: DNR, DNI, NPO, BIPAP, ISOLATION, FALL, MRSA, etc. if present
-- תורן: ONLY tasks for the on-call doctor tonight
-- מחר: plans for morning team
-- Use | to separate segments. Use ; to separate multiple items within a segment.
-- If a cell is empty, still include the | separator with empty content
-- Output ONLY the structured text, no explanations, no markdown
-- Output ALL patients visible on the page — do not skip any rows
+OCR RECOVERY:
+- Room "49|2" or "49\\2" → normalize to "49/2"
+- Keep English medical abbreviations as-is: CT, MRI, ABG, BiPAP, IV, NPO
+- Ages are numbers 0-120 next to Hebrew names
+- "ד\\"ר" / "דר" = doctor reference, not patient data
+- If text is blurry, guess based on medical context
+- Use | between segments, ; between items within a segment
+- If a segment is empty, still write the | separator
+- Output ALL patients on the page — do not skip any rows
+- Output ONLY structured text. No markdown, no explanations.
 `;
 interface ClaudeAPIResponse {
   content: Array<{ type: string; text?: string }>;

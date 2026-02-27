@@ -17,7 +17,7 @@ function makeManualTask(text: string): Task {
 }
 
 const SCAN_TEXT = `צד א
-101 כהן יוסף 72 דלקת ריאות | בדיקת דם בבוקר
+101 כהן יוסף 72 דלקת ריאות | תורן: בדיקת דם בבוקר
 102 לוי שרה 65 אי ספיקת לב`;
 
 describe("mergeScan", () => {

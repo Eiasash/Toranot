@@ -82,21 +82,28 @@ describe("parsePatientList", () => {
   });
 
   describe("task extraction", () => {
-    it("extracts tasks with source='extracted'", () => {
-      const result = parsePatientList("101 כהן יוסף 72 | בדיקת דם בבוקר");
+    it("extracts tasks with source='extracted' via תורן: prefix", () => {
+      const result = parsePatientList("101 כהן יוסף 72 | תורן: בדיקת דם בבוקר");
       expect(result).toHaveLength(1);
       expect(result[0].tasks).toHaveLength(1);
       expect(result[0].tasks[0].source).toBe("extracted");
       expect(result[0].tasks[0].text).toBe("בדיקת דם בבוקר");
     });
 
-    it('recognizes "BS בערב" as a task', () => {
-      const result = parsePatientList("101 כהן יוסף 72 | BS בערב");
+    it('recognizes "BS בערב" as a task via תורן:', () => {
+      const result = parsePatientList("101 כהן יוסף 72 | תורן: BS בערב");
       expect(result).toHaveLength(1);
       expect(result[0].tasks).toHaveLength(1);
       expect(result[0].tasks[0].text).toBe("BS בערב");
       expect(result[0].tasks[0].category).toBe("procedure");
       expect(result[0].tasks[0].source).toBe("extracted");
+    });
+
+    it("items without תורן: prefix go to planNotes, not tasks", () => {
+      const result = parsePatientList("101 כהן יוסף 72 | בדיקת דם בבוקר");
+      expect(result).toHaveLength(1);
+      expect(result[0].tasks).toHaveLength(0);
+      expect(result[0].planNotes).toContain("בדיקת דם בבוקר");
     });
 
     it("generated tasks have source='generated'", () => {
@@ -177,29 +184,27 @@ describe("parsePatientList", () => {
   });
 
   describe("task categorization", () => {
-    it("classifies CT/US as imaging", () => {
-      const result = parsePatientList("101 כהן יוסף 72 | CT חזה");
+    it("classifies CT/US as imaging via תורן:", () => {
+      const result = parsePatientList("101 כהן יוסף 72 | תורן: CT חזה");
       const task = result[0].tasks[0];
       expect(task.category).toBe("imaging");
     });
 
-    it("classifies בדיקת דם as labs", () => {
-      const result = parsePatientList("101 כהן יוסף 72 | בדיקת דם בבוקר");
+    it("classifies בדיקת דם as labs via תורן:", () => {
+      const result = parsePatientList("101 כהן יוסף 72 | תורן: בדיקת דם בבוקר");
       const task = result[0].tasks[0];
       expect(task.category).toBe("labs");
     });
 
     it("classifies שחרור via תורן column label as discharge", () => {
-      // "מכתב שחרור" alone doesn't match the task-detection heuristic,
-      // but using the תורן: prefix forces it through as a task
       const result = parsePatientList("101 כהן יוסף 72 | תורן: מכתב שחרור");
       const task = result[0].tasks.find((t) => t.text === "מכתב שחרור");
       expect(task).toBeDefined();
       expect(task!.category).toBe("discharge");
     });
 
-    it("classifies ייעוץ as consult", () => {
-      const result = parsePatientList("101 כהן יוסף 72 | ייעוץ קרדיולוגיה");
+    it("classifies ייעוץ as consult via תורן:", () => {
+      const result = parsePatientList("101 כהן יוסף 72 | תורן: ייעוץ קרדיולוגיה");
       const task = result[0].tasks[0];
       expect(task.category).toBe("consult");
     });
@@ -323,10 +328,16 @@ describe("parsePatientList", () => {
       expect(result[0].tomorrowNotes).toEqual([]);
     });
 
-    it("strong orders (CT/US/MRI) do NOT route to planNotes", () => {
+    it("strong orders without תורן: route to planNotes (not tasks)", () => {
       const result = parsePatientList("101 כהן יוסף 72 | CT חזה");
+      expect(result[0].planNotes).toContain("CT חזה");
+      expect(result[0].tasks).toHaveLength(0);
+    });
+
+    it("strong orders WITH תורן: become tasks", () => {
+      const result = parsePatientList("101 כהן יוסף 72 | תורן: CT חזה");
+      expect(result[0].tasks).toHaveLength(1);
       expect(result[0].planNotes).toEqual([]);
-      expect(result[0].tasks.length).toBeGreaterThan(0);
     });
 
     it("דחוף prevents routing to planNotes", () => {

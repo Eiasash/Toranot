@@ -277,23 +277,20 @@ function parsePatientLine(
       continue;
     }
 
-    // Actionable task heuristic
-    const isTask =
-      /(?:בדיק|ב"ד|CT|US|\bBS\b|Bladder\s*Scan|תור |לתת |להזמין|לבצע|למדוד|לשלוח|טיפול|ניקוז|עירוי|צילום|דימות|ייעוץ|שיחה|א\.?ק\.?ג)/i.test(
+    // ──────────────────────────────────────────────────────────────
+    // GOLDEN RULE: Only explicitly marked תורן: items become tasks.
+    // Everything else is informational (planNotes or status).
+    // This prevents morning-team orders, nursing tasks, and general
+    // plans from cluttering the on-call task list.
+    // ──────────────────────────────────────────────────────────────
+
+    // If it looks like a clinical order/action but wasn't under תורן: → planNotes
+    const looksActionable =
+      /(?:בדיק|ב"ד|CT|US|\bBS\b|Bladder\s*Scan|תור |לתת |להזמין|לבצע|למדוד|לשלוח|טיפול|ניקוז|עירוי|צילום|דימות|ייעוץ|שיחה|א\.?ק\.?ג|ABG|BiPAP|CPAP|גזים|אנטיביוטיקה)/i.test(
         part,
       );
-    if (isTask) {
-      tasks.push({
-        id: generateId("task-"),
-        text: part,
-        urgency: detectUrgency(part),
-        category: classifyTaskCategory(part),
-        source: "extracted",
-        done: false,
-        doneTime: null,
-        time: extractTime(part),
-        confidence: 0.8,
-      });
+    if (looksActionable) {
+      planNotes.push(part);
     } else {
       status.push(part);
     }
