@@ -359,11 +359,12 @@ const RULES: Rule[] = [
       // ── PHARMACOTHERAPY LADDER (if agitated + danger) ──
       { text: "📋 סולם טיפול אגיטציה (מהקל לכבד):", urgency: "urgent", category: "meds" },
       { text: "1️⃣ Quetiapine 12.5-25mg PO (בטוח בפרקינסון/DLB)", urgency: "urgent", category: "meds" },
-      { text: "2️⃣ Haloperidol 0.5mg PO/IV (❌ לא בפרקינסון/DLB, בדוק QTc)", urgency: "urgent", category: "meds" },
+      { text: "2️⃣ Haloperidol 0.5mg IM (❌ לא בפרקינסון/DLB, בדוק QTc)", urgency: "urgent", category: "meds" },
       { text: "3️⃣ Olanzapine 2.5mg PO/IM (חלופה אם QTc ארוך)", urgency: "urgent", category: "meds" },
-      { text: "4️⃣ אגיטציה קשה → Haloperidol 0.5mg IV + חזור q30min (max 3mg/24h)", urgency: "stat", category: "meds" },
+      { text: "4️⃣ אגיטציה קשה → Haloperidol 0.5mg IM + חזור q30min (max 3mg/24h)", urgency: "stat", category: "meds" },
+      { text: "5️⃣ רפרקטורי / סכנה מיידית → Lorazepam 1mg IV (חריג! בנזו מחמיר דליריום)", urgency: "stat", category: "meds" },
       { text: "🌙 לילה: Trazodone 25-50mg PO / Melatonin 3mg (שיקום שינה)", urgency: "routine", category: "meds" },
-      { text: "❌❌ לא בנזודיאזפינים! (מחמיר דליריום — חריג: גמילה מאלכוהול/בנזו)", urgency: "stat", category: "meds" },
+      { text: "⚠️ בנזו רק כמוצא אחרון / גמילה מאלכוהול — לא כקו ראשון!", urgency: "stat", category: "meds" },
     ],
   },
 
@@ -381,7 +382,7 @@ const RULES: Rule[] = [
       { text: "א.ק.ג לפני ואחרי מתן — QTc >500ms → STOP", urgency: "stat", category: "procedure" },
       { text: "ניטור EPS: נוקשות, טרמור, אקתיזיה, דיסטוניה", urgency: "urgent", category: "other" },
       { text: "❌ אם פרקינסון/DLB → החלף ל-Quetiapine 12.5-25mg", urgency: "stat", category: "meds" },
-      { text: "מינון קשישים: 0.5-1mg PO/IV. ❌ לא >3mg/24h", urgency: "routine", category: "meds" },
+      { text: "מינון קשישים: 0.5mg IM (PO אם משתף פעולה). ❌ לא >3mg/24h", urgency: "routine", category: "meds" },
     ],
   },
 

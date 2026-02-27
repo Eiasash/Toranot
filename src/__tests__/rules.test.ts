@@ -509,10 +509,27 @@ describe("rules engine — all rules", () => {
       expect(generatedSources(tasks)).toContain("דליריום");
     });
 
+    it("includes lorazepam IV as last-resort rescue", () => {
+      const tasks = applyRules(makePatient({ status: ["דליריום"] }));
+      expect(tasks.some(t => t.text.includes("Lorazepam 1mg IV"))).toBe(true);
+    });
+
+    it("haloperidol is IM only (no IV)", () => {
+      const tasks = applyRules(makePatient({ status: ["דליריום"] }));
+      const haldolTasks = tasks.filter(t => t.text.includes("Haloperidol"));
+      expect(haldolTasks.every(t => t.text.includes("IM"))).toBe(true);
+      expect(haldolTasks.some(t => t.text.includes("IV"))).toBe(false);
+    });
+
+    it("triggers on sundowning", () => {
+      const tasks = applyRules(makePatient({ status: ["sundowning"] }));
+      expect(generatedSources(tasks)).toContain("דליריום");
+    });
+
     it("generates 13 delirium tasks (workup + non-pharm + treatment ladder)", () => {
       const tasks = applyRules(makePatient({ status: ["דליריום"] }));
       const delTasks = tasks.filter((t) => t.generatedFrom === "דליריום");
-      expect(delTasks).toHaveLength(13);
+      expect(delTasks).toHaveLength(14);
     });
   });
 
