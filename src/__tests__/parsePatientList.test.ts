@@ -403,4 +403,92 @@ describe("parsePatientList", () => {
       }
     });
   });
+
+  describe("orphan line attachment", () => {
+    it("orphan ABG attaches to next patient", () => {
+      const result = parsePatientList(`צד א
+55/3 לידר נחמה 84 PNEUMONIA
+ABG
+56/1 עשור סוזנה 83 SEPTIC SHOCK`);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].tasks.some((t) => /ABG/i.test(t.text))).toBe(false);
+      expect(result[1].tasks.some((t) => /ABG/i.test(t.text))).toBe(true);
+    });
+
+    it("orphan BiPAP attaches to next patient", () => {
+      const result = parsePatientList(`צד א
+55/3 לידר נחמה 84 PNEUMONIA
+BiPAP
+56/1 עשור סוזנה 83 SEPTIC SHOCK`);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].tasks.some((t) => /BiPAP/i.test(t.text))).toBe(false);
+      expect(result[1].tasks.some((t) => /BiPAP/i.test(t.text))).toBe(true);
+    });
+
+    it("orphan מנת דם attaches to next patient", () => {
+      const result = parsePatientList(`צד א
+55/3 לידר נחמה 84 PNEUMONIA
+מנת דם
+56/1 עשור סוזנה 83 SEPTIC SHOCK`);
+
+      expect(result).toHaveLength(2);
+      expect(result[1].tasks.some((t) => /מנת דם/i.test(t.text))).toBe(true);
+    });
+
+    it("orphan סטורציה attaches to next patient", () => {
+      const result = parsePatientList(`צד א
+55/3 לידר נחמה 84 PNEUMONIA
+סטורציה
+56/1 עשור סוזנה 83 SEPTIC SHOCK`);
+
+      expect(result).toHaveLength(2);
+      expect(result[1].tasks.some((t) => /סטורציה/.test(t.text))).toBe(true);
+    });
+
+    it("orphan before first patient attaches to first patient", () => {
+      const result = parsePatientList(`צד א
+ABG
+55/3 לידר נחמה 84 PNEUMONIA`);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].tasks.some((t) => /ABG/i.test(t.text))).toBe(true);
+    });
+
+    it("long non-patient lines are NOT treated as orphans", () => {
+      const result = parsePatientList(`צד א
+55/3 לידר נחמה 84 PNEUMONIA
+הערה ארוכה מאוד שלא אמורה להידבק לחולה הבא כי היא לא תבנית מוכרת
+56/1 עשור סוזנה 83 SEPTIC SHOCK`);
+
+      expect(result).toHaveLength(2);
+      // Long line should not attach as task to second patient
+      expect(result[1].tasks.length).toBe(0);
+    });
+
+    it("section header clears pending orphans", () => {
+      const result = parsePatientList(`צד א
+55/3 לידר נחמה 84 PNEUMONIA
+ABG
+צד ב
+56/1 עשור סוזנה 83 SEPTIC SHOCK`);
+
+      expect(result).toHaveLength(2);
+      // ABG was before a section header — should be discarded, not attached to צד ב patient
+      expect(result[1].tasks.some((t) => /ABG/i.test(t.text))).toBe(false);
+    });
+
+    it("multiple orphans all attach to next patient", () => {
+      const result = parsePatientList(`צד א
+55/3 לידר נחמה 84 PNEUMONIA
+ABG
+BS
+56/1 עשור סוזנה 83 SEPTIC SHOCK`);
+
+      expect(result).toHaveLength(2);
+      expect(result[1].tasks.some((t) => /ABG/i.test(t.text))).toBe(true);
+      expect(result[1].tasks.some((t) => /BS/i.test(t.text))).toBe(true);
+    });
+  });
 });

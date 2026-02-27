@@ -34,6 +34,48 @@ const TIME_PATTERN = /\b(\d{1,2}:\d{2})\b/;
 // but NOT inside longer words like "מחרוזת".
 const MACHAR_WORD = /(^|[\s,;•\-\(\)\[\]])מחר(?=$|[\s,;•:.\-!\?\)\]\(])/;
 
+// Orphan line matcher: short lines that appear between patient rows in OCR output.
+// These are typically left-column artifacts (ABG, BiPAP, blood products, vitals)
+// that belong to the NEXT patient in the list. Only used when the line:
+//   (a) does NOT parse as a patient row, (b) is short (<=35 chars),
+//   (c) matches this pattern, and (d) is followed by a valid patient line.
+const ORPHAN_TO_NEXT_PATIENT_PATTERN = new RegExp(
+  [
+    // Blood products / transfusion
+    String.raw`מנת\s*דם`,
+    String.raw`עירוי`,
+    String.raw`transfusion`,
+    String.raw`\bPRBC\b`,
+    String.raw`\bFFP\b`,
+    String.raw`\bRBC\b`,
+    String.raw`טסיות`,
+    String.raw`\bplatelets?\b`,
+
+    // Respiratory / ABG / oxygen support
+    String.raw`\bABG\b`,
+    String.raw`גזים`,
+    String.raw`גזים\s*דם`,
+    String.raw`סטורציה`,
+    String.raw`\bBiPAP\b`,
+    String.raw`\bCPAP\b`,
+    String.raw`חמצן`,
+    String.raw`שקילה\s*סטורציה`,
+
+    // Common nursing/monitoring fragments that appear alone
+    String.raw`דם\s*ו(?:שתן|סטיק)`,
+    String.raw`מדדים`,
+    String.raw`לחץ\s*דם`,
+    String.raw`סוכר`,
+    String.raw`\bBS\b`,
+    String.raw`Bladder\s*Scan`,
+
+    // Diuretics that often appear as orphan notes
+    String.raw`פוסיד`,
+    String.raw`\bLasix\b`,
+  ].join("|"),
+  "i"
+);
+
 const PLAN_DAY_REF_PATTERN =
   /\b(?:ביום\s*[א-ת]|ביום\s*(?:ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)|(?:ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת))\b/;
 
@@ -145,6 +187,12 @@ function parsePatientLine(
     idx++;
   }
   const name = nameTokens.length > 0 ? nameTokens.join(" ") : null;
+
+  // A valid patient line needs at least a room or a name.
+  // Lines like "ABG" or "BiPAP" have neither — they're orphan fragments, not patients.
+  // Lines with only a Hebrew name but no room (like "מנת דם", "סטורציה") are also
+  // not real patients — in OCR ward lists, every patient has a room number.
+  if (!room) return null;
 
   // Next token: age?
   let age: number | null = null;
@@ -296,6 +344,10 @@ export function parsePatientList(text: string): PatientEntry[] {
   const today = new Date();
   const date = `${String(today.getDate()).padStart(2, "0")}/${String(today.getMonth() + 1).padStart(2, "0")}/${today.getFullYear()}`;
 
+  // Buffer for orphan lines (short non-patient lines between patient rows).
+  // Flushed into the NEXT patient that successfully parses.
+  const pendingOrphans: string[] = [];
+
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed) continue;
@@ -304,14 +356,40 @@ export function parsePatientList(text: string): PatientEntry[] {
     const section = isSectionHeader(trimmed);
     if (section) {
       currentSection = section;
+      // Section headers discard pending orphans (they belong to the previous section)
+      pendingOrphans.length = 0;
       continue;
     }
 
-    // Try to parse as patient line
+    // Try to parse as patient line first
     const patient = parsePatientLine(trimmed, currentSection, date);
     if (patient) {
+      // Flush any pending orphan lines into this patient as tasks
+      for (const orphan of pendingOrphans) {
+        patient.tasks.push({
+          id: generateId("task-"),
+          text: orphan,
+          urgency: detectUrgency(orphan),
+          category: classifyTaskCategory(orphan),
+          source: "extracted",
+          done: false,
+          doneTime: null,
+          time: extractTime(orphan),
+          confidence: 0.7,
+        });
+      }
+      pendingOrphans.length = 0;
+
       patient.order = patients.length;
       patients.push(patient);
+    } else {
+      // Line didn't parse as patient — check if it's a short orphan fragment
+      // (ABG, BiPAP, מנת דם, etc.) that belongs to the next patient.
+      const looksShort = trimmed.length <= 35;
+      if (looksShort && ORPHAN_TO_NEXT_PATIENT_PATTERN.test(trimmed)) {
+        pendingOrphans.push(trimmed);
+      }
+      // else: silently drop (noise, long paragraphs, unknown lines)
     }
   }
 
