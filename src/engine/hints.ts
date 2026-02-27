@@ -314,6 +314,332 @@ const HINT_RULES: HintRule[] = [
       ],
     },
   },
+
+  // ═══ PNEUMONIA / ASPIRATION ═══
+  {
+    trigger: /pneumonia|דלקת ריאות|aspiration|שאיפת|ASP\b|LRTI|CAP\b|HAP\b|VAP\b/i,
+    hint: {
+      emoji: "🫁",
+      title: "דלקת ריאות — הנחיות רקע",
+      tips: [
+        "ודא ABx ניתנים בזמן — בדוק שעת מתן אחרונה",
+        "אם aspiration — NPO / הגבלת PO? ודא הערכת בליעה",
+        "ראש מיטה ≥30° (מניעת aspiration חוזרת)",
+        "SpO2 יעד — 92-96% (88-92% אם COPD)",
+        "סימני הידרדרות: RR>25, SpO2 יורד, שינוי הכרה",
+        "אם אין שיפור ב-48-72h → שקול הרחבת טווח / הדמיה חוזרת",
+      ],
+    },
+  },
+
+  // ═══ UTI / CATHETER ═══
+  {
+    trigger: /UTI|דלקת.*שתן|urinary.*infect|זיהום.*שתן|CAUTI|קטטר\s*(?:שתן|קבוע)|foley|catheter/i,
+    hint: {
+      emoji: "🚽",
+      title: "UTI / קטטר — הנחיות רקע",
+      tips: [
+        "קטטר → שאל: עדיין נדרש? הסר מוקדם ככל האפשר (CAUTI)",
+        "אם קטטר >48h + חום → תרבית שתן דרך פורט, לא מהשקית",
+        "bacteriuria בלי תסמינים = אל תטפל (בזקנים: שינוי הכרה יכול להיות UTI)",
+        "אם UTI חוזרת → שקול US כליות, שארית שתן",
+      ],
+    },
+  },
+
+  // ═══ AKI ═══
+  {
+    trigger: /AKI|acute kidney|אי.?ספיקת כליות חריפה|Cr.*עלייה|creatinine.*ris/i,
+    hint: {
+      emoji: "⚠️",
+      title: "AKI — הנחיות רקע",
+      tips: [
+        "בדוק Pre-renal (ירידה בנפח) vs Renal vs Post-renal (חסימה)",
+        "I/O — עקוב שתן q1-2h. אם <0.5ml/kg/h → fluid challenge",
+        "עצור nephrotoxins: NSAIDs, aminoglycosides, ACEi/ARB, contrast",
+        "בדוק K+ — אם >5.5 → פרוטוקול היפרקלמיה",
+        "US כליות ודרכי שתן — שלילת חסימה (במיוחד בזקנים עם BPH)",
+        "התאמת מינונים לפי GFR מעודכן",
+      ],
+    },
+  },
+
+  // ═══ SEPSIS ═══
+  {
+    trigger: /sepsis|ספסיס|SIRS|זיהום.*חמור|bacteremia|בקטרמיה|ספטי/i,
+    hint: {
+      emoji: "🔴",
+      title: "ספסיס — הנחיות רקע",
+      tips: [
+        "ABx תוך שעה מזיהוי — ודא שניתנו. אם לא, דחוף!",
+        "קריסטלואידים 30ml/kg אם hypotension — אלא אם CHF/overload",
+        "לקטט q4-6h — יעד clearance (ירידה >10%)",
+        "אם MAP <65 אחרי נוזלים → vasopressors (קו מרכזי)",
+        "I/O — target UO ≥0.5ml/kg/h",
+        "מעקב אורגן: Cr, biluribin, platelets, lactate, mental status",
+      ],
+    },
+  },
+
+  // ═══ FALLS ═══
+  {
+    trigger: /נפילה|fall\b|נפל|סיכון ליפול|fall risk/i,
+    hint: {
+      emoji: "⚡",
+      title: "נפילה / סיכון נפילות — הנחיות רקע",
+      tips: [
+        "אם נפילה חדשה → בדוק ראש (GCS, pupil), סימני שבר",
+        "אם על anticoagulation + נפילה + חבלת ראש → CT head",
+        "סקור תרופות: benzos, opioids, antihypertensives, hypoglycemics",
+        "orthostatic BP — ירידה >20 systolic = positive",
+        "מניעה: נעליים סגורות, פעמון בהישג, תאורת לילה, מעקה",
+        "שקול vitamin D 800-1000 IU/d + הערכת צפיפות עצם",
+      ],
+    },
+  },
+
+  // ═══ HYPONATREMIA ═══
+  {
+    trigger: /hyponatremia|היפונתרמיה|Na.*נמוך|Na\+?\s*<\s*13[0-5]/i,
+    hint: {
+      emoji: "🧂",
+      title: "היפונתרמיה — הנחיות רקע",
+      tips: [
+        "Na q4-6h — יעד תיקון ≤10 mEq/24h (סכנת ODS!)",
+        "הערך volume status: יתר נוזלים? חוסר? euvolemic?",
+        "בדוק: serum osm, urine osm, urine Na → SIADH vs cerebral salt wasting",
+        "סקור תרופות: thiazides, SSRIs, carbamazepine, desmopressin",
+        "אם Na <120 + סימפטומטי (פרכוס, בלבול) → NaCl 3% 100ml over 10min",
+        "הגבלת נוזלים — בדוק אם יש הוראה ומה היעד",
+      ],
+    },
+  },
+
+  // ═══ HYPERKALEMIA ═══
+  {
+    trigger: /hyperkalemia|היפרקלמיה|K\+?\s*>\s*5\.?[5-9]|אשלגן.*גבוה/i,
+    hint: {
+      emoji: "⚡",
+      title: "היפרקלמיה — הנחיות רקע",
+      tips: [
+        "ECG מיידי — חפש peaked T, wide QRS, sine wave",
+        "אם K >6.5 או שינויי ECG → calcium gluconate 10% IV (הגנת לב)",
+        "הורדה: insulin 10U + D50% 50ml IV, salbutamol nebulizer 10mg",
+        "הפרשה: kayexalate 30g PO/PR, furosemide אם יש שתן",
+        "עצור: ACEi/ARB, K-sparing diuretics, K supplements",
+        "אם אנוריה + K >6.5 → שקול דיאליזה חירום",
+      ],
+    },
+  },
+
+  // ═══ DELIRIUM (as hint — supplements the rule) ═══
+  {
+    trigger: /דליריום|delirium|בלבול חריף|acute confusion|sundowning/i,
+    hint: {
+      emoji: "🌙",
+      title: "דליריום — הנחיות רקע",
+      tips: [
+        "דליריום = חירום רפואי — תמיד חפש סיבה (זיהום, תרופות, מטבולי, אצירה)",
+        "המצב הקוגניטיבי הבסיסי הוא המפתח — שאל צוות/משפחה מה הבסיס",
+        "אמצעים לא תרופתיים קודם תמיד: משקפיים, שמיעה, שעון, אור, משפחה",
+        "הימנע קשירה — מחמיר אגיטציה ודליריום",
+        "בנזודיאזפינים מחמירים דליריום (חריג: גמילת אלכוהול)",
+        "זכור hypoactive delirium — רגוע אבל מבולבל, מסוכן לא פחות",
+      ],
+    },
+  },
+
+  // ═══ C.DIFF ═══
+  {
+    trigger: /C\.?\s*diff|clostridium|clostridioides|קלוסטרידיום|שלשול.*ABx|antibiotic.*diarrhea/i,
+    hint: {
+      emoji: "🦠",
+      title: "C. difficile — הנחיות רקע",
+      tips: [
+        "בידוד מגע — כפפות + חלוק + חדר בודד",
+        "אלכוג'ל לא מספיק — רחיצת ידיים עם מים וסבון!",
+        "אם מאובחן → Vancomycin PO 125mg q6h (לא metronidazole כקו ראשון)",
+        "הפסק ABx מיותר ככל האפשר — זה הגורם הראשי",
+        "אם fulminant (megacolon, shock) → Vanco PO + Metro IV + ייעוץ כירורגי",
+      ],
+    },
+  },
+
+  // ═══ MRSA / VRE / MDR ISOLATION ═══
+  {
+    trigger: /MRSA|VRE|ESBL|CRE|MDR|CPE|isolation|בידוד|עמיד/i,
+    hint: {
+      emoji: "🛡️",
+      title: "חיידק עמיד / בידוד — הנחיות רקע",
+      tips: [
+        "ודא סוג בידוד: מגע? טיפות? אוויר?",
+        "כפפות + חלוק לפני כניסה, הסר לפני יציאה",
+        "ציוד ייעודי בחדר (סטטוסקופ, BP cuff)",
+        "MRSA → שקול mupirocin nasal decolonization אם pre-op",
+        "VRE / CRE → אל תשתמש ב-vancomycin אמפירי אם VRE, בדוק רגישויות",
+      ],
+    },
+  },
+
+  // ═══ NIV / BiPAP / CPAP ═══
+  {
+    trigger: /BiPAP|CPAP|NIV|NIPPV|non.?invasive.*ventil|הנשמה.*לא.*פולשנית/i,
+    hint: {
+      emoji: "😮‍💨",
+      title: "NIV / BiPAP — הנחיות רקע",
+      tips: [
+        "ודא הגדרות: IPAP, EPAP, FiO2, trigger sensitivity",
+        "בדוק התאמת מסכה — דליפה = חוסר יעילות",
+        "גזים אחרי 1-2h — אם אין שיפור → שקול הנשמה",
+        "NPO בזמן BiPAP — סיכון aspiration",
+        "כשל NIV: RR>35, paradoxical breathing, GCS יורד → intubation",
+        "אם DNI — תעד ceiling of care ברור",
+      ],
+    },
+  },
+
+  // ═══ TRACHEOSTOMY ═══
+  {
+    trigger: /trach|טרכיאוסטומ|טרכאוסטומ|קנה ניתוח/i,
+    hint: {
+      emoji: "🫁",
+      title: "טרכיאוסטומיה — הנחיות רקע",
+      tips: [
+        "ציוד חירום ליד המיטה: spare trach (same + one size smaller), obturator, suction",
+        "אם decannulation/obstruction: suction → remove inner cannula → replace → call ENT",
+        "בדוק inner cannula נקי — לפחות q8h",
+        "הרטבה — ודא humidification (HME / heated)",
+        "אם trach <7 ימים — אין להחליף בלי ENT/surgeon",
+      ],
+    },
+  },
+
+  // ═══ ANEMIA / TRANSFUSION ═══
+  {
+    trigger: /אנמיה|anemia|Hb\s*<|hemoglobin.*low|iron defic/i,
+    hint: {
+      emoji: "🩸",
+      title: "אנמיה — הנחיות רקע",
+      tips: [
+        "סף עירוי: Hb <7 (Hb <8 אם cardiac / symptomatic)",
+        "אם אנמיה חדשה → בדוק מקור: GI (guaiac), wound, retroperitoneal",
+        "CBC, retic, LDH, haptoglobin, iron/ferritin/TIBC",
+        "אם על anticoagulation + Hb drop → שקול הפסקה / reversal",
+      ],
+    },
+  },
+
+  // ═══ HYPOTHYROIDISM ═══
+  {
+    trigger: /hypothyroid|תת.?פעילות.*תריס|TSH.*גבוה|levothyroxine|eltroxin|אלטרוקסין/i,
+    hint: {
+      emoji: "🦋",
+      title: "תת-פעילות תריס — הנחיות רקע",
+      tips: [
+        "Eltroxin — תן בבוקר על קיבה ריקה, 30-60 דקות לפני אוכל",
+        "אל תתן עם סידן, ברזל, IPP — הפרש לפחות 4 שעות",
+        "אם NPO → תן IV (70-80% מהמינון PO)",
+        "Myxedema coma (נדיר): hypothermia + bradycardia + altered MS → hydrocortisone + T4 IV",
+      ],
+    },
+  },
+
+  // ═══ DYSPHAGIA / NPO ═══
+  {
+    trigger: /dysphagia|דיספגיה|קושי בבליעה|הפרעת בליעה|NPO.*aspir/i,
+    hint: {
+      emoji: "🥄",
+      title: "דיספגיה — הנחיות רקע",
+      tips: [
+        "NPO עד הערכת בליעה — אם לא בוצעה, סמן לקלינאית תקשורת",
+        "אם מאושר PO — בדוק consistency: רגיל / soft / pureed / thickened liquids",
+        "תרופות — בדוק אם צריך crush או liquid form",
+        "ראש מיטה ≥30° בזמן אכילה + 30 דקות אחרי",
+        "אם aspiration חוזרת → שקול הזנה צינורית (NGT/PEG)",
+      ],
+    },
+  },
+
+  // ═══ OBESITY / DOSING ═══
+  {
+    trigger: /השמנה|obesity|BMI\s*>\s*[34]0|bariatric|morbid/i,
+    hint: {
+      emoji: "⚖️",
+      title: "השמנה — הנחיות רקע",
+      tips: [
+        "מינונים: enoxaparin, aminoglycosides, vancomycin — לפי actual weight",
+        "Adjusted body weight לתרופות ליפופיליות (propofol, benzodiazepines)",
+        "סיכון גבוה ל-DVT — ודא prophylaxis מתאים",
+        "גישה ורידית קשה — שקול US-guided IV / PICC",
+        "BiPAP/CPAP — בדוק אם יש OSA baseline",
+      ],
+    },
+  },
+
+  // ═══ OSTEOPOROSIS / VERTEBRAL FRACTURE ═══
+  {
+    trigger: /אוסטאופורוזיס|osteoporo|שבר.*חוליה|vertebral.*fracture|compression.*fracture/i,
+    hint: {
+      emoji: "🦴",
+      title: "אוסטאופורוזיס — הנחיות רקע",
+      tips: [
+        "ניהול כאב: paracetamol קבוע ± tramadol, הימנע NSAIDs",
+        "מוביליזציה מוקדמת — מנע immobility complications",
+        "Vitamin D + Calcium — ודא שהתחילו/ממשיכים",
+        "אם שבר שברירות חדש → bisphosphonates (לא אם GFR <30)",
+        "סיכון נפילות חוזרות — physio + תיקון גורמים",
+      ],
+    },
+  },
+
+  // ═══ ALCOHOL WITHDRAWAL ═══
+  {
+    trigger: /גמילה.*אלכוהול|alcohol.*withdraw|DTs?(?!\w)|delirium tremens|CIWA/i,
+    hint: {
+      emoji: "🍺",
+      title: "גמילה מאלכוהול — הנחיות רקע",
+      tips: [
+        "בנזודיאזפינים הם הטיפול! (חריג לכלל ה-benzo בדליריום)",
+        "CIWA protocol — score q1-2h, treat if >8",
+        "Diazepam 5-10mg IV/PO q5-15min עד שקט (loading dose)",
+        "Thiamine 500mg IV x3/day × 3 ימים (לפני גלוקוז!)",
+        "סכנת חיים: פרכוסים (12-48h), DTs (48-72h) — ICU אם severe",
+        "מעקב: HR, BP, tremor, diaphoresis, hallucinations",
+      ],
+    },
+  },
+
+  // ═══ CONSTIPATION / ILEUS ═══
+  {
+    trigger: /עצירות|constipation|ileus|אילאוס|חסימת.*מעי|bowel obstruct/i,
+    hint: {
+      emoji: "💩",
+      title: "עצירות / חסימת מעי — הנחיות רקע",
+      tips: [
+        "שאל: מתי יציאה אחרונה? אם >3 ימים → בדוק בטן + DRE",
+        "אם על אופיואידים → bowel protocol חובה (senna + docusate / lactulose)",
+        "הימנע lactulose בחשד חסימה מכנית",
+        "אם distension + הקאות + no flatus → צילום בטן → ייעוץ כירורגי",
+        "הידרציה + מוביליזציה — שני הכלים הלא-תרופתיים הכי חשובים",
+      ],
+    },
+  },
+
+  // ═══ INSULIN / HYPOGLYCEMIA ═══
+  {
+    trigger: /היפוגליקמיה|hypoglycemia|BS\s*<\s*70|סוכר.*נמוך/i,
+    hint: {
+      emoji: "🍬",
+      title: "היפוגליקמיה — הנחיות רקע",
+      tips: [
+        "BS <70 → 15g glucose PO (juice/tablets) + recheck 15min",
+        "BS <54 או altered MS → D50% 50ml IV (=25g glucose)",
+        "אם על sulfonylurea → admission + D10% drip + BS q1h ×24h (long-acting!)",
+        "ודא סיבה: אכל? מינון אינסולין? AKI? liver failure? infection?",
+        "הפחת / בטל insulin/SU עד בירור",
+      ],
+    },
+  },
 ];
 
 /**
@@ -327,6 +653,9 @@ export function generateHints(patient: PatientEntry): ClinicalHint[] {
     ...patient.flags,
     ...patient.status,
     ...(patient.notes ?? []),
+    ...(patient.planNotes ?? []),
+    ...(patient.tomorrowNotes ?? []),
+    ...patient.tasks.map((t) => t.text),
     patient.handoverNote ?? "",
   ].join(" ");
   if (!textToSearch.trim()) return [];

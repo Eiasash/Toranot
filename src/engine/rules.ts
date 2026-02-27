@@ -765,7 +765,7 @@ const RULES: Rule[] = [
     group: "iv_propofol",
     triggerField: "all",
     tasks: [
-      { text: "Sedation score (Ramsay) q2h — target 3-5", urgency: "urgent", category: "procedure" },
+      { text: "הערכת רמת סדציה q2h — תעד תגובתיות", urgency: "urgent", category: "procedure" },
       { text: "TG level q48h if >48h infusion (propofol infusion syndrome)", urgency: "routine", category: "labs" },
       { text: "Change syringe q12h", urgency: "routine", category: "meds" },
     ],
@@ -791,9 +791,9 @@ const RULES: Rule[] = [
     group: "iv_midazolam",
     triggerField: "all",
     tasks: [
-      { text: "Sedation score q2h — target Ramsay 3-4", urgency: "urgent", category: "procedure" },
-      { text: "RR + SpO2 q2h — respiratory depression risk", urgency: "stat", category: "procedure" },
-      { text: "Flumazenil 0.2mg IV bedside (emergency reversal)", urgency: "routine", category: "meds" },
+      { text: "RR + SpO2 q2h — סיכון לדיכוי נשימתי", urgency: "urgent", category: "procedure" },
+      { text: "הערכת רמת הכרה q2h — תעד תגובתיות", urgency: "urgent", category: "procedure" },
+      { text: "⚠️ Flumazenil 0.2mg IV מוכן ליד המיטה (reversal חירום — שימוש רק אם דיכוי נשימתי)", urgency: "routine", category: "meds" },
     ],
   },
 
