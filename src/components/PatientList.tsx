@@ -18,7 +18,7 @@ export function PatientList() {
     } else if (sortMode === "name") {
       sorted.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "", "he"));
     } else {
-      // Deterministic: side (implicit — same section) → room number → bed number
+      // Deterministic: side (implicit — same section) → room number → bed number → order (▲▼ tiebreaker)
       sorted.sort((a, b) => {
         const parseRoom = (r: string | null) => {
           if (!r) return { room: Infinity, bed: Infinity };
@@ -30,7 +30,8 @@ export function PatientList() {
         const ar = parseRoom(a.room);
         const br = parseRoom(b.room);
         if (ar.room !== br.room) return ar.room - br.room;
-        return ar.bed - br.bed;
+        if (ar.bed !== br.bed) return ar.bed - br.bed;
+        return (a.order ?? 0) - (b.order ?? 0);
       });
     }
     return sorted;

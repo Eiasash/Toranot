@@ -66,7 +66,7 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
       })(),
       room: roomStr,
       name: name.trim(),
-      age: undefined,
+      age: null,
       diagnosis: diagnosis.trim(),
       status: status ? [status] : [],
       flags: [],
@@ -79,7 +79,7 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
       scannedAt: new Date().toISOString(),
       confidence: 1,
       order: Date.now(),
-    } as unknown as PatientEntry;
+    } as PatientEntry;
 
     dispatch({ type: "ADD_PATIENT", patient });
     onSuccess?.();
