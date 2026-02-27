@@ -237,11 +237,42 @@ function setTaskNoteInList(tasks: Task[], taskId: string, note: string | null): 
   return tasks.map((t) => (t.id === taskId ? { ...t, note } : t));
 }
 
+/**
+ * Check if a bed is occupied by a different patient.
+ * Two patients collide if they share the same room AND section.
+ * Returns the occupant's id if occupied, null if free.
+ */
+function bedOccupiedBy(
+  patients: PatientEntry[],
+  room: string | null,
+  section: PatientSection,
+  excludeId?: string,
+): string | null {
+  if (!room) return null;
+  const occupant = patients.find(
+    (p) => p.room === room && p.section === section && p.id !== excludeId,
+  );
+  return occupant?.id ?? null;
+}
+
 export function reducer(state: PatientsState, action: Action): PatientsState {
   switch (action.type) {
     case "IMPORT_TEXT": {
       const parsed = parsePatientList(action.text);
-      return { ...state, patients: mergeScan(state.patients, parsed) };
+      const merged = mergeScan(state.patients, parsed);
+      // Deduplicate beds: if two patients share room+section, keep the later one
+      // (the scanned patient is more current than the stale one)
+      const seen = new Map<string, number>();
+      for (let i = 0; i < merged.length; i++) {
+        const p = merged[i];
+        if (!p.room) continue;
+        const key = `${p.section}::${p.room}`;
+        seen.set(key, i);
+      }
+      const keepIndices = new Set(seen.values());
+      // Also keep patients without rooms and patients that didn't collide
+      const deduped = merged.filter((p, i) => !p.room || keepIndices.has(i));
+      return { ...state, patients: deduped };
     }
     case "SET_SECTION":
       return { ...state, activeSection: action.section };
@@ -458,6 +489,16 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
     }
 
     case "EDIT_PATIENT": {
+      const editTarget = state.patients.find((p) => p.id === action.patientId);
+      if (!editTarget) return state;
+      const newRoom = action.room ?? editTarget.room;
+      const newSection = action.section ?? editTarget.section;
+      if (
+        (action.room !== undefined || action.section !== undefined) &&
+        bedOccupiedBy(state.patients, newRoom, newSection, action.patientId)
+      ) {
+        return state; // bed occupied — reject silently
+      }
       return {
         ...state,
         patients: state.patients.map((p) =>
@@ -578,6 +619,10 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
     case "MOVE_PATIENT": {
       const patient = state.patients.find(p => p.id === action.patientId);
       if (!patient) return state;
+      const moveSection = action.toSection ?? patient.section;
+      if (bedOccupiedBy(state.patients, action.toRoom, moveSection, action.patientId)) {
+        return state; // bed occupied — reject silently
+      }
       const event: WardEvent = {
         id: generateId("ev-"),
         type: "MOVE",
@@ -600,6 +645,12 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
 
     case "ADD_PATIENT": {
       const normalized = normalizePatient(action.patient as RawPatient);
+      if (
+        normalized.room &&
+        bedOccupiedBy(state.patients, normalized.room, normalized.section, normalized.id)
+      ) {
+        return state; // bed occupied by someone else — reject
+      }
       const exists = state.patients.some((p) => p.id === normalized.id);
       return {
         ...state,
@@ -611,6 +662,12 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
 
     case "NEW_ADMISSION": {
       const admitted = normalizePatient(action.patient as RawPatient);
+      if (
+        admitted.room &&
+        bedOccupiedBy(state.patients, admitted.room, admitted.section, admitted.id)
+      ) {
+        return state; // bed occupied — reject
+      }
       const event: WardEvent = {
         id: generateId("ev-"),
         type: "ADMISSION",

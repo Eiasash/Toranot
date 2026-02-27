@@ -5,7 +5,7 @@ import {
   normalizePatient,
   inferUrgencyFromText,
 } from "../context/PatientsContext";
-import type { PatientEntry, Task, Section, LabEntry } from "../types";
+import type { PatientEntry, Task, Section, PatientSection, LabEntry } from "../types";
 
 // ─── Helpers ───
 
@@ -814,13 +814,102 @@ describe("reducer", () => {
     });
 
     it("adds new patient when id does not exist", () => {
-      const existing = makePatient({ id: "pt-1", name: "כהן יוסף" });
+      const existing = makePatient({ id: "pt-1", name: "כהן יוסף", room: "49/1" });
       const state = makeState([existing]);
 
-      const newPt = makePatient({ id: "pt-2", name: "לוי שרה" });
+      const newPt = makePatient({ id: "pt-2", name: "לוי שרה", room: "50/1" });
       const next = reducer(state, { type: "ADD_PATIENT", patient: newPt });
 
       expect(next.patients).toHaveLength(2);
+    });
+  });
+
+  describe("bed collision prevention", () => {
+    it("ADD_PATIENT rejects when bed is occupied by a different patient", () => {
+      const occupant = makePatient({ id: "pt-1", room: "49/1", section: "SIDE_A" });
+      const state = makeState([occupant]);
+
+      const intruder = makePatient({ id: "pt-2", room: "49/1", section: "SIDE_A" });
+      const next = reducer(state, { type: "ADD_PATIENT", patient: intruder });
+
+      expect(next.patients).toHaveLength(1);
+      expect(next.patients[0].id).toBe("pt-1");
+    });
+
+    it("ADD_PATIENT allows same bed in different section", () => {
+      const occupant = makePatient({ id: "pt-1", room: "49/1", section: "SIDE_A" });
+      const state = makeState([occupant]);
+
+      const other = makePatient({ id: "pt-2", room: "49/1", section: "SIDE_B" });
+      const next = reducer(state, { type: "ADD_PATIENT", patient: other });
+
+      expect(next.patients).toHaveLength(2);
+    });
+
+    it("ADD_PATIENT allows updating same patient in same bed", () => {
+      const occupant = makePatient({ id: "pt-1", room: "49/1", section: "SIDE_A", diagnosis: "old" });
+      const state = makeState([occupant]);
+
+      const updated = makePatient({ id: "pt-1", room: "49/1", section: "SIDE_A", diagnosis: "new" });
+      const next = reducer(state, { type: "ADD_PATIENT", patient: updated });
+
+      expect(next.patients).toHaveLength(1);
+      expect(next.patients[0].diagnosis).toBe("new");
+    });
+
+    it("MOVE_PATIENT rejects when target bed is occupied", () => {
+      const p1 = makePatient({ id: "pt-1", room: "49/1", section: "SIDE_A" });
+      const p2 = makePatient({ id: "pt-2", room: "49/2", section: "SIDE_A" });
+      const state = makeState([p1, p2]);
+
+      const next = reducer(state, { type: "MOVE_PATIENT", patientId: "pt-1", toRoom: "49/2" });
+
+      // Move rejected — p1 stays in 49/1
+      expect(next.patients.find(p => p.id === "pt-1")?.room).toBe("49/1");
+    });
+
+    it("MOVE_PATIENT allows moving to empty bed", () => {
+      const p1 = makePatient({ id: "pt-1", room: "49/1", section: "SIDE_A" });
+      const state = makeState([p1]);
+
+      const next = reducer(state, { type: "MOVE_PATIENT", patientId: "pt-1", toRoom: "50/1" });
+
+      expect(next.patients.find(p => p.id === "pt-1")?.room).toBe("50/1");
+    });
+
+    it("EDIT_PATIENT rejects room change to occupied bed", () => {
+      const p1 = makePatient({ id: "pt-1", room: "49/1", section: "SIDE_A" });
+      const p2 = makePatient({ id: "pt-2", room: "49/2", section: "SIDE_A" });
+      const state = makeState([p1, p2]);
+
+      const next = reducer(state, { type: "EDIT_PATIENT", patientId: "pt-1", room: "49/2" });
+
+      // Edit rejected — room unchanged
+      expect(next.patients.find(p => p.id === "pt-1")?.room).toBe("49/1");
+    });
+
+    it("NEW_ADMISSION rejects when bed is occupied", () => {
+      const occupant = makePatient({ id: "pt-1", room: "49/1", section: "SIDE_A" });
+      const state = makeState([occupant]);
+
+      const newAdmission = makePatient({ id: "pt-3", room: "49/1", section: "SIDE_A", name: "חדש" });
+      const next = reducer(state, { type: "NEW_ADMISSION", patient: newAdmission });
+
+      expect(next.patients).toHaveLength(1);
+      expect(next.patients[0].id).toBe("pt-1");
+    });
+
+    it("IMPORT_TEXT deduplicates same bed within a single import", () => {
+      // Two patients with same room in same section — last one wins
+      const text = `צד א
+49/1 כהן יוסף 72 דלקת ריאות | | תורן: | מחר:
+49/1 לוי שרה 65 אי ספיקת לב | | תורן: | מחר:`;
+      const state = makeState([]);
+      const next = reducer(state, { type: "IMPORT_TEXT", text });
+
+      const bed491 = next.patients.filter(p => p.room === "49/1" && p.section === "SIDE_A");
+      expect(bed491).toHaveLength(1);
+      expect(bed491[0].name).toBe("לוי שרה"); // last one wins
     });
   });
 });
