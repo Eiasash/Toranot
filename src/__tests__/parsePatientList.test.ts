@@ -277,6 +277,69 @@ describe("parsePatientList", () => {
     });
   });
 
+  describe("planNotes routing", () => {
+    it("physio fragment routes to planNotes", () => {
+      const result = parsePatientList("101 כהן יוסף 72 | פיזיותרפיה פעמיים ביום");
+      expect(result[0].planNotes).toContain("פיזיותרפיה פעמיים ביום");
+      expect(result[0].tasks.map(t => t.text)).not.toContain("פיזיותרפיה פעמיים ביום");
+    });
+
+    it("diet/nutrition fragment routes to planNotes", () => {
+      const result = parsePatientList("101 כהן יוסף 72 | דיאטה דלת מלח");
+      expect(result[0].planNotes).toContain("דיאטה דלת מלח");
+    });
+
+    it("PRN fragment routes to planNotes", () => {
+      const result = parsePatientList("101 כהן יוסף 72 | משכך כאבים לפי הצורך");
+      expect(result[0].planNotes).toContain("משכך כאבים לפי הצורך");
+    });
+
+    it("social worker fragment routes to planNotes", () => {
+      const result = parsePatientList('101 כהן יוסף 72 | עו"ס לשיחה עם משפחה');
+      expect(result[0].planNotes!.length).toBeGreaterThan(0);
+    });
+
+    it("day-of-week reference routes to planNotes", () => {
+      const result = parsePatientList("101 כהן יוסף 72 | ביום ראשון סטאף");
+      expect(result[0].planNotes!.length).toBeGreaterThan(0);
+    });
+
+    it("מחר routes to tomorrowNotes, NOT planNotes", () => {
+      const result = parsePatientList("101 כהן יוסף 72 | מחר: צילום חזה");
+      expect(result[0].tomorrowNotes.length).toBeGreaterThan(0);
+      expect(result[0].planNotes!.some(n => n.includes("מחר"))).toBe(false);
+    });
+
+    it("מחר without colon/dash routes to tomorrowNotes (Hebrew word boundary fix)", () => {
+      const result = parsePatientList("101 כהן יוסף 72 | מחר צילום חזה");
+      expect(result[0].tomorrowNotes.length).toBeGreaterThan(0);
+      expect(result[0].tomorrowNotes.some(n => n.includes("צילום"))).toBe(true);
+      expect(result[0].planNotes).toEqual([]);
+      expect(result[0].tasks.map(t => t.text)).not.toContain("מחר צילום חזה");
+    });
+
+    it("מחרוזת does NOT trigger tomorrowNotes (false positive guard)", () => {
+      const result = parsePatientList("101 כהן יוסף 72 | מחרוזת בדיקה");
+      expect(result[0].tomorrowNotes).toEqual([]);
+    });
+
+    it("strong orders (CT/US/MRI) do NOT route to planNotes", () => {
+      const result = parsePatientList("101 כהן יוסף 72 | CT חזה");
+      expect(result[0].planNotes).toEqual([]);
+      expect(result[0].tasks.length).toBeGreaterThan(0);
+    });
+
+    it("דחוף prevents routing to planNotes", () => {
+      const result = parsePatientList("101 כהן יוסף 72 | פיזיותרפיה דחוף");
+      expect(result[0].planNotes).toEqual([]);
+    });
+
+    it("סטט prevents routing to planNotes", () => {
+      const result = parsePatientList("101 כהן יוסף 72 | פיזיותרפיה סטט");
+      expect(result[0].planNotes).toEqual([]);
+    });
+  });
+
   describe("monitor room section inference", () => {
     it("ניטור room does NOT infer section — only headers assign sections", () => {
       const result = parsePatientList("ניטור-1 כהן דני 55");

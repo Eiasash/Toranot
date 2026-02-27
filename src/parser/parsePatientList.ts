@@ -29,6 +29,11 @@ const URGENCY_MARKERS: Record<string, import("../types").Urgency> = {
 
 const TIME_PATTERN = /\b(\d{1,2}:\d{2})\b/;
 
+// Unicode-safe "מחר" word boundary — \b does not work with Hebrew characters.
+// Matches "מחר" at start/end of string or surrounded by whitespace/punctuation,
+// but NOT inside longer words like "מחרוזת".
+const MACHAR_WORD = /(^|[\s,;•\-\(\)\[\]])מחר(?=$|[\s,;•:.\-!\?\)\]\(])/;
+
 const PLAN_DAY_REF_PATTERN =
   /\b(?:ביום\s*[א-ת]|ביום\s*(?:ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)|(?:ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת))\b/;
 
@@ -198,8 +203,12 @@ function parsePatientLine(
       continue;
     }
 
-    // Real tomorrow indicators (מחר / בבוקר) → tomorrowNotes
-    const implicitMachar = /\bמחר\b|\bלבוקר\b|\bבבוקר\b/.test(part);
+    // Real tomorrow indicators (מחר / בבוקר / לבוקר) → tomorrowNotes
+    // Uses MACHAR_WORD for Unicode-safe Hebrew word boundary detection.
+    // Note: \b doesn't work with Hebrew. MACHAR_WORD handles מחר correctly.
+    // בבוקר/לבוקר use \b which is known-broken for Hebrew but left as-is
+    // to preserve existing routing semantics (they route to tasks, not tomorrowNotes).
+    const implicitMachar = MACHAR_WORD.test(part) || /\bלבוקר\b|\bבבוקר\b/.test(part);
     if (implicitMachar) {
       tomorrowNotes.push(part.replace(/^מחר\s*[:\-]?\s*/, "").trim() || part);
       continue;

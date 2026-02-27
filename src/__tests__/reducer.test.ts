@@ -799,4 +799,28 @@ describe("reducer", () => {
       expect(second.patients[0].id).toBe(originalId);
     });
   });
+
+  describe("ADD_PATIENT dedup/replace", () => {
+    it("replaces existing patient with same id instead of duplicating", () => {
+      const existing = makePatient({ id: "pt-dup", name: "כהן יוסף", diagnosis: "דלקת ריאות" });
+      const state = makeState([existing]);
+
+      const replacement = makePatient({ id: "pt-dup", name: "כהן יוסף", diagnosis: "אי ספיקת לב" });
+      const next = reducer(state, { type: "ADD_PATIENT", patient: replacement });
+
+      expect(next.patients).toHaveLength(1);
+      expect(next.patients[0].id).toBe("pt-dup");
+      expect(next.patients[0].diagnosis).toBe("אי ספיקת לב");
+    });
+
+    it("adds new patient when id does not exist", () => {
+      const existing = makePatient({ id: "pt-1", name: "כהן יוסף" });
+      const state = makeState([existing]);
+
+      const newPt = makePatient({ id: "pt-2", name: "לוי שרה" });
+      const next = reducer(state, { type: "ADD_PATIENT", patient: newPt });
+
+      expect(next.patients).toHaveLength(2);
+    });
+  });
 });
