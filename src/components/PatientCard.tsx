@@ -18,6 +18,31 @@ import { AIClinicalReasoning } from "./AIClinicalReasoning";
 import { VoiceButton } from "./VoiceInput";
 import { hapticSuccess } from "../utils/haptics";
 
+// On-call shift: 16:00 → 08:00
+function getShiftStart(): Date {
+  const now = new Date();
+  const s = new Date(now);
+  s.setMinutes(0, 0, 0);
+  s.setHours(16);
+  if (now.getHours() < 16) s.setDate(s.getDate() - 1);
+  return s;
+}
+function isNewThisShift(p: PatientEntry): boolean {
+  if (!p.scannedAt) return false;
+  return new Date(p.scannedAt) >= getShiftStart();
+}
+
+function NewBadge() {
+  return (
+    <span
+      className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-white leading-none shrink-0"
+      title="קבלה חדשה בתורן"
+    >
+      🆕
+    </span>
+  );
+}
+
 function FlagBadge({ flag }: { flag: string }) {
   return (
     <span
@@ -297,6 +322,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
             <span className="text-sm font-semibold truncate dark:text-gray-100 shrink-0 max-w-[120px]">
               {patient.name ?? "לא ידוע"}
             </span>
+            {isNewThisShift(patient) && <NewBadge />}
             {patient.room && (
               <span className="shrink-0 text-xs bg-blue-600 text-white px-1.5 py-0.5 rounded">
                 {patient.room}
@@ -381,6 +407,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
             <>
               <div className="flex items-center gap-2">
                 <AcuityBadge patient={patient} />
+                {isNewThisShift(patient) && <NewBadge />}
                 <span className="text-lg font-semibold truncate dark:text-gray-100">
                   {patient.name ?? "לא ידוע"}
                 </span>
@@ -888,7 +915,10 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
           {patient.room ?? "—"}
         </td>
         <td className="py-2.5 px-4 font-semibold text-gray-900 dark:text-gray-100 text-sm whitespace-nowrap">
-          {patient.name ?? "לא ידוע"}
+          <div className="flex items-center gap-1.5">
+            {isNewThisShift(patient) && <NewBadge />}
+            {patient.name ?? "לא ידוע"}
+          </div>
         </td>
         <td className="py-2.5 px-4 text-gray-500 dark:text-gray-400 text-sm tabular-nums">
           {patient.age ?? "—"}
