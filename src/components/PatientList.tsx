@@ -6,24 +6,8 @@ import { PullToRefresh } from "./PullToRefresh";
 import { calculateAcuity } from "../engine/acuity";
 import { comparePatientsByRoom } from "../utils/sortPatients";
 
-// On-call window: 16:00 → 08:00
-function isOnCallTime(d: Date): boolean {
-  const h = d.getHours();
-  return h >= 16 || h < 8;
-}
-function getShiftStart(): Date {
-  const now = new Date();
-  const s = new Date(now);
-  s.setMinutes(0, 0, 0);
-  if (now.getHours() < 8) s.setDate(s.getDate() - 1);
-  s.setHours(16);
-  return s;
-}
-function isNewThisShift(p: import("../types").PatientEntry): boolean {
-  if (!p.scannedAt) return false;
-  const d = new Date(p.scannedAt);
-  return isOnCallTime(d) && d >= getShiftStart();
-}
+import { isNewThisShift as _isNewThisShift, getShiftStart } from "../utils/shiftTime";
+function isNewThisShift(p: import("../types").PatientEntry): boolean { return _isNewThisShift(p.scannedAt); }
 
 // Section ordering for ALL view
 const SECTION_ORDER: Record<string, number> = Object.fromEntries(
