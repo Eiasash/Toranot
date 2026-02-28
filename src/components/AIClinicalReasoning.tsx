@@ -35,8 +35,8 @@ function sanitizeHTML(html: string): string {
 // Simple markdown → HTML for AI responses
 function renderMarkdown(text: string): string {
   return text
-    // Strip leading artifact characters (Gemini sometimes starts with lone . or *)
-    .replace(/^[.\s]+/, "")
+    // Strip leading artifact characters (Gemini sometimes starts with lone ., ,, * etc)
+    .replace(/^[.,;:\s*]+/, "")
     // Headers (## and ###)
     .replace(/^### (.+)$/gm, '<h3 class="text-sm font-bold mt-3 mb-1 text-slate-800 dark:text-slate-200">$1</h3>')
     .replace(/^## (.+)$/gm, '<h2 class="text-base font-bold mt-4 mb-1.5 text-slate-800 dark:text-slate-200">$1</h2>')
@@ -322,7 +322,7 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
         mode === "freeform" ? freeformQ : undefined,
       );
       const result = await callAIAPI(provider, apiKey, systemPrompt, userPrompt, abortController.signal);
-      setResponse(result.replace(/^[.\s*]+(?=\S)/u, "").trim());
+      setResponse(result.replace(/^[.,;:\s*]+/, "").trim());
     } catch (err: unknown) {
       if ((err as Error).name === "AbortError") return;
       const msg = (err as Error).message || "";
@@ -350,7 +350,7 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center" onClick={onClose}>
       <div
-        className="bg-white dark:bg-gray-900 w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl max-h-[85dvh] flex flex-col overflow-hidden shadow-xl"
+        className="bg-white dark:bg-gray-900 w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl max-h-[92dvh] flex flex-col overflow-hidden shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -411,7 +411,7 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
           </span>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain" ref={responseRef} style={{ WebkitOverflowScrolling: "touch" }}>
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain relative" ref={responseRef} style={{ WebkitOverflowScrolling: "touch" }}>
           {showKeySetup ? (
             /* API Key Setup */
             <APIKeySetup
@@ -516,7 +516,7 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
                 />
               )}
               {/* Scroll padding — clears Android nav bar + bottom safe area */}
-              <div className="h-safe-bottom" style={{ paddingBottom: "env(safe-area-inset-bottom, 16px)", minHeight: "24px" }} />
+              <div style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 32px)" }} />
             </div>
           )}
         </div>
@@ -600,6 +600,7 @@ function APIKeySetup({
     </div>
   );
 }
+
 
 
 
