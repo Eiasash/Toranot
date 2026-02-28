@@ -24,6 +24,7 @@ const STORAGE_KEY_DARK_MODE = "toranot-dark";
 const STORAGE_KEY_SCAN_MODE = "toranot-scan-mode";
 const STORAGE_KEY_EVENTS = "toranot-events";
 const STORAGE_KEY_UNASSIGNED = "toranot-unassigned-tasks";
+const STORAGE_KEY_SHOW_TOMORROW = "toranot-show-tomorrow";
 const MAX_EVENTS = 300;
 const MAX_SHIFT_HISTORY = 30;
 
@@ -64,6 +65,14 @@ export function normalizeTask(t: RawTask): Task {
     confidence: typeof t.confidence === "number" ? t.confidence : 1,
     note: t.note ?? null,
     dueAt: t.dueAt ?? null,
+    // Ensure required string fields always have safe values
+    id: typeof t.id === "string" && t.id ? t.id : Math.random().toString(36).slice(2),
+    text: typeof t.text === "string" ? t.text : String(t.text ?? ""),
+    urgency: (["stat","urgent","routine"].includes(t.urgency as string)
+      ? t.urgency : "routine") as Task["urgency"],
+    category: (typeof t.category === "string" ? t.category : "general") as Task["category"],
+    source: (["manual","generated","imported"].includes(t.source as string)
+      ? t.source : "manual") as Task["source"],
   } as Task;
 }
 
@@ -139,6 +148,14 @@ function loadScanMode(): boolean {
   }
 }
 
+function loadShowTomorrow(): boolean {
+  try {
+    return safeGetItem(STORAGE_KEY_SHOW_TOMORROW) === "true";
+  } catch {
+    return false;
+  }
+}
+
 function loadEvents(): WardEvent[] {
   try {
     const raw = safeGetItem(STORAGE_KEY_EVENTS);
@@ -164,7 +181,7 @@ function loadUnassignedTasks(): Task[] {
 const initializer = (): PatientsState => ({
   patients: loadSavedPatients(),
   activeSection: "ALL",
-  showTomorrow: false,
+  showTomorrow: loadShowTomorrow(),
   darkMode: loadDarkMode(),
   shiftHistory: loadShiftHistory(),
   scanMode: loadScanMode(),
@@ -819,6 +836,11 @@ export function PatientsProvider({ children }: { children: ReactNode }) {
     safeSetItem(STORAGE_KEY_SCAN_MODE, state.scanMode ? "true" : "false");
   }, [state.scanMode]);
 
+  // Persist show-tomorrow toggle
+  useEffect(() => {
+    safeSetItem(STORAGE_KEY_SHOW_TOMORROW, state.showTomorrow ? "true" : "false");
+  }, [state.showTomorrow]);
+
   // Persist events log
   useEffect(() => {
     safeSetItem(STORAGE_KEY_EVENTS, JSON.stringify(state.events));
@@ -876,3 +898,4 @@ export function usePatientsDispatch() {
 export function useCloudSync() {
   return useContext(CloudSyncContext);
 }
+
