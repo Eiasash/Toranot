@@ -262,10 +262,10 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
   const abortRef = useRef<AbortController | null>(null);
   const responseRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll response
+  // Scroll to top of response when new response arrives (better UX than bottom)
   useEffect(() => {
     if (response && responseRef.current) {
-      responseRef.current.scrollTop = responseRef.current.scrollHeight;
+      responseRef.current.scrollTop = 0;
     }
   }, [response]);
 
@@ -336,7 +336,7 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center" onClick={onClose}>
       <div
-        className="bg-white dark:bg-gray-900 w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-xl"
+        className="bg-white dark:bg-gray-900 w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl max-h-[85dvh] flex flex-col overflow-hidden shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -501,6 +501,8 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
                   dangerouslySetInnerHTML={{ __html: renderMarkdown(response) }}
                 />
               )}
+              {/* Scroll padding at bottom so content clears mobile nav bar */}
+              <div className="h-4" />
             </div>
           )}
         </div>
