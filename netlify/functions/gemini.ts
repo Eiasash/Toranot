@@ -76,22 +76,44 @@ export default async (req: Request, _context: Context) => {
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-  try {
-    const upstream = await fetch(url, {
+  // Retry once on 429 after a short wait
+  const attemptFetch = async (): Promise<Response> =>
+    fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
+  try {
+    let upstream = await attemptFetch();
+
+    // 429: back off 3s and retry once
+    if (upstream.status === 429) {
+      await new Promise((r) => setTimeout(r, 3000));
+      upstream = await attemptFetch();
+    }
+
     const data = await upstream.json() as any;
 
     if (!upstream.ok) {
-      return json({ error: data?.error?.message ?? "Gemini API error" }, upstream.status);
+      // Map Gemini error codes to Hebrew user-facing messages
+      const msg: string = data?.error?.message ?? "";
+      let userMsg = `שגיאת Gemini: ${upstream.status}`;
+      if (upstream.status === 429) userMsg = "חריגה ממגבלת Gemini. נסה שוב בעוד דקה.";
+      else if (upstream.status === 403) userMsg = "מכסת Gemini הסתיימה — בדוק את מגבלות ה-API שלך ב-Google AI Studio.";
+      else if (upstream.status === 400) userMsg = `בקשה לא תקינה ל-Gemini: ${msg.slice(0, 120)}`;
+      else if (upstream.status === 500 || upstream.status === 503) userMsg = "שרת Gemini לא זמין כרגע. נסה שוב.";
+      return json({ error: userMsg }, upstream.status);
     }
 
-    // Normalize to Anthropic-compatible response shape so the frontend doesn't need branching
     const text: string =
       data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "אין תשובה.";
+
+    // Blocked by safety filters
+    const finishReason: string = data?.candidates?.[0]?.finishReason ?? "";
+    if (finishReason === "SAFETY") {
+      return json({ error: "התוכן נחסם על ידי מסנני הבטיחות של Gemini." }, 200);
+    }
 
     return json({
       content: [{ type: "text", text }],
@@ -102,6 +124,7 @@ export default async (req: Request, _context: Context) => {
       },
     });
   } catch (e) {
-    return json({ error: "Proxy error" }, 502);
+    return json({ error: "שגיאת רשת בחיבור ל-Gemini." }, 502);
   }
 };
+
