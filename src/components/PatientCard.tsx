@@ -27,24 +27,26 @@ function getShiftStart(): Date {
   if (now.getHours() < 16) s.setDate(s.getDate() - 1);
   return s;
 }
-// Only manually-admitted patients (NEW_ADMISSION event) get the 🆕 badge
-function isNewThisShift(p: PatientEntry, events: import("../types").WardEvent[]): boolean {
-  const shiftStart = getShiftStart();
-  return events.some(
-    e =>
-      e.type === "ADMISSION" &&
-      e.patientId === p.id &&
-      new Date(e.at) >= shiftStart
-  );
+function isNewThisShift(p: PatientEntry): boolean {
+  if (!p.scannedAt) return false;
+  return new Date(p.scannedAt) >= getShiftStart();
 }
 
-function NewBadge() {
+function NewBadge({ scannedAt }: { scannedAt?: string }) {
+  const timeStr = scannedAt
+    ? new Date(scannedAt).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })
+    : null;
+  const shiftStart = getShiftStart();
+  const shiftDateStr = shiftStart.toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit" });
+  const tooltip = timeStr
+    ? `קבלת תורן ${shiftDateStr} — נכנס ${timeStr}`
+    : `קבלת תורן ${shiftDateStr}`;
   return (
     <span
-      className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-white leading-none shrink-0"
-      title="קבלה חדשה בתורן"
+      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-white leading-none shrink-0"
+      title={tooltip}
     >
-      🆕
+      🆕{timeStr && <span className="font-normal opacity-90">{timeStr}</span>}
     </span>
   );
 }
@@ -221,7 +223,7 @@ function HandoverNoteInline({ patient }: { patient: PatientEntry }) {
 
 export function PatientCard({ patient }: { patient: PatientEntry }) {
   const dispatch = usePatientsDispatch();
-  const { showTomorrow, scanMode, events } = usePatientsState();
+  const { showTomorrow, scanMode } = usePatientsState();
 
   const manualNotes = patient.notes ?? [];
 
@@ -328,7 +330,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
             <span className="text-sm font-semibold truncate dark:text-gray-100 shrink-0 max-w-[120px]">
               {patient.name ?? "לא ידוע"}
             </span>
-            {isNewThisShift(patient, events) && <NewBadge />}
+            {isNewThisShift(patient) && <NewBadge scannedAt={patient.scannedAt} />}
             {patient.room && (
               <span className="shrink-0 text-xs bg-blue-600 text-white px-1.5 py-0.5 rounded">
                 {patient.room}
@@ -413,7 +415,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
             <>
               <div className="flex items-center gap-2">
                 <AcuityBadge patient={patient} />
-                {isNewThisShift(patient, events) && <NewBadge />}
+                {isNewThisShift(patient) && <NewBadge scannedAt={patient.scannedAt} />}
                 <span className="text-lg font-semibold truncate dark:text-gray-100">
                   {patient.name ?? "לא ידוע"}
                 </span>
@@ -869,7 +871,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
 
 export function PatientRow({ patient }: { patient: PatientEntry }) {
   const dispatch = usePatientsDispatch();
-  const { showTomorrow, events } = usePatientsState();
+  const { showTomorrow } = usePatientsState();
 
   const [expanded, setExpanded] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -922,7 +924,7 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
         </td>
         <td className="py-2.5 px-4 font-semibold text-gray-900 dark:text-gray-100 text-sm whitespace-nowrap">
           <div className="flex items-center gap-1.5">
-            {isNewThisShift(patient, events) && <NewBadge />}
+            {isNewThisShift(patient) && <NewBadge scannedAt={patient.scannedAt} />}
             {patient.name ?? "לא ידוע"}
           </div>
         </td>
