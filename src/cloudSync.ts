@@ -46,17 +46,25 @@ export const supabase: SupabaseClient | null =
     : null;
 
 // ── Auth helpers (optional UI can call these)
-export async function signInWithEmailOtp(email: string) {
+// Sign in with email+password. If user doesn't exist, auto sign-up.
+// Requires "Confirm email" to be DISABLED in Supabase Auth settings.
+export async function signInWithPassword(email: string, password: string) {
   if (!supabase)
     throw new Error("Supabase not configured (missing env vars)");
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: window.location.origin + window.location.pathname,
-    },
-  });
-  if (error) throw error;
+  // Try sign in first
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (!error) return data;
+  // If user not found, sign up (no email confirmation required)
+  if (error.message.toLowerCase().includes("invalid") || error.message.toLowerCase().includes("not found") || error.message.toLowerCase().includes("credentials")) {
+    const { data: upData, error: upError } = await supabase.auth.signUp({ email, password });
+    if (upError) throw upError;
+    return upData;
+  }
+  throw error;
 }
+
+// Keep old export name as alias so nothing else breaks
+export const signInWithEmailOtp = (_email: string) => Promise.reject(new Error("Use signInWithPassword instead"));
 
 export async function signOut() {
   if (!supabase) return;
