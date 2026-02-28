@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { PatientsProvider } from "./context/PatientsContext";
-import { signInWithEmailOtp, signOut, supabase } from "./cloudSync";
+import { signInWithEmailOtp, signOut, supabase, createHandoff, pullHandoff, type ToranotCloudState } from "./cloudSync";
 import { SectionTabs } from "./components/SectionTabs";
 import { InputArea } from "./components/InputArea";
 import { PatientList } from "./components/PatientList";
@@ -12,7 +12,7 @@ import { ShiftHistory } from "./components/ShiftHistory";
 import { GlobalSearch } from "./components/GlobalSearch";
 import { UndoToastContainer } from "./components/UndoToast";
 import { ShiftTimer } from "./components/ShiftTimer";
-import { usePatientsDispatch, usePatientsState } from "./context/PatientsContext";
+import { usePatientsDispatch, usePatientsState, useCloudSync } from "./context/PatientsContext";
 import { QRSync } from "./components/QRSync";
 import { QuickCaptureSheet } from "./components/QuickCaptureSheet";
 import { MorningReport } from "./components/MorningReport";
@@ -303,7 +303,7 @@ function CloudAuthPanel() {
 }
 
 // ─── Overflow menu (secondary actions) ────────────────────
-function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qrsync" | "capture" | "morning" | "ivprotocols") => void }) {
+function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qrsync" | "capture" | "morning" | "ivprotocols" | "handoff_cloud") => void }) {
   const [open, setOpen] = useState(false);
   const [dialog, setDialog] = useState<ConfirmDialog>({ type: "none" });
   const { darkMode, showTomorrow, scanMode, patients } = usePatientsState();
@@ -508,6 +508,16 @@ function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qrsync" |
                   סנכרון QR
                 </button>
               )}
+              {/* Cloud Handoff */}
+              {supabase && (
+                <button
+                  onClick={() => { onOpenModal("handoff_cloud"); setOpen(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-slate-200 active:bg-slate-700 border-t border-slate-700 text-right"
+                >
+                  <span className="text-base">🤝</span>
+                  מסירה בענן
+                </button>
+              )}
               {/* Clear all */}
               {patients.length > 0 && (
                 <button
@@ -653,8 +663,233 @@ function useShakeDetector(onShake: () => void) {
   }, [onShake]);
 }
 
+// ─── Cloud Sync Status Indicator ──────────────────────────
+function SyncIndicator() {
+  const { status, lastSync } = useCloudSync();
+  if (status === "off") return null;
+
+  const config = {
+    syncing: { icon: "⟳", color: "text-blue-400", label: "מסנכרן..." },
+    synced: { icon: "☁️", color: "text-green-400", label: lastSync ? `סונכרן ${lastSync.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })}` : "מסונכרן" },
+    error: { icon: "⚠️", color: "text-red-400", label: "שגיאת סנכרון" },
+    conflict: { icon: "⚡", color: "text-amber-400", label: "קונפליקט" },
+  }[status];
+
+  return (
+    <div className={`flex items-center gap-1 text-[10px] ${config.color} min-h-[44px] px-1`} title={config.label}>
+      <span className={status === "syncing" ? "animate-spin" : ""}>{config.icon}</span>
+      <span className="hidden sm:inline">{config.label}</span>
+    </div>
+  );
+}
+
+// ─── Conflict Resolution Dialog ──────────────────────────
+function ConflictDialog() {
+  const { conflict, resolveConflict } = useCloudSync();
+  if (!conflict) return null;
+
+  const cloudTime = conflict.cloudUpdatedAt
+    ? new Date(conflict.cloudUpdatedAt).toLocaleString("he-IL", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })
+    : "לא ידוע";
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center px-4 pb-8 sm:pb-0 bg-black/50">
+      <div className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden">
+        <div className="px-5 pt-5 pb-4">
+          <div className="text-2xl mb-2">⚡</div>
+          <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">קונפליקט סנכרון</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            נמצאו נתונים שונים במכשיר ובענן. איזו גרסה לשמור?
+          </p>
+        </div>
+        <div className="px-5 pb-4 space-y-2">
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-3">
+            <p className="text-xs font-semibold text-blue-800 dark:text-blue-300">
+              📱 מכשיר — {conflict.localCount} מטופלים
+            </p>
+            <p className="text-[11px] text-blue-600 dark:text-blue-400">הנתונים שנמצאים כרגע במכשיר הזה</p>
+          </div>
+          <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-xl p-3">
+            <p className="text-xs font-semibold text-purple-800 dark:text-purple-300">
+              ☁️ ענן — {conflict.cloudCount} מטופלים
+            </p>
+            <p className="text-[11px] text-purple-600 dark:text-purple-400">עודכן: {cloudTime}</p>
+          </div>
+        </div>
+        <div className="flex border-t border-gray-200 dark:border-gray-700">
+          <button
+            onClick={() => resolveConflict("local")}
+            className="flex-1 py-4 text-sm font-semibold text-blue-600 active:bg-blue-50 dark:active:bg-blue-900/20"
+          >
+            השאר מכשיר
+          </button>
+          <button
+            onClick={() => resolveConflict("cloud")}
+            className="flex-1 py-4 text-sm font-semibold text-purple-600 border-r border-gray-200 dark:border-gray-700 active:bg-purple-50 dark:active:bg-purple-900/20"
+          >
+            טען מענן
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Shift Handoff Modal ──────────────────────────────────
+function ShiftHandoffModal({ onClose }: { onClose: () => void }) {
+  const [tab, setTab] = useState<"send" | "receive">("send");
+  const [code, setCode] = useState<string | null>(null);
+  const [inputCode, setInputCode] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const { patients } = usePatientsState();
+  const dispatch = usePatientsDispatch();
+
+  const handleCreate = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const state: ToranotCloudState = {
+        patients: patients as unknown[],
+        shiftHistory: [],
+        events: [],
+        unassignedTasks: [],
+      };
+      const result = await createHandoff(state);
+      if (result) {
+        setCode(result.code);
+      } else {
+        setError("יצירת קוד נכשלה — ודא שאתה מחובר לענן");
+      }
+    } catch {
+      setError("שגיאה ביצירת קוד מסירה");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePull = async () => {
+    if (inputCode.length < 4) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const state = await pullHandoff(inputCode);
+      if (state) {
+        dispatch({ type: "IMPORT_CLOUD_STATE", state });
+        onClose();
+      } else {
+        setError("קוד לא נמצא או פג תוקף");
+      }
+    } catch {
+      setError("שגיאה בטעינת נתונים");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCopy = () => {
+    if (!code) return;
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-gray-900">
+      {/* Header */}
+      <header className="flex items-center justify-between px-4 py-3 border-b border-gray-700 safe-top">
+        <h2 className="text-lg font-bold text-white">🤝 מסירת משמרת — ענן</h2>
+        <button onClick={onClose} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-400 active:text-white text-2xl">✕</button>
+      </header>
+
+      {/* Tabs */}
+      <div className="flex border-b border-gray-700">
+        <button
+          onClick={() => setTab("send")}
+          className={`flex-1 py-3 text-sm font-semibold ${tab === "send" ? "text-blue-400 border-b-2 border-blue-400" : "text-gray-400"}`}
+        >
+          📤 שלח מסירה
+        </button>
+        <button
+          onClick={() => setTab("receive")}
+          className={`flex-1 py-3 text-sm font-semibold ${tab === "receive" ? "text-green-400 border-b-2 border-green-400" : "text-gray-400"}`}
+        >
+          📥 קבל מסירה
+        </button>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-5">
+        {tab === "send" ? (
+          <div className="max-w-sm mx-auto space-y-4">
+            <p className="text-sm text-gray-400 text-center">
+              צור קוד מסירה שהתורן הבא יכניס כדי לקבל את רשימת המטופלים שלך
+            </p>
+            <p className="text-xs text-gray-500 text-center">
+              {patients.length} מטופלים · תוקף 24 שעות
+            </p>
+
+            {!code ? (
+              <button
+                onClick={handleCreate}
+                disabled={loading || patients.length === 0}
+                className="w-full bg-blue-600 disabled:bg-gray-700 text-white py-4 rounded-xl text-base font-bold active:bg-blue-700 transition-colors"
+              >
+                {loading ? "יוצר..." : patients.length === 0 ? "אין מטופלים למסירה" : "צור קוד מסירה"}
+              </button>
+            ) : (
+              <div className="text-center space-y-4">
+                <div className="bg-gray-800 rounded-2xl p-6">
+                  <p className="text-xs text-gray-400 mb-2">קוד המסירה:</p>
+                  <p className="text-4xl font-mono font-bold text-white tracking-[0.3em]" dir="ltr">{code}</p>
+                </div>
+                <button
+                  onClick={handleCopy}
+                  className="w-full bg-gray-700 text-white py-3 rounded-xl text-sm active:bg-gray-600"
+                >
+                  {copied ? "✅ הועתק!" : "📋 העתק קוד"}
+                </button>
+                <p className="text-xs text-gray-500">תגיד/שלח לתורן הבא את הקוד הזה</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="max-w-sm mx-auto space-y-4">
+            <p className="text-sm text-gray-400 text-center">
+              הכנס את הקוד שקיבלת מהתורן היוצא
+            </p>
+            <input
+              type="text"
+              dir="ltr"
+              maxLength={6}
+              placeholder="XXXXXX"
+              value={inputCode}
+              onChange={(e) => setInputCode(e.target.value.toUpperCase())}
+              className="w-full bg-gray-800 border border-gray-600 text-white text-center text-3xl font-mono tracking-[0.3em] px-4 py-5 rounded-xl placeholder:text-gray-600 focus:outline-none focus:border-blue-500"
+            />
+            <button
+              onClick={handlePull}
+              disabled={loading || inputCode.length < 4}
+              className="w-full bg-green-600 disabled:bg-gray-700 text-white py-4 rounded-xl text-base font-bold active:bg-green-700 transition-colors"
+            >
+              {loading ? "טוען..." : "📥 טען מסירה"}
+            </button>
+          </div>
+        )}
+
+        {error && (
+          <div className="max-w-sm mx-auto mt-4 bg-red-900/30 border border-red-700 rounded-xl p-3 text-center">
+            <p className="text-sm text-red-300">{error}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main App ──────────────────────────────────────────────
-type Modal = "none" | "reference" | "handoff" | "dashboard" | "history" | "search" | "qrsync" | "capture" | "morning" | "ivprotocols";
+type Modal = "none" | "reference" | "handoff" | "dashboard" | "history" | "search" | "qrsync" | "capture" | "morning" | "ivprotocols" | "handoff_cloud";
 
 function AppInner() {
   const [modal, setModal] = useState<Modal>("none");
@@ -717,6 +952,9 @@ function AppInner() {
             <ShiftTimer />
           </div>
 
+          {/* Cloud sync indicator */}
+          <SyncIndicator />
+
           {/* Overflow menu — all secondary actions */}
           <OverflowMenu onOpenModal={(m) => setModal(m)} />
         </div>
@@ -749,6 +987,10 @@ function AppInner() {
       {modal === "capture"    && <QuickCaptureSheet onClose={() => setModal("none")} />}
       {modal === "morning"    && <MorningReport   onClose={() => setModal("none")} />}
       {modal === "ivprotocols" && <IVProtocols    onClose={() => setModal("none")} />}
+      {modal === "handoff_cloud" && <ShiftHandoffModal onClose={() => setModal("none")} />}
+
+      {/* Conflict resolution overlay — highest z-index */}
+      <ConflictDialog />
     </div>
   );
 }

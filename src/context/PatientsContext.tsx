@@ -12,7 +12,7 @@ import { mergeScan } from "../engine/mergeScan";
 import { applyRules } from "../engine/rules";
 import { generateId } from "../utils/id";
 import { safeGetItem, safeSetItem } from "../utils/storage";
-import { useToranotCloudSync, type ToranotCloudState } from "../cloudSync";
+import { useToranotCloudSync, type ToranotCloudState, type SyncStatus, type ConflictData } from "../cloudSync";
 
 // -----------------------------
 // Constants
@@ -758,11 +758,24 @@ const PatientsStateContext = createContext<PatientsState>({
 });
 const PatientsDispatchContext = createContext<Dispatch<Action>>(() => {});
 
+export type CloudSyncState = {
+  status: SyncStatus;
+  lastSync: Date | null;
+  conflict: ConflictData | null;
+  resolveConflict: (choice: "local" | "cloud") => void;
+};
+const CloudSyncContext = createContext<CloudSyncState>({
+  status: "off",
+  lastSync: null,
+  conflict: null,
+  resolveConflict: () => {},
+});
+
 export function PatientsProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined as unknown as PatientsState, initializer);
 
   // ─── Cloud sync (one line, everything lives in the hook) ────
-  useToranotCloudSync(state, dispatch);
+  const syncState = useToranotCloudSync(state, dispatch);
 
   // Persist patients to localStorage so data survives Android tab kills
   useEffect(() => {
@@ -826,7 +839,9 @@ export function PatientsProvider({ children }: { children: ReactNode }) {
   return (
     <PatientsStateContext.Provider value={state}>
       <PatientsDispatchContext.Provider value={dispatch}>
-        {children}
+        <CloudSyncContext.Provider value={syncState}>
+          {children}
+        </CloudSyncContext.Provider>
       </PatientsDispatchContext.Provider>
     </PatientsStateContext.Provider>
   );
@@ -838,4 +853,8 @@ export function usePatientsState() {
 
 export function usePatientsDispatch() {
   return useContext(PatientsDispatchContext);
+}
+
+export function useCloudSync() {
+  return useContext(CloudSyncContext);
 }
