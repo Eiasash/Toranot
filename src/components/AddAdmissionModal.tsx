@@ -211,7 +211,7 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
       order: Date.now(),
     } as PatientEntry;
 
-    dispatch({ type: "ADD_PATIENT", patient });
+    dispatch({ type: "NEW_ADMISSION", patient });
     onSuccess?.();
     onClose();
   }
