@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import type { PatientEntry, PatientSection } from "../types";
 import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
 import { generateId } from "../utils/id";
@@ -14,18 +14,121 @@ interface Props {
   onSuccess?: () => void;
 }
 
+// ── Freestyle parser ──
+// "49/2 כהן יוסף 82 pneumonia DNR"
+// "חדר 53 מיטה 1 לוי שרה בת 75 CHF"
+function parseFreestyle(text: string): Partial<{
+  room: string;
+  bed: number;
+  name: string;
+  age: number;
+  diagnosis: string;
+  status: string;
+}> {
+  const result: ReturnType<typeof parseFreestyle> = {};
+  let remaining = text.trim();
+
+  // Extract DNR/DNI
+  const statusMatch = remaining.match(/\b(DNR\s*\/?\s*DNI|DNR|DNI|FULL\s*CODE)\b/i);
+  if (statusMatch) {
+    const raw = statusMatch[1].toUpperCase().replace(/\s+/g, "");
+    result.status = raw === "FULLCODE" ? "" : raw.replace("/", "/");
+    remaining = remaining.replace(statusMatch[0], " ");
+  }
+
+  // Extract room/bed: "49/2", "49-2", "חדר 49 מיטה 2"
+  const roomBedMatch = remaining.match(/(?:חדר\s*)?(\d{2,3})\s*[\/\-]\s*(\d)/);
+  if (roomBedMatch) {
+    result.room = roomBedMatch[1];
+    result.bed = parseInt(roomBedMatch[2]);
+    remaining = remaining.replace(roomBedMatch[0], " ");
+  } else {
+    const roomOnlyMatch = remaining.match(/(?:חדר\s+)(\d{2,3})/);
+    if (roomOnlyMatch) {
+      result.room = roomOnlyMatch[1];
+      remaining = remaining.replace(roomOnlyMatch[0], " ");
+    }
+    const bedMatch = remaining.match(/(?:מיטה\s+)(\d)/);
+    if (bedMatch) {
+      result.bed = parseInt(bedMatch[1]);
+      remaining = remaining.replace(bedMatch[0], " ");
+    }
+  }
+
+  // Extract age: "בת/בן X" or standalone number 50-120
+  const ageHebMatch = remaining.match(/(?:בת|בן)\s+(\d{2,3})/);
+  if (ageHebMatch) {
+    const a = parseInt(ageHebMatch[1]);
+    if (a >= 18 && a <= 120) {
+      result.age = a;
+      remaining = remaining.replace(ageHebMatch[0], " ");
+    }
+  }
+  if (!result.age) {
+    const ageMatch = remaining.match(/\b(\d{2,3})\b/g);
+    if (ageMatch) {
+      for (const m of ageMatch) {
+        const a = parseInt(m);
+        if (a >= 50 && a <= 120 && String(a) !== result.room) {
+          result.age = a;
+          remaining = remaining.replace(new RegExp(`\\b${m}\\b`), " ");
+          break;
+        }
+      }
+    }
+  }
+
+  // Remaining: Hebrew name first, then diagnosis
+  remaining = remaining.replace(/\s+/g, " ").trim();
+
+  const hebrewNameMatch = remaining.match(/^([\u0590-\u05FF][\u0590-\u05FF\s'"\-]{1,40}[\u0590-\u05FF])/);
+  if (hebrewNameMatch) {
+    result.name = hebrewNameMatch[1].trim();
+    remaining = remaining.slice(hebrewNameMatch[0].length).trim();
+  } else {
+    const latinNameMatch = remaining.match(/^([A-Za-z][\w\s'\-]{1,30}[A-Za-z])/);
+    if (latinNameMatch) {
+      result.name = latinNameMatch[1].trim();
+      remaining = remaining.slice(latinNameMatch[0].length).trim();
+    }
+  }
+
+  if (remaining.trim()) {
+    result.diagnosis = remaining.trim();
+  }
+
+  return result;
+}
+
 export function AddAdmissionModal({ onClose, onSuccess }: Props) {
   const { patients } = usePatientsState();
   const dispatch = usePatientsDispatch();
 
+  const [freestyle, setFreestyle] = useState("");
+  const [showStructured, setShowStructured] = useState(false);
   const [side, setSide] = useState<"A" | "B" | "C">("A");
   const [room, setRoom] = useState("");
   const [bed, setBed] = useState<1 | 2 | 3>(1);
   const [name, setName] = useState("");
+  const [age, setAge] = useState("");
   const [diagnosis, setDiagnosis] = useState("");
   const [status, setStatus] = useState<"" | "DNR" | "DNI" | "DNR/DNI">("");
   const [remarks, setRemarks] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [parsed, setParsed] = useState(false);
+
+  const handleFreestyleParse = useCallback(() => {
+    if (!freestyle.trim()) return;
+    const p = parseFreestyle(freestyle);
+    if (p.room) setRoom(p.room);
+    if (p.bed) setBed(p.bed as 1 | 2 | 3);
+    if (p.name) setName(p.name);
+    if (p.age) setAge(String(p.age));
+    if (p.diagnosis) setDiagnosis(p.diagnosis);
+    if (p.status) setStatus(p.status as typeof status);
+    setParsed(true);
+    setShowStructured(true);
+  }, [freestyle]);
 
   function validate(): string | null {
     if (!side) return "יש לבחור צד";
@@ -36,7 +139,7 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
   }
 
   function isDuplicateBed(): boolean {
-    const section = SIDE_TO_SECTION[side as "A" | "B" | "C"];
+    const section = SIDE_TO_SECTION[side];
     const roomStr = room.trim().includes("/") ? room.trim() : `${room.trim()}/${bed}`;
     return patients.some((p: PatientEntry) => p.section === section && p.room === roomStr);
   }
@@ -49,13 +152,13 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
     }
 
     if (isDuplicateBed()) {
-      setError(`מיטה ${bed} בחדר ${room} (צד ${side}) כבר תפוסה`);
+      setError(`מיטה ${bed} בחדר ${room} (צד ${side === "A" ? "א" : side === "B" ? "ב" : "ג"}) כבר תפוסה`);
       return;
     }
 
-    const section = SIDE_TO_SECTION[side as "A" | "B" | "C"];
-    // Use room as-is if it already contains a slash, otherwise append bed
+    const section = SIDE_TO_SECTION[side];
     const roomStr = room.trim().includes("/") ? room.trim() : `${room.trim()}/${bed}`;
+    const parsedAge = age.trim() ? parseInt(age.trim()) : null;
 
     const patient: PatientEntry = {
       id: generateId("pt-"),
@@ -66,7 +169,7 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
       })(),
       room: roomStr,
       name: name.trim(),
-      age: null,
+      age: parsedAge && parsedAge >= 18 && parsedAge <= 120 ? parsedAge : null,
       diagnosis: diagnosis.trim(),
       status: status ? [status] : [],
       flags: [],
@@ -86,131 +189,122 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
     onClose();
   }
 
+  const inputCls = "w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100";
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white dark:bg-gray-900 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md p-5 space-y-4 shadow-xl">
+      <div className="bg-white dark:bg-gray-900 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[90vh] overflow-y-auto p-5 space-y-4 shadow-xl">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">קבלה חדשה</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-xl px-1"
-          >
-            ×
-          </button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-xl px-1">×</button>
         </div>
 
         {error && (
-          <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">
-            {error}
-          </div>
+          <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">{error}</div>
         )}
 
-        {/* Side + Room + Bed — one row */}
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">צד *</label>
-            <select
-              value={side}
-              onChange={(e) => setSide(e.target.value as "A" | "B" | "C")}
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-            >
-              <option value="A">צד א</option>
-              <option value="B">צד ב</option>
-              <option value="C">צד ג</option>
-            </select>
-          </div>
-
-          <div className="flex-1">
-            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">חדר *</label>
-            <input
-              type="number"
-              value={room}
-              onChange={(e) => setRoom(e.target.value)}
-              placeholder="49"
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+        {/* ── Freestyle input ── */}
+        <div>
+          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">הקלד חופשי — הכל בשורה אחת</label>
+          <div className="flex gap-2">
+            <textarea
+              value={freestyle}
+              onChange={(e) => { setFreestyle(e.target.value); setParsed(false); }}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleFreestyleParse(); } }}
+              placeholder={"49/2 כהן יוסף 82 pneumonia DNR"}
+              dir="auto"
+              rows={2}
+              autoFocus
+              style={{ unicodeBidi: "plaintext" as const }}
+              className={`flex-1 ${inputCls} resize-none placeholder:text-gray-400`}
             />
-          </div>
-
-          <div className="w-24">
-            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">מיטה *</label>
-            <select
-              value={bed}
-              onChange={(e) => setBed(Number(e.target.value) as 1 | 2 | 3)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+            <button
+              onClick={handleFreestyleParse}
+              disabled={!freestyle.trim()}
+              className="self-end px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium active:bg-blue-700 disabled:opacity-40 whitespace-nowrap"
             >
-              <option value={1}>1</option>
-              <option value={2}>2</option>
-              <option value={3}>3</option>
-            </select>
+              {parsed ? "✓ נותח" : "נתח →"}
+            </button>
           </div>
+          <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+            דוגמאות: &quot;49/2 כהן יוסף 82 pneumonia DNR&quot; · &quot;חדר 53 מיטה 1 לוי שרה בת 75 CHF&quot;
+          </p>
         </div>
 
-        {/* Name */}
-        <div>
-          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">שם מטופל *</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="כהן יוסף"
-            dir="auto"
-            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-          />
+        {/* Divider */}
+        <div className="flex items-center gap-2 text-xs text-gray-400">
+          <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+          <button onClick={() => setShowStructured(!showStructured)} className="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+            {showStructured ? "▲ הסתר שדות" : "▼ ערוך שדות ידנית"}
+          </button>
+          <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
         </div>
 
-        {/* Diagnosis */}
-        <div>
-          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">אבחנה *</label>
-          <input
-            type="text"
-            value={diagnosis}
-            onChange={(e) => setDiagnosis(e.target.value)}
-            placeholder="דלקת ריאות"
-            dir="auto"
-            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-          />
-        </div>
+        {/* ── Structured fields ── */}
+        {showStructured && (
+          <>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">צד *</label>
+                <select value={side} onChange={(e) => setSide(e.target.value as "A" | "B" | "C")} className={inputCls}>
+                  <option value="A">צד א</option>
+                  <option value="B">צד ב</option>
+                  <option value="C">צד ג</option>
+                </select>
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">חדר *</label>
+                <input type="number" value={room} onChange={(e) => setRoom(e.target.value)} placeholder="49" className={inputCls} />
+              </div>
+              <div className="w-24">
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">מיטה *</label>
+                <select value={bed} onChange={(e) => setBed(Number(e.target.value) as 1 | 2 | 3)} className={inputCls}>
+                  <option value={1}>1</option>
+                  <option value={2}>2</option>
+                  <option value={3}>3</option>
+                </select>
+              </div>
+            </div>
 
-        {/* Status (optional) */}
-        <div>
-          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">סטטוס</label>
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value as typeof status)}
-            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-          >
-            <option value="">ללא</option>
-            <option value="DNR">DNR</option>
-            <option value="DNI">DNI</option>
-            <option value="DNR/DNI">DNR/DNI</option>
-          </select>
-        </div>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">שם מטופל *</label>
+                <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="כהן יוסף" dir="auto" className={inputCls} />
+              </div>
+              <div className="w-20">
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">גיל</label>
+                <input type="number" value={age} onChange={(e) => setAge(e.target.value)} placeholder="82" min={18} max={120} className={inputCls} />
+              </div>
+            </div>
 
-        {/* Remarks (optional) */}
-        <div>
-          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">הערות</label>
-          <textarea
-            value={remarks}
-            onChange={(e) => setRemarks(e.target.value)}
-            placeholder="הערות נוספות..."
-            dir="auto"
-            rows={2}
-            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none"
-          />
-        </div>
+            <div>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">אבחנה *</label>
+              <input type="text" value={diagnosis} onChange={(e) => setDiagnosis(e.target.value)} placeholder="דלקת ריאות" dir="auto" className={inputCls} />
+            </div>
+
+            <div>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">סטטוס</label>
+              <select value={status} onChange={(e) => setStatus(e.target.value as typeof status)} className={inputCls}>
+                <option value="">ללא</option>
+                <option value="DNR">DNR</option>
+                <option value="DNI">DNI</option>
+                <option value="DNR/DNI">DNR/DNI</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">הערות</label>
+              <textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="הערות נוספות..." dir="auto" rows={2} className={`${inputCls} resize-none`} />
+            </div>
+          </>
+        )}
 
         {/* Actions */}
         <div className="flex gap-2 pt-1">
-          <button
-            onClick={handleSubmit}
-            className="flex-1 py-3 bg-blue-600 text-white rounded-xl text-sm font-semibold active:bg-blue-700"
-          >
+          <button onClick={handleSubmit} className="flex-1 py-3 bg-blue-600 text-white rounded-xl text-sm font-semibold active:bg-blue-700">
             הוסף מטופל
           </button>
-          <button
-            onClick={onClose}
-            className="px-5 py-3 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl text-sm active:bg-gray-100 dark:active:bg-gray-700"
-          >
+          <button onClick={onClose} className="px-5 py-3 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl text-sm active:bg-gray-100 dark:active:bg-gray-700">
             ביטול
           </button>
         </div>
