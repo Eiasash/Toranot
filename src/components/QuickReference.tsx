@@ -803,7 +803,11 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
 // ─────────────────────────────────────────────────────────
 
 function HomeGrid({ onSelect }: { onSelect: (key: SectionKey) => void }) {
-  const groups = ["geriatrics", "ortho", "protocols", "calculators", "quickaccess"] as const;
+  const groups = [
+    "geriatrics", "ortho", "protocols", "calculators", "quickaccess",
+    "oncall_cardio", "oncall_resp", "oncall_gi", "oncall_neuro",
+    "oncall_metabolic", "oncall_heme", "oncall_general",
+  ] as const;
   return (
     <div className="p-4 space-y-5">
       {groups.map((group) => {
@@ -813,7 +817,7 @@ function HomeGrid({ onSelect }: { onSelect: (key: SectionKey) => void }) {
             <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2 px-1">
               {GROUP_LABELS[group]}
             </h3>
-            <div className={`grid gap-2.5 ${group === "calculators" || group === "quickaccess" ? "grid-cols-3" : "grid-cols-2"}`}>
+            <div className={`grid gap-2.5 ${group === "calculators" || group === "quickaccess" ? "grid-cols-3" : items.length >= 5 ? "grid-cols-3" : "grid-cols-2"}`}>
               {items.map((s) => (
                 <button
                   key={s.key}
