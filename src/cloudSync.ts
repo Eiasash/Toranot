@@ -287,10 +287,10 @@ export type ConflictData = {
 // ═══════════════════════════════════════════════════════════
 
 function generateHandoffCode(): string {
-  // 6-character alphanumeric code (easy to type/dictate)
+  // 8-character alphanumeric code (still easy to type/dictate, harder to brute-force)
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no O/0/1/I confusion
   let code = "";
-  const arr = crypto.getRandomValues(new Uint8Array(6));
+  const arr = crypto.getRandomValues(new Uint8Array(8));
   for (const byte of arr) code += chars[byte % chars.length];
   return code;
 }
@@ -320,6 +320,11 @@ export async function createHandoff(state: ToranotCloudState): Promise<{ code: s
 
 export async function pullHandoff(code: string): Promise<ToranotCloudState | null> {
   if (!supabase) return null;
+
+  // Require auth to reduce drive-by brute forcing.
+  // (RLS should still be enabled server-side. This just avoids making it *too* easy.)
+  const uid = await getUserId();
+  if (!uid) return null;
 
   const { data, error } = await supabase
     .from("shared_shifts")

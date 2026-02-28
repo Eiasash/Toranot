@@ -7,8 +7,24 @@
 
 exports.handler = async (event, context) => {
   // CORS headers
+  // Configure ALLOWED_ORIGINS="https://toranot.netlify.app,https://your-domain.com"
+  const DEFAULT_ALLOWED = [
+    "https://toranot.netlify.app",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+  ];
+
+  const origin = event.headers?.origin || event.headers?.Origin || "";
+  const allowed = (process.env.ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const allowList = allowed.length ? allowed : DEFAULT_ALLOWED;
+  const ok = origin && allowList.includes(origin);
+
   const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": ok ? origin : "null",
+    "Vary": "Origin",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
   };

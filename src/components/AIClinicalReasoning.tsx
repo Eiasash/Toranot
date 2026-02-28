@@ -12,6 +12,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import type { PatientEntry } from "../types";
 import { safeGetItem, safeSetItem } from "../utils/storage";
+import DOMPurify from "dompurify";
 
 const API_KEY_STORAGE = "toranot-anthropic-key";
 const GEMINI_KEY_STORAGE = "toranot-gemini-key";
@@ -23,13 +24,15 @@ const GEMINI_MODEL = "gemini-3.1-pro-preview";
 
 type AIProvider = "claude" | "gemini";
 
-// Strip dangerous HTML tags before rendering AI output (XSS prevention)
+// Render AI output safely.
+// Regex-based sanitizers are a cute hobby, not a security strategy.
 function sanitizeHTML(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, "")
-    .replace(/<iframe[\s\S]*?<\/iframe>/gi, "")
-    .replace(/on\w+\s*=\s*["'][^"']*["']/gi, "")
-    .replace(/javascript:/gi, "");
+  return DOMPurify.sanitize(html, {
+    // Keep formatting, kill the scary stuff.
+    USE_PROFILES: { html: true },
+    FORBID_TAGS: ["script", "iframe", "object", "embed"],
+    FORBID_ATTR: ["style", "onerror", "onload"],
+  });
 }
 
 // Simple markdown → HTML for AI responses

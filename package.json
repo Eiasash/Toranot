@@ -17,9 +17,10 @@
     "tailwindcss": "^4.1.18",
     "typescript": "^5.4.0",
     "vite": "^7.3.1",
-    "vitest": "^4.0.18"
+    "vitest": "^4.0.18",
+    "@types/dompurify": "^3.0.6"
   },
-  "description": "Hospital ward shift management PWA — patient tracking, task automation, drug safety alerts, and lab trend monitoring for on-call doctors",
+  "description": "Hospital ward shift management PWA \u2014 patient tracking, task automation, drug safety alerts, and lab trend monitoring for on-call doctors",
   "main": "index.js",
   "repository": {
     "type": "git",
@@ -32,6 +33,7 @@
     "@supabase/supabase-js": "^2.49.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react-dom": "^19.2.4",
+    "dompurify": "^3.1.6"
   }
 }

@@ -1,37 +1,65 @@
 import type { Context } from "@netlify/functions";
 
-const CORS_HEADERS: Record<string, string> = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+// Don't let random websites siphon your API keys through this proxy.
+// Configure ALLOWED_ORIGINS="https://toranot.netlify.app,https://your-domain.com"
+const DEFAULT_ALLOWED = [
+  "https://toranot.netlify.app",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+];
+
+function corsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get("origin") ?? "";
+  const allowed = (process.env.ALLOWED_ORIGINS ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const allowList = allowed.length ? allowed : DEFAULT_ALLOWED;
+  const ok = origin && allowList.includes(origin);
+  return {
+    "Access-Control-Allow-Origin": ok ? origin : "null",
+    "Vary": "Origin",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  };
+}
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
   });
 }
 
 export default async (req: Request, _context: Context) => {
+  const CORS = corsHeaders(req);
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: { ...CORS_HEADERS } });
+    return new Response(null, { status: 204, headers: { ...CORS } });
   }
 
   if (req.method !== "POST") {
-    return json({ error: "Method not allowed" }, 405);
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { ...CORS, "Content-Type": "application/json" },
+    });
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return json({ error: "Gemini API key not configured on server" }, 500);
+    return new Response(JSON.stringify({ error: "Gemini API key not configured on server" }), {
+      status: 500,
+      headers: { ...CORS, "Content-Type": "application/json" },
+    });
   }
 
   let body: any;
   try {
     body = await req.json();
   } catch {
-    return json({ error: "Invalid JSON" }, 400);
+    return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+      status: 400,
+      headers: { ...CORS, "Content-Type": "application/json" },
+    });
   }
 
   const model =
@@ -59,7 +87,10 @@ export default async (req: Request, _context: Context) => {
   }));
 
   if (contents.length === 0) {
-    return json({ error: "No messages provided" }, 400);
+    return new Response(JSON.stringify({ error: "No messages provided" }), {
+      status: 400,
+      headers: { ...CORS, "Content-Type": "application/json" },
+    });
   }
 
   const payload: Record<string, unknown> = {
@@ -103,7 +134,10 @@ export default async (req: Request, _context: Context) => {
       else if (upstream.status === 403) userMsg = "מכסת Gemini הסתיימה — בדוק את מגבלות ה-API שלך ב-Google AI Studio.";
       else if (upstream.status === 400) userMsg = `בקשה לא תקינה ל-Gemini: ${msg.slice(0, 120)}`;
       else if (upstream.status === 500 || upstream.status === 503) userMsg = "שרת Gemini לא זמין כרגע. נסה שוב.";
-      return json({ error: userMsg }, upstream.status);
+      return new Response(JSON.stringify({ error: userMsg }), {
+        status: upstream.status,
+        headers: { ...CORS, "Content-Type": "application/json" },
+      });
     }
 
     const text: string =
@@ -112,19 +146,28 @@ export default async (req: Request, _context: Context) => {
     // Blocked by safety filters
     const finishReason: string = data?.candidates?.[0]?.finishReason ?? "";
     if (finishReason === "SAFETY") {
-      return json({ error: "התוכן נחסם על ידי מסנני הבטיחות של Gemini." }, 200);
+      return new Response(JSON.stringify({ error: "התוכן נחסם על ידי מסנני הבטיחות של Gemini." }), {
+        status: 200,
+        headers: { ...CORS, "Content-Type": "application/json" },
+      });
     }
 
-    return json({
+    return new Response(JSON.stringify({
       content: [{ type: "text", text }],
       model,
       usage: {
         input_tokens: data?.usageMetadata?.promptTokenCount ?? 0,
         output_tokens: data?.usageMetadata?.candidatesTokenCount ?? 0,
       },
+    }), {
+      status: 200,
+      headers: { ...CORS, "Content-Type": "application/json" },
     });
   } catch (e) {
-    return json({ error: "שגיאת רשת בחיבור ל-Gemini." }, 502);
+    return new Response(JSON.stringify({ error: "שגיאת רשת בחיבור ל-Gemini." }), {
+      status: 502,
+      headers: { ...CORS, "Content-Type": "application/json" },
+    });
   }
 };
 
