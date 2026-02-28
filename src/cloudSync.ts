@@ -36,7 +36,13 @@ const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_ANON_KEY as
 
 export const supabase: SupabaseClient | null =
   SUPABASE_URL && SUPABASE_ANON
-    ? createClient(SUPABASE_URL, SUPABASE_ANON)
+    ? createClient(SUPABASE_URL, SUPABASE_ANON, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+        },
+      })
     : null;
 
 // ── Auth helpers (optional UI can call these)
