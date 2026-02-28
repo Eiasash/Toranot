@@ -100,18 +100,24 @@ function formatPatient(p: PatientEntry): string {
   return lines.join("\n");
 }
 
-// On-call shift: 16:00 → 08:00
+// On-call window: 16:00 → 08:00
+function isOnCallTime(d: Date): boolean {
+  const h = d.getHours();
+  return h >= 16 || h < 8;
+}
 function getShiftStart(): Date {
   const now = new Date();
   const s = new Date(now);
   s.setMinutes(0, 0, 0);
+  if (now.getHours() < 8) {
+    s.setDate(s.getDate() - 1);
+  }
   s.setHours(16);
-  if (now.getHours() < 16) s.setDate(s.getDate() - 1);
   return s;
 }
 
 function isOncallRelevant(p: PatientEntry, shiftStart: Date): boolean {
-  if (p.scannedAt && new Date(p.scannedAt) >= shiftStart) return true;
+  if (p.scannedAt && isOnCallTime(new Date(p.scannedAt)) && new Date(p.scannedAt) >= shiftStart) return true;
   if (p.tasks.some(t => t.source !== "generated")) return true;
   if ([...p.tasks, ...p.generatedTasks].some(t => t.done)) return true;
   if (p.handoverNote) return true;
@@ -147,7 +153,7 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
       minute: "2-digit",
     });
 
-    const newAdmissions = patients.filter(p => p.scannedAt && new Date(p.scannedAt) >= shiftStart);
+    const newAdmissions = patients.filter(p => p.scannedAt && isOnCallTime(new Date(p.scannedAt)) && new Date(p.scannedAt) >= shiftStart);
 
     const lines: string[] = [
       `📋 ${oncallOnly ? "מסירת תורן" : "סיכום משמרת"} — ${dateStr} ${timeStr}`,
