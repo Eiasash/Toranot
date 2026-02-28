@@ -14,6 +14,7 @@ const CACHE_NAME = `toranot-v${CACHE_VERSION}`;
 const PRECACHE_ASSETS = [
   "./",
   "./index.html",
+  "./offline.html",
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",
@@ -87,6 +88,21 @@ self.addEventListener("fetch", (event) => {
           return addCOIHeaders(response);
         }).catch(() => caches.match(event.request).then(r => r || new Response("Offline", { status: 503 })));
       })
+    );
+    return;
+  }
+
+  // Navigation requests (HTML) → network-first with offline fallback page
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => addCOIHeaders(response))
+        .catch(async () => {
+          const cached = await caches.match("./index.html");
+          if (cached) return cached;
+          const offline = await caches.match("./offline.html");
+          return offline ?? new Response("Offline", { status: 503 });
+        })
     );
     return;
   }
@@ -293,3 +309,4 @@ function addCOIHeaders(response) {
     headers: newHeaders,
   });
 }
+
