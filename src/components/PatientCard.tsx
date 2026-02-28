@@ -593,8 +593,42 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
         );
       })()}
 
-      {/* Quick action buttons — collapsed by default */}
-      <details className="group">
+      {/* AI + key tools — always visible on desktop, inside כלים on mobile */}
+      <div className="hidden sm:flex gap-1.5 flex-wrap">
+        <button
+          onClick={() => setShowAI(true)}
+          className="text-xs px-2.5 py-1 rounded-lg border border-violet-200 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/30 text-violet-800 dark:text-violet-300 active:bg-violet-100"
+        >
+          🤖 AI ייעוץ
+        </button>
+        <button
+          onClick={() => setShowScenario(true)}
+          className="text-xs px-2.5 py-1 rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 active:bg-amber-100"
+        >
+          ⚡ תרחיש
+        </button>
+        <button
+          onClick={() => setShowLabForm(!showLabForm)}
+          className="text-xs px-2.5 py-1 rounded-lg border border-purple-200 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 active:bg-purple-100"
+        >
+          📊 Lab
+        </button>
+        {(patient.labs?.length ?? 0) >= 2 && (
+          <button
+            onClick={() => setShowLabChart(!showLabChart)}
+            className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${
+              showLabChart
+                ? "bg-purple-600 text-white border-purple-600"
+                : "border-purple-200 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300"
+            } active:bg-purple-100`}
+          >
+            📈 Lab Trend
+          </button>
+        )}
+      </div>
+
+      {/* Quick action buttons — collapsed by default (mobile), all tools */}
+      <details className="group sm:hidden">
         <summary className="text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 cursor-pointer active:bg-gray-100 list-none flex items-center gap-1">
           <span className="text-sm">🔧</span> כלים
           <span className="text-gray-400 group-open:rotate-180 transition-transform">▾</span>

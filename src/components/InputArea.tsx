@@ -8,7 +8,16 @@ import type { PatientEntry } from "../types";
 
 type InputMode = "closed" | "choose" | "scan" | "text" | "admission";
 
-const PLACEHOLDER = `הדביקו רשימת חולים כאן, לדוגמה:\n\nצד א\n101 כהן יוסף 72 דלקת ריאות DNR | משתחרר היום\n102 לוי שרה 65 אי ספיקת לב NPO | א.ק.ג דחוף`;
+const PLACEHOLDER = `הדביקו רשימת חולים כאן. פורמט גמיש:
+
+צד א
+101 כהן יוסף 72 דלקת ריאות DNR | תורן: תרביות דם; צילום חזה | מחר: CT
+102 לוי שרה 65 אי ספיקת לב NPO | תורן: א.ק.ג דחוף | סטורציה 88%
+54/2 דוד מרים 80 COPD + סוכרת | תורן: גזים; BS q6h | תוכנית: BiPAP
+
+כל מה שאחרי תורן: → משימות שלך
+כל מה שאחרי מחר: → הערות לבוקר
+כל השאר → רקע / מצב`;
 
 export function InputArea() {
   const [mode, setMode] = useState<InputMode>("choose");
