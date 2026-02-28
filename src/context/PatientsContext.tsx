@@ -570,7 +570,7 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
       return { ...state, darkMode: !state.darkMode };
 
     case "CLEAR_ALL":
-      return { ...state, patients: [], events: [], unassignedTasks: [] };
+      return { ...state, patients: [], events: [], unassignedTasks: [], shiftHistory: [] };
 
     case "REAPPLY_RULES":
       return {
