@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
 import { CloudAuthPanel } from "./CloudAuthPanel";
+import { supabase } from "../cloudSync";
 import { ConfirmModal, type ConfirmDialog } from "../App";
 
 export type OverflowModal = "history" | "qrsync" | "capture" | "morning" | "ivprotocols" | "handoff_cloud";
