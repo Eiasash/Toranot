@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Component, type ErrorInfo } from "react";
 import { PatientsProvider } from "./context/PatientsContext";
 import { signInWithPassword, signUpWithPassword, signOut, supabase, createHandoff, pullHandoff, type ToranotCloudState } from "./cloudSync";
 import { SectionTabs } from "./components/SectionTabs";
@@ -426,9 +426,8 @@ function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qrsync" |
 
   const handleShareClick = () => {
     setOpen(false);
-    const key = (() => { try { return localStorage.getItem("toranot-anthropic-key"); } catch { return null; } })();
-    const base = window.location.origin + window.location.pathname;
-    const url = key ? `${base}#apikey=${encodeURIComponent(key)}` : base;
+    // Share base URL only — never include API keys in shared URLs
+    const url = window.location.origin + window.location.pathname;
 
     if (navigator.share) {
       navigator.share({ title: "תורנות — ניהול משמרת", url }).catch(() => {
@@ -1050,6 +1049,46 @@ function AppInner() {
   );
 }
 
+// ─── Error Boundary ───────────────────────────────────────
+
+class AppErrorBoundary extends Component<
+  { children: React.ReactNode },
+  { error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("[Toranot] Uncaught error:", error, info.componentStack);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-6">
+          <div className="max-w-sm w-full text-center space-y-4">
+            <div className="text-5xl">⚠️</div>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">שגיאה בלתי צפויה</h1>
+            <p className="text-sm text-gray-600 dark:text-gray-400 font-mono break-all">
+              {this.state.error.message}
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full py-3 bg-violet-600 text-white rounded-xl font-bold"
+            >
+              טען מחדש
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export function App() {
   // Extract API key from URL hash on first load: #apikey=sk-ant-...
   // Hash fragments never hit server logs, analytics, or referrer headers.
@@ -1068,9 +1107,12 @@ export function App() {
   }, []);
 
   return (
-    <PatientsProvider>
-      <AppInner />
-      <UndoToastContainer />
-    </PatientsProvider>
+    <AppErrorBoundary>
+      <PatientsProvider>
+        <AppInner />
+        <UndoToastContainer />
+      </PatientsProvider>
+    </AppErrorBoundary>
   );
 }
+
