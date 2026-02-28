@@ -192,13 +192,20 @@ export function useToranotCloudSync(
           /* quota */
         }
 
-        // Conflict detection: if local has patients and cloud has different patients
+        // Conflict detection: if local has patients and cloud has DIFFERENT patients
+        // Compare by patient ID sets to avoid false conflicts from JSON key ordering
         const localPatients = (state.patients ?? []) as unknown[];
         const remotePatients = (remote.patients ?? []) as unknown[];
         const localHasData = Array.isArray(localPatients) && localPatients.length > 0;
         const cloudHasData = Array.isArray(remotePatients) && remotePatients.length > 0;
 
-        if (localHasData && cloudHasData && stableJson(localPatients) !== stableJson(remotePatients)) {
+        const patientIds = (arr: unknown[]) =>
+          new Set((arr as { id?: string }[]).map(p => p.id ?? "").filter(Boolean));
+        const localIds = patientIds(localPatients);
+        const remoteIds = patientIds(remotePatients);
+        const setsEqual = localIds.size === remoteIds.size && [...localIds].every(id => remoteIds.has(id));
+
+        if (localHasData && cloudHasData && !setsEqual) {
           // Conflict! Let user choose
           pendingCloudState.current = remote;
           setConflict({
