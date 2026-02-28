@@ -100,6 +100,29 @@ function parseFreestyle(text: string): Partial<{
   return result;
 }
 
+// ── Common geriatric diagnoses for autocomplete ──
+const COMMON_DIAGNOSES = [
+  "Pneumonia", "Aspiration pneumonia", "UTI", "Urosepsis", "Sepsis",
+  "Cellulitis", "Endocarditis", "Cholangitis", "Cholecystitis", "C. diff colitis", "COVID-19",
+  "ACS", "NSTEMI", "STEMI", "AF with RVR", "Acute HF decompensation",
+  "HFrEF exacerbation", "HFpEF exacerbation", "Hypertensive urgency", "Syncope",
+  "COPD exacerbation", "Asthma exacerbation", "PE", "Pleural effusion",
+  "Delirium", "Stroke", "TIA", "Seizure", "Altered mental status",
+  "GI bleed", "Acute abdomen", "Bowel obstruction", "Liver failure", "Pancreatitis",
+  "DKA", "HHS", "Hyponatremia", "Hyperkalemia", "AKI", "CKD exacerbation",
+  "Hip fracture", "Falls", "DVT", "Anemia", "Functional decline", "Malignancy workup",
+];
+
+const QUICK_DX = ["Pneumonia", "UTI", "ACS", "Delirium", "AKI", "HF", "Sepsis", "Stroke", "COPD", "AF with RVR", "GI bleed", "Hip fracture"];
+
+const COMMON_ADMISSION_MEDS = [
+  "Warfarin", "Apixaban", "Rivaroxaban", "Aspirin",
+  "Insulin", "Metformin", "Steroids (chronic)",
+  "ACEi / ARB", "Beta-blocker", "Digoxin",
+  "Furosemide", "Antiepileptics", "Opioids",
+  "Benzodiazepines", "Antipsychotics",
+];
+
 export function AddAdmissionModal({ onClose, onSuccess }: Props) {
   const { patients } = usePatientsState();
   const dispatch = usePatientsDispatch();
@@ -114,6 +137,7 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
   const [diagnosis, setDiagnosis] = useState("");
   const [status, setStatus] = useState<"" | "DNR" | "DNI" | "DNR/DNI">("");
   const [remarks, setRemarks] = useState("");
+  const [meds, setMeds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [parsed, setParsed] = useState(false);
 
@@ -177,7 +201,10 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
       generatedTasks: [],
       tomorrowNotes: [],
       planNotes: [],
-      notes: remarks.trim() ? [remarks.trim()] : [],
+      notes: [
+        ...(remarks.trim() ? [remarks.trim()] : []),
+        ...(meds.length > 0 ? [`מדים: ${meds.join(", ")}`] : []),
+      ],
       labs: [],
       scannedAt: new Date().toISOString(),
       confidence: 1,
@@ -279,7 +306,48 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
 
             <div>
               <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">אבחנה *</label>
-              <input type="text" value={diagnosis} onChange={(e) => setDiagnosis(e.target.value)} placeholder="דלקת ריאות" dir="auto" className={inputCls} />
+              <input
+                type="text"
+                list="dx-suggestions"
+                value={diagnosis}
+                onChange={(e) => setDiagnosis(e.target.value)}
+                placeholder="Pneumonia / דלקת ריאות"
+                dir="auto"
+                className={inputCls}
+              />
+              <datalist id="dx-suggestions">
+                {COMMON_DIAGNOSES.map(d => <option key={d} value={d} />)}
+              </datalist>
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {QUICK_DX.map(d => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setDiagnosis(d)}
+                    className={"text-[10px] px-2 py-0.5 rounded-full border transition-colors " + (diagnosis === d ? "bg-blue-600 text-white border-blue-600" : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600")}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                תרופות לדגל <span className="text-gray-400">(אופציונלי)</span>
+              </label>
+              <div className="flex flex-wrap gap-1">
+                {COMMON_ADMISSION_MEDS.map(m => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setMeds(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m])}
+                    className={"text-[10px] px-2 py-0.5 rounded-full border transition-colors " + (meds.includes(m) ? "bg-amber-500 text-white border-amber-500" : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600")}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div>
