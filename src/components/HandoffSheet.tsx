@@ -100,21 +100,7 @@ function formatPatient(p: PatientEntry): string {
   return lines.join("\n");
 }
 
-// On-call window: 16:00 → 08:00
-function isOnCallTime(d: Date): boolean {
-  const h = d.getHours();
-  return h >= 16 || h < 8;
-}
-function getShiftStart(): Date {
-  const now = new Date();
-  const s = new Date(now);
-  s.setMinutes(0, 0, 0);
-  if (now.getHours() < 8) {
-    s.setDate(s.getDate() - 1);
-  }
-  s.setHours(16);
-  return s;
-}
+import { isOnCallTime, getShiftStart } from "../utils/shiftTime";
 
 function isOncallRelevant(p: PatientEntry, shiftStart: Date): boolean {
   if (p.scannedAt && isOnCallTime(new Date(p.scannedAt)) && new Date(p.scannedAt) >= shiftStart) return true;
