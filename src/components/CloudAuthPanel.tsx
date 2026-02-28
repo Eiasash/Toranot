@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { signInWithPassword, signUpWithPassword, signOut, supabase } from "../cloudSync";
 
-function CloudAuthPanel() {
+export function CloudAuthPanel() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"login" | "signup">("login");
