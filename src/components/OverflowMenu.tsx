@@ -1,0 +1,260 @@
+import { useState } from "react";
+import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
+import { CloudAuthPanel } from "./CloudAuthPanel";
+import { ConfirmModal, type ConfirmDialog } from "../App";
+
+export type OverflowModal = "history" | "qrsync" | "capture" | "morning" | "ivprotocols" | "handoff_cloud";
+
+export function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qrsync" | "capture" | "morning" | "ivprotocols" | "handoff_cloud") => void }) {
+  const [open, setOpen] = useState(false);
+  const [dialog, setDialog] = useState<ConfirmDialog>({ type: "none" });
+  const { darkMode, showTomorrow, scanMode, patients } = usePatientsState();
+  const dispatch = usePatientsDispatch();
+
+  const openArchiveDialog = (mode: "archive" | "end") => {
+    setOpen(false);
+    const now = new Date();
+    const date = now.toLocaleDateString("he-IL");
+    const hour = now.getHours();
+    const shiftType = hour >= 7 && hour < 15 ? "בוקר" : hour >= 15 && hour < 23 ? "ערב" : "לילה";
+    const label = `${date} — ${shiftType}`;
+
+    // Collect incomplete stat/urgent tasks
+    const incompleteTasks = patients.flatMap((p) =>
+      [...p.tasks, ...p.generatedTasks]
+        .filter((t) => !t.done && (t.urgency === "stat" || t.urgency === "urgent"))
+        .map((t) => ({ name: p.name ?? "?", room: p.room ?? null, task: t.text })),
+    );
+
+    // Patients with zero tasks (possibly forgotten)
+    const patientsNoTasks = patients
+      .filter((p) => [...p.tasks, ...p.generatedTasks].length === 0)
+      .map((p) => ({ name: p.name ?? "?", room: p.room ?? null }));
+
+    // Abnormal labs without a follow-up task mentioning that lab
+    const abnormalLabs: Array<{ name: string; room: string | null; lab: string }> = [];
+    for (const p of patients) {
+      for (const lab of p.labs ?? []) {
+        const val = lab.value;
+        if (isNaN(val)) continue;
+        const abnormal =
+          (lab.label === "K" && (val < 3.0 || val > 5.5)) ||
+          (lab.label === "Na" && (val < 130 || val > 150)) ||
+          (lab.label === "Cr" && val > 1.5) ||
+          (lab.label === "Hb" && val < 8) ||
+          (lab.label === "PLT" && val < 50) ||
+          (lab.label === "WBC" && val > 20) ||
+          (lab.label === "INR" && val > 3) ||
+          (lab.label === "glucose" && (val < 70 || val > 400)) ||
+          (lab.label === "Lac" && val > 4) ||
+          (lab.label === "pH" && (val < 7.25 || val > 7.55));
+        if (abnormal) {
+          const allTasks = [...p.tasks, ...p.generatedTasks];
+          const hasFollowUp = allTasks.some((t) => !t.done && t.text.toLowerCase().includes(lab.label.toLowerCase()));
+          if (!hasFollowUp) {
+            abnormalLabs.push({ name: p.name ?? "?", room: p.room ?? null, lab: `${lab.label}: ${val}` });
+          }
+        }
+      }
+    }
+
+    const openStatCount = incompleteTasks.filter((t) =>
+      patients.some((p) =>
+        [...p.tasks, ...p.generatedTasks].some((pt) => pt.text === t.task && pt.urgency === "stat" && !pt.done)
+      )
+    ).length;
+
+    setDialog({ type: "archive", mode, label, incompleteTasks, patientsNoTasks, abnormalLabs, openStatCount });
+  };
+
+  const handleArchiveClick = () => openArchiveDialog("archive");
+  const handleEndShiftClick = () => openArchiveDialog("end");
+
+  const [shareCopied, setShareCopied] = useState(false);
+
+  const handleShareClick = () => {
+    setOpen(false);
+    // Share base URL only — never include API keys in shared URLs
+    const url = window.location.origin + window.location.pathname;
+
+    if (navigator.share) {
+      navigator.share({ title: "תורנות — ניהול משמרת", url }).catch(() => {
+        navigator.clipboard.writeText(url);
+        setShareCopied(true);
+        setTimeout(() => setShareCopied(false), 2000);
+      });
+    } else {
+      navigator.clipboard.writeText(url);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    }
+  };
+
+  const handleClearClick = () => {
+    setOpen(false);
+    setDialog({ type: "clear" });
+  };
+
+  const handleConfirm = () => {
+    if (dialog.type === "archive") {
+      dispatch({ type: "ARCHIVE_SHIFT", label: dialog.label });
+      console.log("[Toranot] Shift archived:", dialog.label);
+      if (dialog.mode === "end") {
+        dispatch({ type: "CLEAR_ALL" });
+      }
+    } else if (dialog.type === "clear") {
+      dispatch({ type: "CLEAR_ALL" });
+    }
+    setDialog({ type: "none" });
+  };
+
+  return (
+    <>
+      <div className="relative">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-slate-200 active:bg-slate-700 transition-colors text-lg"
+          aria-label="תפריט נוסף"
+        >
+          ···
+        </button>
+
+        {open && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+            <div className="absolute left-0 top-full mt-1 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl overflow-hidden min-w-[200px]" onClick={(e) => e.stopPropagation()}>
+              {/* Tomorrow toggle */}
+              <button
+                onClick={() => { dispatch({ type: "TOGGLE_SHOW_TOMORROW" }); setOpen(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-slate-200 active:bg-slate-700 text-right"
+              >
+                <span className="text-base">📅</span>
+                {showTomorrow ? "הסתר משימות מחר" : "הצג משימות מחר"}
+              </button>
+              {/* Quick capture */}
+              <button
+                onClick={() => { onOpenModal("capture"); setOpen(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-slate-200 active:bg-slate-700 border-t border-slate-700 text-right"
+              >
+                <span className="text-base">📲</span>
+                קליטה מהירה
+              </button>
+              {/* Morning report */}
+              <button
+                onClick={() => { onOpenModal("morning"); setOpen(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-slate-200 active:bg-slate-700 border-t border-slate-700 text-right"
+              >
+                <span className="text-base">☀️</span>
+                דוח בוקר
+              </button>
+              {/* Scan mode */}
+              <button
+                onClick={() => { dispatch({ type: "TOGGLE_SCAN_MODE" }); setOpen(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-slate-200 active:bg-slate-700 border-t border-slate-700 text-right"
+              >
+                <span className="text-base">{scanMode ? "📋" : "👁️"}</span>
+                {scanMode ? "תצוגה מלאה" : "מצב סקירה"}
+              </button>
+              {/* Dark mode */}
+              <button
+                onClick={() => { dispatch({ type: "TOGGLE_DARK_MODE" }); setOpen(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-slate-200 active:bg-slate-700 border-t border-slate-700 text-right"
+              >
+                <span className="text-base">{darkMode ? "☀️" : "🌙"}</span>
+                {darkMode ? "מצב יום" : "מצב לילה"}
+              </button>
+              {/* Archive shift */}
+              {patients.length > 0 && (
+                <button
+                  onClick={handleArchiveClick}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-slate-200 active:bg-slate-700 border-t border-slate-700 text-right"
+                >
+                  <span className="text-base">💾</span>
+                  שמור משמרת
+                </button>
+              )}
+              {/* End shift (archive + clear) */}
+              {patients.length > 0 && (
+                <button
+                  onClick={handleEndShiftClick}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-slate-200 active:bg-slate-700 border-t border-slate-700 text-right"
+                >
+                  <span className="text-base">🏁</span>
+                  סיום משמרת
+                </button>
+              )}
+              {/* History */}
+              <button
+                onClick={() => { onOpenModal("history"); setOpen(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-slate-200 active:bg-slate-700 border-t border-slate-700 text-right"
+              >
+                <span className="text-base">📁</span>
+                היסטוריית משמרות
+              </button>
+              {/* Share link with AI key */}
+              <button
+                onClick={handleShareClick}
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-slate-200 active:bg-slate-700 border-t border-slate-700 text-right"
+              >
+                <span className="text-base">{shareCopied ? "✅" : "🔗"}</span>
+                {shareCopied ? "הקישור הועתק!" : "שתף עם AI"}
+              </button>
+              {/* QR Sync */}
+              {patients.length > 0 && (
+                <button
+                  onClick={() => { onOpenModal("qrsync"); setOpen(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-slate-200 active:bg-slate-700 border-t border-slate-700 text-right"
+                >
+                  <span className="text-base">📲</span>
+                  סנכרון QR
+                </button>
+              )}
+              {/* Cloud Handoff */}
+              {supabase && (
+                <button
+                  onClick={() => { onOpenModal("handoff_cloud"); setOpen(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-slate-200 active:bg-slate-700 border-t border-slate-700 text-right"
+                >
+                  <span className="text-base">🤝</span>
+                  מסירה בענן
+                </button>
+              )}
+              {/* Clear all */}
+              {patients.length > 0 && (
+                <button
+                  onClick={handleClearClick}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-red-300 active:bg-red-900/30 border-t border-slate-700 text-right"
+                >
+                  <span className="text-base">🗑️</span>
+                  מחק הכל
+                </button>
+              )}
+              {/* IV Protocols */}
+              <button
+                onClick={() => { onOpenModal("ivprotocols"); setOpen(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-amber-300 active:bg-slate-700 border-t border-slate-700 text-right"
+              >
+                <span className="text-base">💉</span>
+                פרוטוקולי IV — שערי צדק
+              </button>
+              {/* Cloud sync auth */}
+              <CloudAuthPanel />
+              {/* Build stamp */}
+              <div className="px-4 py-2 text-[10px] text-slate-500 border-t border-slate-700 select-text">
+                build {__GIT_SHA__} · {new Date(__BUILD_TIME__).toLocaleString("en-GB")}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Inline confirm modal — rendered outside the overflow container so z-index works */}
+      <ConfirmModal
+        dialog={dialog}
+        onConfirm={handleConfirm}
+        onCancel={() => setDialog({ type: "none" })}
+      />
+    </>
+  );
+}
+
