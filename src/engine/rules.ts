@@ -778,7 +778,7 @@ const RULES: Rule[] = [
     group: "iv_opioid",
     triggerField: "all",
     tasks: [
-      { text: "RR + sedation score q2h — hold if RR<10", urgency: "stat", category: "procedure" },
+      { text: "RR + SpO2 q2h — hold if RR<10 or SpO2<90%", urgency: "urgent", category: "procedure" },
       { text: "Naloxone 0.4mg IV bedside (emergency reversal)", urgency: "routine", category: "meds" },
       { text: "Bowel protocol — עצירות צפויה", urgency: "routine", category: "meds" },
     ],

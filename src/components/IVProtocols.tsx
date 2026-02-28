@@ -62,7 +62,7 @@ const PROTOCOLS: Protocol[] = [
       "Start: 5 mcg/kg/min",
       "Titrate: +5-10 mcg/kg/min q10min",
       "Max: 50 mcg/kg/min",
-      "Target: Ramsay 3-5",
+      "Target: הערכת רמת סדציה q2h — תעד תגובתיות",
       "Change syringe q12h",
       "Use Adjusted Body Weight if BMI >30",
     ],

@@ -24,6 +24,29 @@ const DIRECT_API_URL = "https://api.anthropic.com/v1/messages";
 const PROXY_API_URL = "/api/claude";
 const MODEL = "claude-sonnet-4-20250514";
 
+// Simple markdown → HTML for AI responses
+function renderMarkdown(text: string): string {
+  return text
+    // Headers
+    .replace(/^### (.+)$/gm, '<h3 class="text-sm font-bold mt-3 mb-1 text-slate-800 dark:text-slate-200">$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2 class="text-base font-bold mt-4 mb-1.5 text-slate-800 dark:text-slate-200">$1</h2>')
+    // Bold
+    .replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-slate-900 dark:text-slate-100">$1</strong>')
+    // Italic
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    // Bullet lists
+    .replace(/^[•·\-]\s+(.+)$/gm, '<li class="mr-4 mb-0.5">$1</li>')
+    // Wrap consecutive <li> in <ul>
+    .replace(/((?:<li[^>]*>.*<\/li>\n?)+)/g, '<ul class="list-disc list-inside my-1.5 text-xs space-y-0.5">$1</ul>')
+    // Line breaks (double newline = paragraph)
+    .replace(/\n{2,}/g, '</p><p class="mb-2">')
+    // Single newlines in remaining text
+    .replace(/\n/g, '<br/>')
+    // Wrap in paragraph
+    .replace(/^/, '<p class="mb-2">')
+    .replace(/$/, '</p>');
+}
+
 /** On Netlify, the serverless proxy holds the key — no client key needed */
 const isNetlifyHosted = () =>
   typeof window !== "undefined" && window.location.hostname.includes("netlify");
@@ -407,12 +430,11 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
 
               {response && (
                 <div
-                  className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed whitespace-pre-wrap break-words"
+                  className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed break-words"
                   dir="auto"
                   style={{ unicodeBidi: "plaintext" }}
-                >
-                  {response}
-                </div>
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(response) }}
+                />
               )}
             </div>
           )}
