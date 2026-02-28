@@ -411,7 +411,7 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
           </span>
         </div>
 
-        <div className="flex-1 overflow-y-auto" ref={responseRef}>
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain" ref={responseRef} style={{ WebkitOverflowScrolling: "touch" }}>
           {showKeySetup ? (
             /* API Key Setup */
             <APIKeySetup
@@ -515,8 +515,8 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
                   dangerouslySetInnerHTML={{ __html: sanitizeHTML(renderMarkdown(response)) }}
                 />
               )}
-              {/* Scroll padding at bottom so content clears mobile nav bar */}
-              <div className="h-4" />
+              {/* Scroll padding — clears Android nav bar + bottom safe area */}
+              <div className="h-safe-bottom" style={{ paddingBottom: "env(safe-area-inset-bottom, 16px)", minHeight: "24px" }} />
             </div>
           )}
         </div>
@@ -600,5 +600,6 @@ function APIKeySetup({
     </div>
   );
 }
+
 
 
