@@ -19,6 +19,36 @@ import {
   PhoneDirectory,
   OsteoporosisProtocol,
 } from "./QuickReferenceCalculators";
+import {
+  ChestPainProtocol,
+  AcuteDyspneaProtocol,
+  GIBleedProtocol,
+  AnaphylaxisProtocol,
+  HypertensiveProtocol,
+  RapidAFProtocol,
+  SyncopeProtocol,
+  FeverWorkupProtocol,
+  SeizureProtocol,
+  DKA_HHS_Protocol,
+  TransfusionReactionProtocol,
+  PainProtocol,
+  AcuteStrokeProtocol,
+  HyponatremiaProtocol,
+  HyperkalemiaProtocol,
+  HypoglycemiaProtocol,
+  AlteredMentalStatusProtocol,
+  FallProtocolOnCall,
+  DVTPEProtocol,
+  LiverProtocol,
+  CorticosteroidProtocol,
+  InsomniaBehaviorProtocol,
+  UrinaryRetentionProtocol,
+  BloodProductsProtocol,
+  AcuteAbdomenProtocol,
+  AcuteKidneyInjuryProtocol,
+  DeathPronouncementProtocol,
+  AnticoagReversalProtocol,
+} from "./OnCallProtocols";
 
 // ─────────────────────────────────────────────────────────
 // DATA: DAG Protocol Quick Reference
@@ -296,13 +326,42 @@ type SectionKey =
   | "discharge"
   | "orthoAdmit"
   | "osteoporosis"
-  | "phones";
+  | "phones"
+  // On-call protocols
+  | "chestpain"
+  | "dyspnea"
+  | "gibleed"
+  | "anaphylaxis"
+  | "htncrisis"
+  | "rapidaf"
+  | "syncope"
+  | "fever"
+  | "seizure"
+  | "dka"
+  | "transfusion"
+  | "pain"
+  | "stroke"
+  | "hyponatremia"
+  | "hyperkalemia"
+  | "hypoglycemia"
+  | "ams"
+  | "falloncall"
+  | "dvtpe"
+  | "liver"
+  | "steroids"
+  | "insomnia"
+  | "retention"
+  | "bloodproducts"
+  | "abdomen"
+  | "aki"
+  | "death"
+  | "anticoagreversal";
 
 interface SectionDef {
   key: SectionKey;
   icon: string;
   label: string;
-  group: "geriatrics" | "ortho" | "protocols" | "calculators" | "quickaccess";
+  group: "geriatrics" | "ortho" | "protocols" | "calculators" | "quickaccess" | "oncall_cardio" | "oncall_resp" | "oncall_gi" | "oncall_neuro" | "oncall_metabolic" | "oncall_heme" | "oncall_general";
 }
 
 const SECTIONS: SectionDef[] = [
@@ -326,6 +385,41 @@ const SECTIONS: SectionDef[] = [
   { key: "curb65", icon: "🫁", label: "CURB-65", group: "calculators" },
   // ── Quick Access ──
   { key: "phones", icon: "📞", label: "שלוחות",  group: "quickaccess" },
+  // ── On-Call: Cardio & Hemodynamics ──
+  { key: "chestpain",   icon: "💔", label: "כאב חזה",          group: "oncall_cardio" },
+  { key: "rapidaf",     icon: "💓", label: "AF מהיר",          group: "oncall_cardio" },
+  { key: "htncrisis",   icon: "🩺", label: "משבר יל״ד",        group: "oncall_cardio" },
+  { key: "syncope",     icon: "😵", label: "סינקופה",          group: "oncall_cardio" },
+  { key: "dvtpe",       icon: "🦵", label: "DVT / PE",         group: "oncall_cardio" },
+  // ── On-Call: Respiratory ──
+  { key: "dyspnea",     icon: "🫁", label: "קוצר נשימה חריף",  group: "oncall_resp" },
+  { key: "anaphylaxis", icon: "🚨", label: "אנפילקסיס",        group: "oncall_resp" },
+  // ── On-Call: GI & Liver ──
+  { key: "gibleed",     icon: "🩸", label: "דימום GI",          group: "oncall_gi" },
+  { key: "abdomen",     icon: "🤕", label: "בטן חריפה",         group: "oncall_gi" },
+  { key: "liver",       icon: "🫘", label: "כבד / HE / SBP",    group: "oncall_gi" },
+  // ── On-Call: Neuro ──
+  { key: "stroke",      icon: "🧠", label: "שבץ חריף",          group: "oncall_neuro" },
+  { key: "seizure",     icon: "⚡", label: "פרכוסים",           group: "oncall_neuro" },
+  { key: "ams",         icon: "😶‍🌫️", label: "שינוי הכרה",       group: "oncall_neuro" },
+  // ── On-Call: Metabolic & Renal ──
+  { key: "dka",           icon: "📊", label: "DKA / HHS",        group: "oncall_metabolic" },
+  { key: "hyponatremia",  icon: "🧂", label: "היפונתרמיה",       group: "oncall_metabolic" },
+  { key: "hyperkalemia",  icon: "⬆️", label: "היפרקלמיה",       group: "oncall_metabolic" },
+  { key: "hypoglycemia",  icon: "⬇️", label: "היפוגליקמיה",     group: "oncall_metabolic" },
+  { key: "aki",           icon: "🫘", label: "AKI חריף",         group: "oncall_metabolic" },
+  // ── On-Call: Heme ──
+  { key: "transfusion",      icon: "💉", label: "תגובת עירוי",     group: "oncall_heme" },
+  { key: "bloodproducts",    icon: "🅰️", label: "מוצרי דם",        group: "oncall_heme" },
+  { key: "anticoagreversal", icon: "🔄", label: "reversal נוגדי קרישה", group: "oncall_heme" },
+  // ── On-Call: General ──
+  { key: "fever",       icon: "🌡️", label: "חום — בירור",       group: "oncall_general" },
+  { key: "pain",        icon: "😣", label: "כאב — סולם",        group: "oncall_general" },
+  { key: "falloncall",  icon: "🤸", label: "נפילה בתורנות",     group: "oncall_general" },
+  { key: "steroids",    icon: "💊", label: "stress dose סטרואידים", group: "oncall_general" },
+  { key: "insomnia",    icon: "🌙", label: "נדודי שינה",         group: "oncall_general" },
+  { key: "retention",   icon: "🚽", label: "עצירת שתן",          group: "oncall_general" },
+  { key: "death",       icon: "🕊️", label: "קביעת מוות",         group: "oncall_general" },
 ];
 
 const GROUP_LABELS: Record<string, string> = {
@@ -334,6 +428,13 @@ const GROUP_LABELS: Record<string, string> = {
   protocols: "פרוטוקולים ותרופות",
   calculators: "מחשבונים וסקורים",
   quickaccess: "גישה מהירה",
+  oncall_cardio: "🚨 תורן — לב וכלי דם",
+  oncall_resp: "🚨 תורן — נשימה",
+  oncall_gi: "🚨 תורן — GI וכבד",
+  oncall_neuro: "🚨 תורן — נוירולוגיה",
+  oncall_metabolic: "🚨 תורן — מטבולי וכליות",
+  oncall_heme: "🚨 תורן — המטולוגיה ודם",
+  oncall_general: "🚨 תורן — כללי",
 };
 
 // ─────────────────────────────────────────────────────────
@@ -624,6 +725,36 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
           {section === "orthoAdmit" && <div className="p-4"><OrthoGeriatricAdmission /></div>}
           {section === "osteoporosis" && <div className="p-4"><OsteoporosisProtocol /></div>}
           {section === "phones" && <div className="p-4"><PhoneDirectory /></div>}
+
+          {/* On-Call Protocols */}
+          {section === "chestpain" && <div className="p-4"><ChestPainProtocol /></div>}
+          {section === "dyspnea" && <div className="p-4"><AcuteDyspneaProtocol /></div>}
+          {section === "gibleed" && <div className="p-4"><GIBleedProtocol /></div>}
+          {section === "anaphylaxis" && <div className="p-4"><AnaphylaxisProtocol /></div>}
+          {section === "htncrisis" && <div className="p-4"><HypertensiveProtocol /></div>}
+          {section === "rapidaf" && <div className="p-4"><RapidAFProtocol /></div>}
+          {section === "syncope" && <div className="p-4"><SyncopeProtocol /></div>}
+          {section === "fever" && <div className="p-4"><FeverWorkupProtocol /></div>}
+          {section === "seizure" && <div className="p-4"><SeizureProtocol /></div>}
+          {section === "dka" && <div className="p-4"><DKA_HHS_Protocol /></div>}
+          {section === "transfusion" && <div className="p-4"><TransfusionReactionProtocol /></div>}
+          {section === "pain" && <div className="p-4"><PainProtocol /></div>}
+          {section === "stroke" && <div className="p-4"><AcuteStrokeProtocol /></div>}
+          {section === "hyponatremia" && <div className="p-4"><HyponatremiaProtocol /></div>}
+          {section === "hyperkalemia" && <div className="p-4"><HyperkalemiaProtocol /></div>}
+          {section === "hypoglycemia" && <div className="p-4"><HypoglycemiaProtocol /></div>}
+          {section === "ams" && <div className="p-4"><AlteredMentalStatusProtocol /></div>}
+          {section === "falloncall" && <div className="p-4"><FallProtocolOnCall /></div>}
+          {section === "dvtpe" && <div className="p-4"><DVTPEProtocol /></div>}
+          {section === "liver" && <div className="p-4"><LiverProtocol /></div>}
+          {section === "steroids" && <div className="p-4"><CorticosteroidProtocol /></div>}
+          {section === "insomnia" && <div className="p-4"><InsomniaBehaviorProtocol /></div>}
+          {section === "retention" && <div className="p-4"><UrinaryRetentionProtocol /></div>}
+          {section === "bloodproducts" && <div className="p-4"><BloodProductsProtocol /></div>}
+          {section === "abdomen" && <div className="p-4"><AcuteAbdomenProtocol /></div>}
+          {section === "aki" && <div className="p-4"><AcuteKidneyInjuryProtocol /></div>}
+          {section === "death" && <div className="p-4"><DeathPronouncementProtocol /></div>}
+          {section === "anticoagreversal" && <div className="p-4"><AnticoagReversalProtocol /></div>}
         </div>
 
         {/* ── Footer nav ── */}
