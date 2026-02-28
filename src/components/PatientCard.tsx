@@ -18,29 +18,8 @@ import { AIClinicalReasoning } from "./AIClinicalReasoning";
 import { VoiceButton } from "./VoiceInput";
 import { hapticSuccess } from "../utils/haptics";
 
-// On-call window: 16:00 → 08:00 next day
-// A timestamp is "on-call" if its local hour is >= 16 OR < 8
-function isOnCallTime(d: Date): boolean {
-  const h = d.getHours();
-  return h >= 16 || h < 8;
-}
-function getShiftStart(): Date {
-  const now = new Date();
-  const s = new Date(now);
-  s.setMinutes(0, 0, 0);
-  if (now.getHours() < 8) {
-    // Early morning — shift started yesterday at 16:00
-    s.setDate(s.getDate() - 1);
-  }
-  s.setHours(16);
-  return s;
-}
-function isNewThisShift(p: PatientEntry): boolean {
-  if (!p.scannedAt) return false;
-  const d = new Date(p.scannedAt);
-  // Must be within the current on-call window AND after shift start
-  return isOnCallTime(d) && d >= getShiftStart();
-}
+import { isNewThisShift as _isNewThisShift, getShiftStart } from "../utils/shiftTime";
+function isNewThisShift(p: PatientEntry): boolean { return _isNewThisShift(p.scannedAt); }
 
 function NewBadge({ scannedAt }: { scannedAt?: string }) {
   const timeStr = scannedAt
