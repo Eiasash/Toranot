@@ -6,6 +6,20 @@ import { PullToRefresh } from "./PullToRefresh";
 import { calculateAcuity } from "../engine/acuity";
 import { comparePatientsByRoom } from "../utils/sortPatients";
 
+// On-call shift: 16:00 → 08:00
+function getShiftStart(): Date {
+  const now = new Date();
+  const s = new Date(now);
+  s.setMinutes(0, 0, 0);
+  s.setHours(16);
+  if (now.getHours() < 16) s.setDate(s.getDate() - 1);
+  return s;
+}
+function isNewThisShift(p: import("../types").PatientEntry): boolean {
+  if (!p.scannedAt) return false;
+  return new Date(p.scannedAt) >= getShiftStart();
+}
+
 // Section ordering for ALL view
 const SECTION_ORDER: Record<string, number> = Object.fromEntries(
   PATIENT_SECTIONS.map((s, i) => [s, i])
@@ -14,7 +28,7 @@ const SECTION_ORDER: Record<string, number> = Object.fromEntries(
 export function PatientList() {
   const { patients, activeSection } = usePatientsState();
   const dispatch = usePatientsDispatch();
-  const [sortMode, setSortMode] = useState<"room" | "severity" | "name">("room");
+  const [sortMode, setSortMode] = useState<"room" | "severity" | "name" | "new">("room");
 
   const filtered = useMemo(() => {
     const sectionPatients = activeSection === "ALL"
@@ -25,6 +39,13 @@ export function PatientList() {
       sorted.sort((a, b) => calculateAcuity(b).score - calculateAcuity(a).score || (a.order ?? 0) - (b.order ?? 0));
     } else if (sortMode === "name") {
       sorted.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "", "he"));
+    } else if (sortMode === "new") {
+      sorted.sort((a, b) => {
+        const aN = isNewThisShift(a) ? 0 : 1;
+        const bN = isNewThisShift(b) ? 0 : 1;
+        if (aN !== bN) return aN - bN;
+        return comparePatientsByRoom(a, b);
+      });
     } else {
       if (activeSection === "ALL") {
         // Group by section order, then room within each section
@@ -79,6 +100,7 @@ export function PatientList() {
               className="text-xs px-2 py-1 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-none outline-none"
             >
               <option value="room">📋 לפי חדר</option>
+              <option value="new">🆕 קבלות תורן</option>
               <option value="severity">🔥 לפי חומרה</option>
               <option value="name">א→ב לפי שם</option>
             </select>
@@ -103,6 +125,22 @@ export function PatientList() {
                     ⚠ לא יציבים
                   </button>
                 )}
+                {(() => {
+                  const newPts = filtered.filter(isNewThisShift);
+                  if (newPts.length === 0) return null;
+                  return (
+                    <button
+                      onClick={() => {
+                        setSortMode("new");
+                        const first = newPts[0];
+                        setTimeout(() => document.getElementById(`patient-${first.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+                      }}
+                      className="shrink-0 text-xs px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 active:bg-emerald-200 font-semibold"
+                    >
+                      🆕 קבלות ({newPts.length})
+                    </button>
+                  );
+                })()}
                 {rooms.map(room => (
                   <button
                     key={room}
