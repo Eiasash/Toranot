@@ -253,6 +253,23 @@ export function ConfirmModal({
   );
 }
 
+// ─── Modal discriminant union ──────────────────────────────
+// Single source of truth for all overlay states in AppInner.
+// Exported so BottomNav, OverflowMenu, and any future surface can
+// share the same type without re-declaring it locally.
+export type Modal =
+  | "none"
+  | "reference"
+  | "handoff"
+  | "dashboard"
+  | "history"
+  | "search"
+  | "qrsync"
+  | "capture"
+  | "morning"
+  | "ivprotocols"
+  | "handoff_cloud";
+
 // ─── Bottom Navigation Bar ─────────────────────────────────
 // Primary actions at thumb-reach. 56px height + safe area inset.
 // Four slots: Search | Dashboard | Handoff | Reference

@@ -3,6 +3,7 @@ import { usePatientsState, usePatientsDispatch } from "../context/PatientsContex
 import { CloudAuthPanel } from "./CloudAuthPanel";
 import { supabase } from "../cloudSync";
 import { ConfirmModal, type ConfirmDialog } from "../App";
+import { supabase } from "../cloudSync";
 
 export type OverflowModal = "history" | "qrsync" | "capture" | "morning" | "ivprotocols" | "handoff_cloud";
 
