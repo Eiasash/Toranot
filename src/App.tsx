@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { PatientsProvider } from "./context/PatientsContext";
-import { signInWithEmailOtp, signOut, supabase, createHandoff, pullHandoff, type ToranotCloudState } from "./cloudSync";
+import { signInWithPassword, signOut, supabase, createHandoff, pullHandoff, type ToranotCloudState } from "./cloudSync";
 import { SectionTabs } from "./components/SectionTabs";
 import { InputArea } from "./components/InputArea";
 import { PatientList } from "./components/PatientList";
@@ -254,21 +254,19 @@ function ConfirmModal({
 // ─── Cloud auth panel (inline in overflow menu) ──────────
 function CloudAuthPanel() {
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [user, setUser] = useState<{ email?: string } | null>(null);
   const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!supabase) return;
-
     supabase.auth.getSession().then(({ data }) => {
       setUser(data.session?.user ?? null);
     });
-
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       setUser(session?.user ?? null);
     });
-
     return () => sub.subscription.unsubscribe();
   }, []);
 
@@ -289,42 +287,50 @@ function CloudAuthPanel() {
     );
   }
 
+  const canSubmit = email.includes("@") && password.length >= 6;
+
   return (
-    <div className="px-4 py-3 border-t border-slate-700 text-right">
-      <div className="text-xs text-slate-400 mb-2">☁️ סנכרון ענן</div>
-      {sent ? (
-        <div className="text-xs text-green-400">📧 נשלח! בדוק את המייל</div>
-      ) : (
-        <>
-          <input
-            type="email"
-            dir="ltr"
-            placeholder="your@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            onClick={(e) => e.stopPropagation()}
-            className="w-full bg-slate-900 border border-slate-600 text-slate-200 text-xs px-2.5 py-2 rounded-lg mb-2 placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
-          />
-          <button
-            disabled={loading || !email.includes("@")}
-            onClick={async (e) => {
-              e.stopPropagation();
-              setLoading(true);
-              try {
-                await signInWithEmailOtp(email);
-                setSent(true);
-              } catch {
-                alert("שליחת קוד נכשלה");
-              } finally {
-                setLoading(false);
-              }
-            }}
-            className="w-full bg-blue-600 disabled:bg-slate-600 text-white text-xs px-3 py-2 rounded-lg active:bg-blue-700 transition-colors"
-          >
-            {loading ? "שולח..." : "התחבר בענן"}
-          </button>
-        </>
-      )}
+    <div className="px-4 py-3 border-t border-slate-700 text-right space-y-2">
+      <div className="text-xs text-slate-400">☁️ סנכרון ענן</div>
+      <input
+        type="email"
+        dir="ltr"
+        placeholder="your@email.com"
+        value={email}
+        onChange={(e) => { setEmail(e.target.value); setError(null); }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full bg-slate-900 border border-slate-600 text-slate-200 text-xs px-2.5 py-2 rounded-lg placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+      />
+      <input
+        type="password"
+        dir="ltr"
+        placeholder="סיסמה (לפחות 6 תווים)"
+        value={password}
+        onChange={(e) => { setPassword(e.target.value); setError(null); }}
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => { if (e.key === "Enter" && canSubmit) e.currentTarget.closest("button")?.click(); }}
+        className="w-full bg-slate-900 border border-slate-600 text-slate-200 text-xs px-2.5 py-2 rounded-lg placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+      />
+      {error && <div className="text-[11px] text-red-400">{error}</div>}
+      <button
+        disabled={loading || !canSubmit}
+        onClick={async (e) => {
+          e.stopPropagation();
+          setLoading(true);
+          setError(null);
+          try {
+            await signInWithPassword(email, password);
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "שגיאת התחברות");
+          } finally {
+            setLoading(false);
+          }
+        }}
+        className="w-full bg-blue-600 disabled:bg-slate-600 text-white text-xs px-3 py-2 rounded-lg active:bg-blue-700 transition-colors"
+      >
+        {loading ? "מתחבר..." : "התחבר / הרשם"}
+      </button>
+      <div className="text-[10px] text-slate-500 text-center">הרשמה אוטומטית אם המשתמש לא קיים</div>
     </div>
   );
 }
