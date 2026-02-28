@@ -119,7 +119,7 @@ function isOncallRelevant(p: PatientEntry, shiftStart: Date): boolean {
 }
 
 export function HandoffSheet({ onClose }: { onClose: () => void }) {
-  const { patients } = usePatientsState();
+  const { patients, events } = usePatientsState();
   const [oncallOnly, setOncallOnly] = useState(false);
 
   const shiftStart = useMemo(() => getShiftStart(), []);
@@ -147,7 +147,13 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
       minute: "2-digit",
     });
 
-    const newAdmissions = patients.filter(p => p.scannedAt && new Date(p.scannedAt) >= shiftStart);
+    // Only manually-admitted patients appear in new admissions block
+    const admissionIds = new Set(
+      events
+        .filter(e => e.type === "ADMISSION" && new Date(e.at) >= shiftStart)
+        .map(e => e.patientId)
+    );
+    const newAdmissions = patients.filter(p => admissionIds.has(p.id));
 
     const lines: string[] = [
       `📋 ${oncallOnly ? "מסירת תורן" : "סיכום משמרת"} — ${dateStr} ${timeStr}`,
@@ -223,7 +229,7 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
     }
 
     return lines.join("\n");
-  }, [patients, filteredPatients, sections, oncallOnly, shiftStart]);
+  }, [patients, filteredPatients, sections, oncallOnly, shiftStart, events]);
 
   const handleCopy = async () => {
     try {
