@@ -249,10 +249,13 @@ export function RapidAFProtocol() {
       </Section>
 
       <Section title="Rhythm Control (שקול אם <48h / anticoagulated)">
-        <div className="text-xs text-slate-600 dark:text-slate-400">
-          AF {"<"}48h → cardioversion בטוח (chemical or electrical). AF {">"} 48h or unknown → TEE לפני cardioversion או anticoagulate 3 שבועות.
-          Chemical: Amiodarone 300mg IV over 1h. Flecainide/Propafenone → pill-in-pocket (only if no structural heart disease).
+        <div className="text-xs text-slate-600 dark:text-slate-400 mb-2">
+          <strong>AF &lt;48h</strong> → cardioversion בטוח (chemical or electrical).<br />
+          <strong>AF &gt;48h or unknown</strong> → TEE לפני cardioversion <em>או</em> anticoagulate 3 שבועות לפני.
         </div>
+        <Drug name="Amiodarone" dose="300mg IV over 1h" route="Chemical cardioversion" notes="גם ב-HFrEF. המשך 900mg/23h maintenance" />
+        <Drug name="Flecainide / Propafenone" dose="pill-in-pocket" route="PO" notes="❌ structural heart disease — רק אם EF תקין, ללא CAD" />
+        <Drug name="Electrical cardioversion" dose="120–200J biphasic" route="Synchronized" notes="אם chemical נכשל, או מעדיפים ריתמוס מהיר" />
       </Section>
 
       <Tip>בקשישים: rate control is usually enough. Don't chase sinus rhythm at 3am.</Tip>
