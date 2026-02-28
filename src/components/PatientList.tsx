@@ -15,9 +15,18 @@ function getShiftStart(): Date {
   if (now.getHours() < 16) s.setDate(s.getDate() - 1);
   return s;
 }
-function isNewThisShift(p: import("../types").PatientEntry): boolean {
-  if (!p.scannedAt) return false;
-  return new Date(p.scannedAt) >= getShiftStart();
+// Only manually-admitted patients (NEW_ADMISSION event) get the 🆕 badge
+function isNewThisShift(
+  p: import("../types").PatientEntry,
+  events: import("../types").WardEvent[]
+): boolean {
+  const shiftStart = getShiftStart();
+  return events.some(
+    e =>
+      e.type === "ADMISSION" &&
+      e.patientId === p.id &&
+      new Date(e.at) >= shiftStart
+  );
 }
 
 // Section ordering for ALL view
@@ -26,7 +35,7 @@ const SECTION_ORDER: Record<string, number> = Object.fromEntries(
 );
 
 export function PatientList() {
-  const { patients, activeSection } = usePatientsState();
+  const { patients, activeSection, events } = usePatientsState();
   const dispatch = usePatientsDispatch();
   const [sortMode, setSortMode] = useState<"room" | "severity" | "name" | "new">("room");
 
@@ -41,8 +50,8 @@ export function PatientList() {
       sorted.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "", "he"));
     } else if (sortMode === "new") {
       sorted.sort((a, b) => {
-        const aN = isNewThisShift(a) ? 0 : 1;
-        const bN = isNewThisShift(b) ? 0 : 1;
+        const aN = isNewThisShift(a, events) ? 0 : 1;
+        const bN = isNewThisShift(b, events) ? 0 : 1;
         if (aN !== bN) return aN - bN;
         return comparePatientsByRoom(a, b);
       });
@@ -60,7 +69,7 @@ export function PatientList() {
       }
     }
     return sorted;
-  }, [patients, activeSection, sortMode]);
+  }, [patients, activeSection, sortMode, events]);
 
   const handleRefresh = useCallback(() => {
     dispatch({ type: "REAPPLY_RULES" });
@@ -126,7 +135,7 @@ export function PatientList() {
                   </button>
                 )}
                 {(() => {
-                  const newPts = filtered.filter(isNewThisShift);
+                  const newPts = filtered.filter(p => isNewThisShift(p, events));
                   if (newPts.length === 0) return null;
                   return (
                     <button
