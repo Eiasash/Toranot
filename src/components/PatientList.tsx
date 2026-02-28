@@ -6,27 +6,23 @@ import { PullToRefresh } from "./PullToRefresh";
 import { calculateAcuity } from "../engine/acuity";
 import { comparePatientsByRoom } from "../utils/sortPatients";
 
-// On-call shift: 16:00 → 08:00
+// On-call window: 16:00 → 08:00
+function isOnCallTime(d: Date): boolean {
+  const h = d.getHours();
+  return h >= 16 || h < 8;
+}
 function getShiftStart(): Date {
   const now = new Date();
   const s = new Date(now);
   s.setMinutes(0, 0, 0);
+  if (now.getHours() < 8) s.setDate(s.getDate() - 1);
   s.setHours(16);
-  if (now.getHours() < 16) s.setDate(s.getDate() - 1);
   return s;
 }
-// Only manually-admitted patients (NEW_ADMISSION event) get the 🆕 badge
-function isNewThisShift(
-  p: import("../types").PatientEntry,
-  events: import("../types").WardEvent[]
-): boolean {
-  const shiftStart = getShiftStart();
-  return events.some(
-    e =>
-      e.type === "ADMISSION" &&
-      e.patientId === p.id &&
-      new Date(e.at) >= shiftStart
-  );
+function isNewThisShift(p: import("../types").PatientEntry): boolean {
+  if (!p.scannedAt) return false;
+  const d = new Date(p.scannedAt);
+  return isOnCallTime(d) && d >= getShiftStart();
 }
 
 // Section ordering for ALL view
@@ -35,7 +31,7 @@ const SECTION_ORDER: Record<string, number> = Object.fromEntries(
 );
 
 export function PatientList() {
-  const { patients, activeSection, events } = usePatientsState();
+  const { patients, activeSection } = usePatientsState();
   const dispatch = usePatientsDispatch();
   const [sortMode, setSortMode] = useState<"room" | "severity" | "name" | "new">("room");
 
@@ -50,8 +46,8 @@ export function PatientList() {
       sorted.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "", "he"));
     } else if (sortMode === "new") {
       sorted.sort((a, b) => {
-        const aN = isNewThisShift(a, events) ? 0 : 1;
-        const bN = isNewThisShift(b, events) ? 0 : 1;
+        const aN = isNewThisShift(a) ? 0 : 1;
+        const bN = isNewThisShift(b) ? 0 : 1;
         if (aN !== bN) return aN - bN;
         return comparePatientsByRoom(a, b);
       });
@@ -69,7 +65,7 @@ export function PatientList() {
       }
     }
     return sorted;
-  }, [patients, activeSection, sortMode, events]);
+  }, [patients, activeSection, sortMode]);
 
   const handleRefresh = useCallback(() => {
     dispatch({ type: "REAPPLY_RULES" });
@@ -135,7 +131,7 @@ export function PatientList() {
                   </button>
                 )}
                 {(() => {
-                  const newPts = filtered.filter(p => isNewThisShift(p, events));
+                  const newPts = filtered.filter(p => isNewThisShift(p));
                   if (newPts.length === 0) return null;
                   return (
                     <button
