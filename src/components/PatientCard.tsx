@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import type { PatientEntry, Task } from "../types";
 import { SECTIONS, SECTION_LABEL } from "../types";
 import { TaskItem } from "./TaskItem";
@@ -114,6 +114,13 @@ function HandoverNoteInline({ patient }: { patient: PatientEntry }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(patient.handoverNote ?? "");
   const note = patient.handoverNote;
+
+  // Sync draft when patient.handoverNote changes externally (e.g. after re-scan or cloud sync)
+  useEffect(() => {
+    if (!editing) {
+      setDraft(patient.handoverNote ?? "");
+    }
+  }, [patient.handoverNote, editing]);
 
   if (!editing && !note) {
     return (

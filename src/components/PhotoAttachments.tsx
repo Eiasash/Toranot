@@ -29,6 +29,8 @@ function compressImage(
   });
 }
 
+const MAX_PHOTOS = 5;
+
 export function PhotoAttachments({ patient }: { patient: PatientEntry }) {
   const dispatch = usePatientsDispatch();
   const [viewing, setViewing] = useState<PatientPhoto | null>(null);
@@ -38,6 +40,12 @@ export function PhotoAttachments({ patient }: { patient: PatientEntry }) {
   const handleCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (photos.length >= MAX_PHOTOS) {
+      alert(`ניתן לצרף עד ${MAX_PHOTOS} תמונות לחולה. מחק תמונה קיימת לפני הוספת חדשה.`);
+      e.target.value = "";
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = async () => {
@@ -99,9 +107,11 @@ export function PhotoAttachments({ patient }: { patient: PatientEntry }) {
       {/* Add photo button */}
       <button
         onClick={() => inputRef.current?.click()}
-        className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 active:bg-gray-100"
+        disabled={photos.length >= MAX_PHOTOS}
+        className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 active:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+        aria-label={photos.length >= MAX_PHOTOS ? `הגעת למגבלת ${MAX_PHOTOS} תמונות` : "צלם או צרף תמונה"}
       >
-        📷 צלם / צרף תמונה
+        📷 צלם / צרף תמונה{photos.length >= MAX_PHOTOS ? ` (${MAX_PHOTOS}/${MAX_PHOTOS})` : photos.length > 0 ? ` (${photos.length}/${MAX_PHOTOS})` : ""}
       </button>
       <input
         ref={inputRef}

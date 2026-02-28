@@ -101,11 +101,16 @@ export function detectScanChanges(
 }
 
 function normalizeKey(p: PatientEntry): string | null {
-  // Use name as primary key (most stable across room moves)
   const name = p.name?.trim();
   if (!name) return null;
   // Normalize Hebrew: remove niqqud, extra spaces
-  return name.replace(/[\u0591-\u05C7]/g, "").replace(/\s+/g, " ").trim();
+  const normalizedName = name.replace(/[\u0591-\u05C7]/g, "").replace(/\s+/g, " ").trim();
+  // Use room+name composite key to disambiguate common names in different rooms.
+  // Fall back to name-only when room is absent (e.g. newly admitted patient without bed).
+  if (p.room) {
+    return `${p.room}::${normalizedName}`;
+  }
+  return normalizedName;
 }
 
 /** Format diff as a short Hebrew summary */
