@@ -13,6 +13,7 @@ import { applyRules } from "../engine/rules";
 import { generateId } from "../utils/id";
 import { safeGetItem, safeSetItem } from "../utils/storage";
 import { useToranotCloudSync, type ToranotCloudState, type SyncStatus, type ConflictData } from "../cloudSync";
+import { detectScanChanges, type ScanDiff } from "../engine/smartOCR";
 
 // -----------------------------
 // Constants
@@ -46,6 +47,7 @@ interface PatientsState {
   scanMode: boolean;
   events: WardEvent[];
   unassignedTasks: Task[];
+  lastScanDiff?: ScanDiff | null;
 }
 
 // Data loaded from localStorage or external sources may have missing/wrong-typed fields.
@@ -168,6 +170,7 @@ const initializer = (): PatientsState => ({
   scanMode: loadScanMode(),
   events: loadEvents(),
   unassignedTasks: loadUnassignedTasks(),
+  lastScanDiff: null,
 });
 
 // -----------------------------
@@ -206,7 +209,8 @@ export type Action =
   | { type: "ADD_UNASSIGNED_TASK"; text: string; urgency: Urgency }
   | { type: "ASSIGN_TASK_TO_PATIENT"; taskId: string; patientId: string }
   | { type: "TOGGLE_UNASSIGNED_TASK"; taskId: string }
-  | { type: "IMPORT_CLOUD_STATE"; state: ToranotCloudState };
+  | { type: "IMPORT_CLOUD_STATE"; state: ToranotCloudState }
+  | { type: "DISMISS_SCAN_DIFF" };
 
 export function inferUrgencyFromText(text: string): Urgency {
   const t = text.trim();
@@ -259,6 +263,10 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
   switch (action.type) {
     case "IMPORT_TEXT": {
       const parsed = parsePatientList(action.text);
+      // Compute scan diff BEFORE merge so we compare old state vs fresh scan
+      const scanDiff = state.patients.length > 0
+        ? detectScanChanges(state.patients, parsed)
+        : null;
       const merged = mergeScan(state.patients, parsed);
       // Deduplicate beds: if two patients share room+section, keep the later one
       // (the scanned patient is more current than the stale one)
@@ -272,7 +280,13 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
       const keepIndices = new Set(seen.values());
       // Also keep patients without rooms and patients that didn't collide
       const deduped = merged.filter((p, i) => !p.room || keepIndices.has(i));
-      return { ...state, patients: deduped };
+      // Only show diff banner if something actually changed
+      const hasDiff = scanDiff && (
+        scanDiff.newPatients.length > 0 ||
+        scanDiff.missingPatients.length > 0 ||
+        scanDiff.changedPatients.length > 0
+      );
+      return { ...state, patients: deduped, lastScanDiff: hasDiff ? scanDiff : null };
     }
     case "SET_SECTION":
       return { ...state, activeSection: action.section };
@@ -738,6 +752,9 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
       };
     }
 
+    case "DISMISS_SCAN_DIFF":
+      return { ...state, lastScanDiff: null };
+
     default:
       return state;
   }
@@ -755,6 +772,7 @@ const PatientsStateContext = createContext<PatientsState>({
   scanMode: false,
   events: [],
   unassignedTasks: [],
+  lastScanDiff: null,
 });
 const PatientsDispatchContext = createContext<Dispatch<Action>>(() => {});
 

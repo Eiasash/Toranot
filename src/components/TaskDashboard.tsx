@@ -167,7 +167,13 @@ export function TaskDashboard({ onClose }: { onClose: () => void }) {
 
         {tab === "sections" ? (
           <div className="flex-1 overflow-y-auto p-4">
-            <SectionDashboard patients={patients} onSelectSection={() => { onClose(); }} />
+            <SectionDashboard
+              patients={patients}
+              onSelectSection={(section: Section) => {
+                dispatch({ type: "SET_SECTION", section });
+                onClose();
+              }}
+            />
           </div>
         ) : tab === "route" ? (
           <div className="flex-1 overflow-y-auto p-3 space-y-3">

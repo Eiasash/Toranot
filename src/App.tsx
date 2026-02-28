@@ -17,6 +17,33 @@ import { QRSync } from "./components/QRSync";
 import { QuickCaptureSheet } from "./components/QuickCaptureSheet";
 import { MorningReport } from "./components/MorningReport";
 import { requestNotificationPermission, syncReminders } from "./utils/taskReminders";
+import { formatScanDiffSummary } from "./engine/smartOCR";
+
+// ─── Scan Diff Banner ──────────────────────────────────────
+function ScanDiffBanner() {
+  const { lastScanDiff } = usePatientsState();
+  const dispatch = usePatientsDispatch();
+
+  if (!lastScanDiff) return null;
+  const summary = formatScanDiffSummary(lastScanDiff);
+  if (!summary) return null;
+
+  return (
+    <div
+      role="status"
+      className="w-full lg:max-w-6xl lg:mx-auto mx-0 px-3 py-2 bg-blue-50 dark:bg-blue-900/30 border-b border-blue-200 dark:border-blue-700 flex items-center justify-between gap-2 text-sm"
+    >
+      <span className="text-blue-800 dark:text-blue-300 font-medium">{summary}</span>
+      <button
+        onClick={() => dispatch({ type: "DISMISS_SCAN_DIFF" })}
+        className="text-blue-600 dark:text-blue-400 text-xs px-2 py-0.5 rounded border border-blue-300 dark:border-blue-600 active:opacity-70 shrink-0"
+        aria-label="סגור הודעת שינויים"
+      >
+        סגור
+      </button>
+    </div>
+  );
+}
 
 // ─── Shift Progress Bar ────────────────────────────────────
 function ShiftProgress() {
@@ -961,6 +988,7 @@ function AppInner() {
       </header>
 
       <ShiftProgress />
+      <ScanDiffBanner />
 
       <div className="w-full lg:max-w-6xl lg:mx-auto">
         <InputArea />

@@ -40,8 +40,17 @@ export function scheduleTaskReminder(
   const now = Date.now();
   const delay = reminderTime - now;
 
-  // Don't schedule if already past
-  if (delay < 0) return;
+  // If the due time is already past, fire immediately
+  if (dueTime < now) {
+    fireReminder(taskId, patientName, taskText, dueAt);
+    return;
+  }
+
+  // If reminder time is past but due time is still future, fire now
+  if (delay < 0) {
+    fireReminder(taskId, patientName, taskText, dueAt);
+    return;
+  }
 
   const timerId = setTimeout(() => {
     fireReminder(taskId, patientName, taskText, dueAt);
