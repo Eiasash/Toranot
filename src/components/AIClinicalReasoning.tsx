@@ -18,7 +18,7 @@ const GEMINI_KEY_STORAGE = "toranot-gemini-key";
 const DIRECT_API_URL = "https://api.anthropic.com/v1/messages";
 const PROXY_API_URL = "/api/claude";
 const GEMINI_PROXY_URL = "/api/gemini";
-const CLAUDE_MODEL = "claude-sonnet-4-20250514";
+const CLAUDE_MODEL = "claude-sonnet-4-6";
 const GEMINI_MODEL = "gemini-3.1-pro-preview";
 
 type AIProvider = "claude" | "gemini";
@@ -35,15 +35,17 @@ function sanitizeHTML(html: string): string {
 // Simple markdown → HTML for AI responses
 function renderMarkdown(text: string): string {
   return text
-    // Headers
+    // Strip leading artifact characters (Gemini sometimes starts with lone . or *)
+    .replace(/^[.\s]+/, "")
+    // Headers (## and ###)
     .replace(/^### (.+)$/gm, '<h3 class="text-sm font-bold mt-3 mb-1 text-slate-800 dark:text-slate-200">$1</h3>')
     .replace(/^## (.+)$/gm, '<h2 class="text-base font-bold mt-4 mb-1.5 text-slate-800 dark:text-slate-200">$1</h2>')
-    // Bold
+    // Bold (must run before bullet/italic so ** is consumed first)
     .replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-slate-900 dark:text-slate-100">$1</strong>')
-    // Italic
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    // Bullet lists
-    .replace(/^[•·\-]\s+(.+)$/gm, '<li class="mr-4 mb-0.5">$1</li>')
+    // Italic — only single * surrounded by non-space (avoids eating bullet asterisks)
+    .replace(/(?<![\s*])\*(?![\s*])(.+?)(?<![\s*])\*(?![\s*])/g, '<em>$1</em>')
+    // Bullet lists — handle *, •, ·, - as bullet markers
+    .replace(/^[*•·\-]\s+(.+)$/gm, '<li class="mr-4 mb-0.5">$1</li>')
     // Wrap consecutive <li> in <ul>
     .replace(/((?:<li[^>]*>.*<\/li>\n?)+)/g, '<ul class="list-disc list-inside my-1.5 text-xs space-y-0.5">$1</ul>')
     // Line breaks (double newline = paragraph)
@@ -320,7 +322,7 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
         mode === "freeform" ? freeformQ : undefined,
       );
       const result = await callAIAPI(provider, apiKey, systemPrompt, userPrompt, abortController.signal);
-      setResponse(result);
+      setResponse(result.replace(/^[.\s*]+(?=\S)/u, "").trim());
     } catch (err: unknown) {
       if ((err as Error).name === "AbortError") return;
       const msg = (err as Error).message || "";
@@ -598,4 +600,5 @@ function APIKeySetup({
     </div>
   );
 }
+
 
