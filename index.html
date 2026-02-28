@@ -14,6 +14,22 @@
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
     <link rel="apple-touch-icon" href="icon-192.png" />
     <title>תורנות</title>
+    <script>
+      // One-time SW nuke — force clear all caches and unregister stale workers
+      // Remove this block after all clients have updated (safe to keep indefinitely)
+      (async()=>{
+        if(!navigator.serviceWorker)return;
+        const regs=await navigator.serviceWorker.getRegistrations();
+        for(const r of regs){await r.unregister()}
+        const keys=await caches.keys();
+        for(const k of keys){await caches.delete(k)}
+        // If we had a SW before, reload once to get fresh content
+        if(regs.length>0&&!sessionStorage.getItem('sw_nuked')){
+          sessionStorage.setItem('sw_nuked','1');
+          location.reload();
+        }
+      })();
+    </script>
   </head>
   <body class="overscroll-none bg-white">
     <div id="root"></div>
