@@ -348,9 +348,9 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center" onClick={onClose} style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
       <div
-        className="bg-white dark:bg-gray-900 w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl max-h-[92dvh] flex flex-col overflow-hidden shadow-xl"
+        className="bg-white dark:bg-gray-900 w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl flex flex-col overflow-hidden shadow-xl" style={{ maxHeight: "min(92dvh, calc(92dvh - env(safe-area-inset-bottom, 0px)))" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -411,7 +411,10 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
           </span>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain relative" ref={responseRef} style={{ WebkitOverflowScrolling: "touch" }}>
+        <div className="flex-1 min-h-0 relative">
+          {/* Fade gradient at bottom — signals scrollable content */}
+          <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white dark:from-gray-900 to-transparent z-10" />
+          <div className="h-full overflow-y-auto overscroll-y-contain" ref={responseRef} style={{ WebkitOverflowScrolling: "touch" }}>
           {showKeySetup ? (
             /* API Key Setup */
             <APIKeySetup
@@ -519,6 +522,7 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
               <div style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 32px)" }} />
             </div>
           )}
+          </div>
         </div>
       </div>
     </div>
@@ -600,6 +604,7 @@ function APIKeySetup({
     </div>
   );
 }
+
 
 
 
