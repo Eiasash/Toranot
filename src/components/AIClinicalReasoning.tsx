@@ -1,18 +1,12 @@
 /**
- * AIClinicalReasoning — Claude API integration for on-call clinical decision support.
+ * AIClinicalReasoning — AI clinical decision support.
+ * Supports Claude (Anthropic) and Gemini 3.1 Pro (Google).
  *
  * SAFETY PRINCIPLES:
- * 1. This is a DECISION SUPPORT tool, not a decision maker.
- *    Every output starts with a disclaimer and ends with "verify independently."
- * 2. Prompts are geriatrics-specific: drug interactions, delirium, falls,
- *    polypharmacy, goals-of-care framing.
- * 3. No hallucinated dosing — the prompt explicitly tells Claude to say
- *    "check formulary" rather than guess doses.
- * 4. All patient data stays in the browser → API call → response.
- *    Nothing is stored server-side (Anthropic API is stateless).
- * 5. Works offline-first: if API fails, shows cached quick-reference instead.
- *
- * The user must provide their own Anthropic API key (stored in localStorage).
+ * 1. DECISION SUPPORT only — never a prescriber.
+ * 2. Geriatrics-specific prompts: polypharmacy, delirium, falls, GOC.
+ * 3. No hallucinated dosing — always "verify per formulary."
+ * 4. All data: browser → API → response. Nothing stored server-side.
  */
 
 import { useState, useCallback, useRef, useEffect } from "react";
@@ -20,9 +14,14 @@ import type { PatientEntry } from "../types";
 import { safeGetItem, safeSetItem } from "../utils/storage";
 
 const API_KEY_STORAGE = "toranot-anthropic-key";
+const GEMINI_KEY_STORAGE = "toranot-gemini-key";
 const DIRECT_API_URL = "https://api.anthropic.com/v1/messages";
 const PROXY_API_URL = "/api/claude";
-const MODEL = "claude-sonnet-4-20250514";
+const GEMINI_PROXY_URL = "/api/gemini";
+const CLAUDE_MODEL = "claude-sonnet-4-20250514";
+const GEMINI_MODEL = "gemini-3.1-pro-preview";
+
+type AIProvider = "claude" | "gemini";
 
 // Simple markdown → HTML for AI responses
 function renderMarkdown(text: string): string {
@@ -182,56 +181,79 @@ function buildUserPrompt(patient: PatientEntry, mode: QueryMode, freeformQ?: str
   return `${modePrompts[mode]}\n\n--- נתוני חולה ---\n${context}`;
 }
 
-async function callClaudeAPI(
+async function callAIAPI(
+  provider: AIProvider,
   apiKey: string,
   systemPrompt: string,
   userMessage: string,
   signal?: AbortSignal,
 ): Promise<string> {
   const useProxy = isNetlifyHosted();
-  const url = useProxy ? PROXY_API_URL : DIRECT_API_URL;
 
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
+  if (provider === "gemini") {
+    // Always proxy Gemini (key lives on server)
+    const url = GEMINI_PROXY_URL;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: GEMINI_MODEL,
+        max_tokens: 1500,
+        system: systemPrompt,
+        messages: [{ role: "user", content: userMessage }],
+      }),
+      signal,
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({})) as { error?: string };
+      if (response.status === 500) throw new Error("מפתח Gemini לא מוגדר בשרת — פנה למנהל.");
+      if (response.status === 429) throw new Error("חריגה ממגבלת Gemini. נסה שוב בעוד דקה.");
+      throw new Error(data?.error ?? `שגיאת Gemini: ${response.status}`);
+    }
+    const data = await response.json() as { content?: { type: string; text: string }[] };
+    const textBlock = data.content?.find((b) => b.type === "text");
+    return textBlock?.text ?? "אין תשובה.";
+  }
+
+  // Claude
+  const url = useProxy ? PROXY_API_URL : DIRECT_API_URL;
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (!useProxy) {
     headers["x-api-key"] = apiKey;
     headers["anthropic-version"] = "2023-06-01";
     headers["anthropic-dangerous-direct-browser-access"] = "true";
   }
-
   const response = await fetch(url, {
     method: "POST",
     headers,
     body: JSON.stringify({
-      model: MODEL,
+      model: CLAUDE_MODEL,
       max_tokens: 1500,
       system: systemPrompt,
       messages: [{ role: "user", content: userMessage }],
     }),
     signal,
   });
-
   if (!response.ok) {
     const errorText = await response.text();
-    if (response.status === 401) {
-      throw new Error("מפתח API לא תקין. בדוק את ההגדרות.");
-    }
-    if (response.status === 429) {
-      throw new Error("חריגה ממגבלת בקשות. נסה שוב בעוד דקה.");
-    }
+    if (response.status === 401) throw new Error("מפתח API לא תקין. בדוק את ההגדרות.");
+    if (response.status === 429) throw new Error("חריגה ממגבלת בקשות. נסה שוב בעוד דקה.");
     throw new Error(`שגיאת API: ${response.status} — ${errorText.slice(0, 100)}`);
   }
-
-  const data = await response.json();
-  const textBlock = data.content?.find((b: { type: string }) => b.type === "text");
+  const data = await response.json() as { content?: { type: string; text: string }[] };
+  const textBlock = data.content?.find((b) => b.type === "text");
   return textBlock?.text ?? "אין תשובה.";
 }
 
 export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningProps) {
+  const [provider, setProvider] = useState<AIProvider>(() => {
+    const saved = safeGetItem("toranot-ai-provider");
+    return (saved === "gemini" || saved === "claude") ? saved : "gemini";
+  });
   const [apiKey, setApiKey] = useState(() => safeGetItem(API_KEY_STORAGE) ?? "");
   const proxyMode = isNetlifyHosted();
-  const [showKeySetup, setShowKeySetup] = useState(!proxyMode && !apiKey);
+  // Claude key setup is only needed when not proxied; Gemini always uses server proxy
+  const [showKeySetup, setShowKeySetup] = useState(!proxyMode && !apiKey && provider === "claude");
   const [selectedMode, setSelectedMode] = useState<QueryMode | null>(null);
   const [freeformQ, setFreeformQ] = useState("");
   const [response, setResponse] = useState("");
@@ -253,8 +275,22 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
     setShowKeySetup(false);
   }, []);
 
+  const switchProvider = useCallback((p: AIProvider) => {
+    setProvider(p);
+    safeSetItem("toranot-ai-provider", p);
+    setResponse("");
+    setError("");
+    setSelectedMode(null);
+    // Only show key setup for Claude when not on Netlify
+    if (p === "claude" && !proxyMode && !apiKey) {
+      setShowKeySetup(true);
+    } else {
+      setShowKeySetup(false);
+    }
+  }, [proxyMode, apiKey]);
+
   const handleQuery = useCallback(async (mode: QueryMode) => {
-    if (!proxyMode && !apiKey) {
+    if (provider === "claude" && !proxyMode && !apiKey) {
       setShowKeySetup(true);
       return;
     }
@@ -274,7 +310,7 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
         mode,
         mode === "freeform" ? freeformQ : undefined,
       );
-      const result = await callClaudeAPI(apiKey, systemPrompt, userPrompt, abortController.signal);
+      const result = await callAIAPI(provider, apiKey, systemPrompt, userPrompt, abortController.signal);
       setResponse(result);
     } catch (err: unknown) {
       if ((err as Error).name === "AbortError") return;
@@ -290,7 +326,7 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
     } finally {
       setLoading(false);
     }
-  }, [apiKey, patient, freeformQ]);
+  }, [provider, apiKey, patient, freeformQ]);
 
   const handleCancel = () => {
     abortRef.current?.abort();
@@ -312,24 +348,53 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {proxyMode ? (
-              <span className="text-[10px] text-green-300" title="AI פעיל דרך שרת">☁️ מוכן</span>
-            ) : (
+            {/* Provider switcher */}
+            <div className="flex bg-violet-800/60 rounded-lg p-0.5 gap-0.5">
+              <button
+                onClick={() => switchProvider("gemini")}
+                className={`text-[11px] px-2 py-1 rounded-md font-medium transition-colors ${
+                  provider === "gemini"
+                    ? "bg-white text-violet-800"
+                    : "text-violet-200 hover:text-white"
+                }`}
+                title="Gemini 3.1 Pro"
+              >
+                ✦ Gemini
+              </button>
+              <button
+                onClick={() => switchProvider("claude")}
+                className={`text-[11px] px-2 py-1 rounded-md font-medium transition-colors ${
+                  provider === "claude"
+                    ? "bg-white text-violet-800"
+                    : "text-violet-200 hover:text-white"
+                }`}
+                title="Claude Sonnet"
+              >
+                ◆ Claude
+              </button>
+            </div>
+            {provider === "claude" && !proxyMode && (
               <button
                 onClick={() => setShowKeySetup(true)}
                 className="text-violet-300 hover:text-white text-xs"
-                title="הגדרות API"
+                title="הגדרות Claude API"
               >
                 ⚙️
               </button>
+            )}
+            {proxyMode && (
+              <span className="text-[10px] text-green-300" title="AI פעיל דרך שרת">☁️</span>
             )}
             <button onClick={onClose} className="text-white/70 hover:text-white text-xl px-2">✕</button>
           </div>
         </div>
 
-        {/* Disclaimer */}
-        <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 px-4 py-1.5 text-[10px] text-amber-800 dark:text-amber-300 flex-shrink-0">
-          ⚠️ כלי תמיכה בהחלטה בלבד — לא מחליף שיקול דעת קליני. אמת כל המלצה באופן עצמאי.
+        {/* Disclaimer + active model */}
+        <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 px-4 py-1.5 text-[10px] text-amber-800 dark:text-amber-300 flex-shrink-0 flex items-center justify-between gap-2">
+          <span>⚠️ כלי תמיכה בהחלטה בלבד — לא מחליף שיקול דעת קליני. אמת כל המלצה באופן עצמאי.</span>
+          <span className="shrink-0 font-mono bg-amber-100 dark:bg-amber-800/40 px-1.5 py-0.5 rounded text-[9px]">
+            {provider === "gemini" ? "gemini-3.1-pro-preview" : "claude-sonnet-4"}
+          </span>
         </div>
 
         <div className="flex-1 overflow-y-auto" ref={responseRef}>
