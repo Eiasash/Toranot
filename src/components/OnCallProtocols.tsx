@@ -380,22 +380,22 @@ export function DKA_HHS_Protocol() {
       </Section>
 
       <Section title="טיפול — DKA">
-        <Step n={1}><strong>נוזלים:</strong> NaCl 0.9% 1L/h x 1-2h → 250-500ml/h. עבור ל-0.45% אם Na מתוקן {">"} 140</Step>
-        <Step n={2}><strong>אינסולין:</strong> Regular insulin 0.1U/kg/h IV (או 0.14U/kg/h ללא bolus). יעד: ירידת BS 50-70mg/dL/h</Step>
-        <Step n={3}><strong>אשלגן:</strong> אם K {"<"} 5.3 → 20-40mEq/L בנוזלים. אם K {"<"} 3.3 → תקן K לפני אינסולין!</Step>
-        <Step n={4}><strong>Bicarb:</strong> רק אם pH {"<"} 6.9 → 100mEq NaHCO3 in 400ml over 2h</Step>
-        <Step n={5}><strong>D5:</strong> כש-BS מגיע ל-200-250 → הוסף D5 לנוזלים, המשך אינסולין עד AG נסגר</Step>
+        <Step n={1}><strong>נוזלים:</strong> NaCl 0.9% — ‎1L/h × 1-2h, לאחר מכן 250-500ml/h. עבור ל-0.45% אם Na מתוקן &gt;140</Step>
+        <Step n={2}><strong>אינסולין:</strong> Regular insulin 0.1U/kg/h IV (או 0.14U/kg/h ללא bolus). יעד: ירידת Glucose ‎50-70mg/dL/h</Step>
+        <Step n={3}><strong>אשלגן:</strong> K &lt;5.3 → הוסף 20-40mEq/L לנוזלים. K &lt;3.3 → תקן לפני אינסולין!</Step>
+        <Step n={4}><strong>Bicarb:</strong> רק אם pH &lt;6.9 → 100mEq NaHCO3 ב-400ml תוך 2h</Step>
+        <Step n={5}><strong>D5:</strong> כש-Glucose מגיע ל-200-250 → הוסף D5 לנוזלים, המשך אינסולין עד AG נסגר</Step>
       </Section>
 
       <Section title="מעקב">
-        <div className="text-xs text-slate-600 dark:text-slate-400">
-          BS כל שעה. BMP (K+, bicarb, AG) כל 2-4h. I/O כל שעה. 
-          יעד DKA resolution: pH {">"} 7.3, bicarb {">"} 15, AG {"<"} 12, BS {"<"} 200.
-          מעבר ל-SC insulin: overlap 2h עם drip. המשך IV fluids.
+        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1" dir="rtl">
+          <div>Glucose כל שעה. BMP (K+, bicarb, AG) כל 2-4h. I/O כל שעה.</div>
+          <div>יעד resolution: pH &gt;7.3, bicarb &gt;15, AG &lt;12, Glucose &lt;200.</div>
+          <div>מעבר ל-SC insulin: overlap 2h עם drip. המשך IV fluids.</div>
         </div>
       </Section>
 
-      <Warn>HHS — נוזלים הם הטיפול העיקרי! אינסולין low-dose (0.02-0.05U/kg/h). הורדה מהירה מדי → cerebral edema.</Warn>
+      <Warn>HHS — נוזלים הם הטיפול העיקרי! אינסולין low-dose בלבד (0.02-0.05U/kg/h). הורדה מהירה → cerebral edema!</Warn>
     </div>
   );
 }
@@ -619,7 +619,7 @@ export function HyperkalemiaProtocol() {
         </Step>
         <Step n={2}>
           <strong>Shift (הכנס K לתוך תאים):</strong><br/>
-          • Insulin 10U Regular IV + D50W 50ml (= 25g glucose). עקוב BS q1h x 4h!<br/>
+          • Insulin 10U Regular IV + D50W 50ml (= 25g glucose). עקוב Glucose q1h × 4h!<br/>
           • Salbutamol 10-20mg nebulizer (4-8x dose רגילה!)<br/>
           • NaHCO3 50mEq IV אם pH {"<"} 7.2 (only works in acidosis)
         </Step>
@@ -644,17 +644,17 @@ export function HypoglycemiaProtocol() {
     <div className="space-y-3" dir="rtl">
       <Section title="הגדרה והערכה">
         <div className="text-xs text-slate-600 dark:text-slate-400">
-          BS {"<"} 70 mg/dL = hypoglycemia. Whipple's triad: symptoms + low glucose + resolution with treatment.
+          Glucose {"<"} 70 mg/dL = hypoglycemia. Whipple's triad: symptoms + low glucose + resolution with treatment.
           בקשישים: סימנים לא טיפוסיים — בלבול, נפילה, דיבור לא ברור (מחקה CVA!).
         </div>
       </Section>
 
       <Section title="טיפול">
         <Step n={1}>
-          <strong>בהכרה (PO):</strong> 15-20g glucose (3-4 סוכריות, חצי כוס מיץ). בדוק BS אחרי 15 דק'. חזור אם עדיין {"<"} 70.
+          <strong>בהכרה (PO):</strong> 15-20g glucose (3-4 סוכריות, חצי כוס מיץ). בדוק Glucose אחרי 15 דק'. חזור אם עדיין {"<"} 70.
         </Step>
         <Step n={2}>
-          <strong>ללא הכרה / NPO:</strong> D50W 25-50ml IV push. בדוק BS אחרי 15 דק'.
+          <strong>ללא הכרה / NPO:</strong> D50W 25-50ml IV push. בדוק Glucose אחרי 15 דק'.
         </Step>
         <Step n={3}>
           <strong>אין IV:</strong> Glucagon 1mg IM/SC. onset 10-15 min.
