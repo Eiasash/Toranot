@@ -448,9 +448,6 @@ function ConflictDialog() {
   );
 }
 
-// ─── Modal type ──────────────────────────────────────────
-type Modal = "none" | "reference" | "handoff" | "dashboard" | "history" | "search" | "qrsync" | "capture" | "morning" | "ivprotocols" | "handoff_cloud";
-
 // ─── Main App Inner ──────────────────────────────────────
 function AppInner() {
   const [modal, setModal] = useState<Modal>("none");
