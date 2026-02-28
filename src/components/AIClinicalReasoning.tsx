@@ -19,8 +19,8 @@ const GEMINI_KEY_STORAGE = "toranot-gemini-key";
 const DIRECT_API_URL = "https://api.anthropic.com/v1/messages";
 const PROXY_API_URL = "/api/claude";
 const GEMINI_PROXY_URL = "/api/gemini";
-const CLAUDE_MODEL = "claude-sonnet-4-6";
-const GEMINI_MODEL = "gemini-3.1-pro-preview";
+const CLAUDE_MODEL = "claude-sonnet-4-5";
+const GEMINI_MODEL = "gemini-2.5-pro-preview";
 
 type AIProvider = "claude" | "gemini";
 
@@ -212,7 +212,7 @@ async function callAIAPI(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: GEMINI_MODEL,
-        max_tokens: 1500,
+        max_tokens: 2048,
         system: systemPrompt,
         messages: [{ role: "user", content: userMessage }],
       }),
@@ -242,7 +242,7 @@ async function callAIAPI(
     headers,
     body: JSON.stringify({
       model: CLAUDE_MODEL,
-      max_tokens: 1500,
+      max_tokens: 2048,
       system: systemPrompt,
       messages: [{ role: "user", content: userMessage }],
     }),
@@ -410,14 +410,14 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
         <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 px-4 py-1.5 text-[10px] text-amber-800 dark:text-amber-300 flex-shrink-0 flex items-center justify-between gap-2">
           <span>⚠️ כלי תמיכה בהחלטה בלבד — לא מחליף שיקול דעת קליני. אמת כל המלצה באופן עצמאי.</span>
           <span className="shrink-0 font-mono bg-amber-100 dark:bg-amber-800/40 px-1.5 py-0.5 rounded text-[9px]">
-            {provider === "gemini" ? "gemini-3.1-pro-preview" : "claude-sonnet-4"}
+            {provider === "gemini" ? "gemini-2.5-pro-preview" : "claude-sonnet-4-5"}
           </span>
         </div>
 
         <div className="flex-1 min-h-0 relative">
           {/* Fade gradient at bottom — signals scrollable content */}
-          <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white dark:from-gray-900 to-transparent z-10" />
-          <div className="h-full overflow-y-auto overscroll-y-contain" ref={responseRef} style={{ WebkitOverflowScrolling: "touch" }}>
+          <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white dark:from-gray-900 to-transparent z-10" />
+          <div className="h-full overflow-y-auto overscroll-contain scroll-smooth" ref={responseRef} style={{ WebkitOverflowScrolling: "touch" }}>
           {showKeySetup ? (
             /* API Key Setup */
             <APIKeySetup

@@ -65,12 +65,12 @@ export default async (req: Request, _context: Context) => {
   const model =
     typeof body?.model === "string" && body.model.trim()
       ? body.model.trim()
-      : "gemini-3.1-pro-preview";
+      : "gemini-2.5-pro-preview";
 
-  const maxTokensRaw = Number(body?.max_tokens ?? 1500);
+  const maxTokensRaw = Number(body?.max_tokens ?? 2048);
   const maxOutputTokens = Number.isFinite(maxTokensRaw)
     ? Math.min(Math.max(1, maxTokensRaw), 8192)
-    : 1500;
+    : 2048;
 
   // Convert Anthropic-style {system, messages} to Gemini format
   const systemInstruction = typeof body?.system === "string" && body.system.trim()

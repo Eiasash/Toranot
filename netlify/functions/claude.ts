@@ -88,12 +88,12 @@ export default async (req: Request, _context: Context) => {
   const model =
     typeof body?.model === "string" && body.model.trim()
       ? body.model.trim()
-      : "claude-sonnet-4-6";
+      : "claude-sonnet-4-5";
 
-  const maxTokensRaw = Number(body?.max_tokens ?? 1500);
+  const maxTokensRaw = Number(body?.max_tokens ?? 2048);
   const max_tokens = Number.isFinite(maxTokensRaw)
-    ? Math.min(Math.max(1, maxTokensRaw), 4096)
-    : 1500;
+    ? Math.min(Math.max(1, maxTokensRaw), 8192)
+    : 2048;
 
   if (!isValidMessages(body?.messages)) {
     return new Response(JSON.stringify({ error: "Invalid or missing messages" }), {
