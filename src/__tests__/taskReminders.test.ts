@@ -43,14 +43,15 @@ describe("scheduleTaskReminder", () => {
     consoleSpy.mockRestore();
   });
 
-  it("does not fire for past due times", () => {
+  it("fires immediately for past due times", () => {
     const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const pastDue = new Date(Date.now() - 60 * 1000).toISOString();
 
     scheduleTaskReminder("t1", "כהן", "task", pastDue, 5);
 
-    vi.advanceTimersByTime(60 * 60 * 1000);
-    expect(consoleSpy).not.toHaveBeenCalled();
+    // New behavior: past-due reminders fire immediately
+    expect(consoleSpy).toHaveBeenCalledTimes(1);
+    expect(consoleSpy.mock.calls[0][0]).toContain("כהן");
 
     consoleSpy.mockRestore();
   });

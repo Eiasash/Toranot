@@ -67,14 +67,13 @@ describe("detectScanChanges", () => {
     expect(diff.missingPatients[0].name).toBe("לוי שרה");
   });
 
-  it("detects room changes", () => {
+  it("detects room changes (shows as missing + new with room-based keys)", () => {
     const old = [makePatient({ name: "כהן יוסף", room: "101" })];
     const newList = [makePatient({ name: "כהן יוסף", room: "102" })];
     const diff = detectScanChanges(old, newList);
-    expect(diff.changedPatients).toHaveLength(1);
-    expect(diff.changedPatients[0].changes[0]).toContain("חדר");
-    expect(diff.changedPatients[0].changes[0]).toContain("101");
-    expect(diff.changedPatients[0].changes[0]).toContain("102");
+    // With room::name composite key, room change = old key missing + new key added
+    expect(diff.missingPatients).toHaveLength(1);
+    expect(diff.newPatients).toHaveLength(1);
   });
 
   it("detects section changes", () => {
@@ -132,9 +131,9 @@ describe("detectScanChanges", () => {
     expect(diff.missingPatients).toEqual([]);
   });
 
-  it("handles multiple changes for same patient", () => {
+  it("handles multiple changes for same patient (same room)", () => {
     const old = [makePatient({ name: "כהן יוסף", room: "101", section: "SIDE_A", diagnosis: "UTI" })];
-    const newList = [makePatient({ name: "כהן יוסף", room: "105", section: "SIDE_B", diagnosis: "Sepsis" })];
+    const newList = [makePatient({ name: "כהן יוסף", room: "101", section: "SIDE_B", diagnosis: "Sepsis" })];
     const diff = detectScanChanges(old, newList);
     expect(diff.changedPatients).toHaveLength(1);
     expect(diff.changedPatients[0].changes.length).toBeGreaterThanOrEqual(2);
