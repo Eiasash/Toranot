@@ -20,7 +20,7 @@ const DIRECT_API_URL = "https://api.anthropic.com/v1/messages";
 const PROXY_API_URL = "/api/claude";
 const GEMINI_PROXY_URL = "/api/gemini";
 const CLAUDE_MODEL = "claude-sonnet-4-6";
-const GEMINI_MODEL = "gemini-3.1-pro-preview";
+const GEMINI_MODEL = "gemini-2.5-flash";
 
 type AIProvider = "claude" | "gemini";
 
@@ -212,7 +212,7 @@ async function callAIAPI(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: GEMINI_MODEL,
-        max_tokens: 1500,
+        max_tokens: 4096,
         system: systemPrompt,
         messages: [{ role: "user", content: userMessage }],
       }),
@@ -242,7 +242,7 @@ async function callAIAPI(
     headers,
     body: JSON.stringify({
       model: CLAUDE_MODEL,
-      max_tokens: 1500,
+      max_tokens: 4096,
       system: systemPrompt,
       messages: [{ role: "user", content: userMessage }],
     }),
@@ -279,7 +279,7 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
   // Scroll to top of response when new response arrives (better UX than bottom)
   useEffect(() => {
     if (response && responseRef.current) {
-      responseRef.current.scrollTop = 0;
+      responseRef.current.scrollTo({ top: 0, behavior: "smooth" });
     }
   }, [response]);
 
@@ -410,7 +410,7 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
         <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 px-4 py-1.5 text-[10px] text-amber-800 dark:text-amber-300 flex-shrink-0 flex items-center justify-between gap-2">
           <span>⚠️ כלי תמיכה בהחלטה בלבד — לא מחליף שיקול דעת קליני. אמת כל המלצה באופן עצמאי.</span>
           <span className="shrink-0 font-mono bg-amber-100 dark:bg-amber-800/40 px-1.5 py-0.5 rounded text-[9px]">
-            {provider === "gemini" ? "gemini-3.1-pro-preview" : "claude-sonnet-4"}
+            {provider === "gemini" ? "gemini-2.5-flash" : "claude-sonnet-4-6"}
           </span>
         </div>
 
