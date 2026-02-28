@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { usePatientsState } from "../context/PatientsContext";
 import { SECTION_LABEL, type PatientEntry, type Task } from "../types";
 import { formatLabsForHandoff } from "./LabChart";
@@ -100,18 +100,44 @@ function formatPatient(p: PatientEntry): string {
   return lines.join("\n");
 }
 
+// On-call shift: 16:00 → 08:00
+function getShiftStart(): Date {
+  const now = new Date();
+  const s = new Date(now);
+  s.setMinutes(0, 0, 0);
+  s.setHours(16);
+  if (now.getHours() < 16) s.setDate(s.getDate() - 1);
+  return s;
+}
+
+function isOncallRelevant(p: PatientEntry, shiftStart: Date): boolean {
+  if (p.scannedAt && new Date(p.scannedAt) >= shiftStart) return true;
+  if (p.tasks.some(t => t.source !== "generated")) return true;
+  if ([...p.tasks, ...p.generatedTasks].some(t => t.done)) return true;
+  if (p.handoverNote) return true;
+  return false;
+}
+
 export function HandoffSheet({ onClose }: { onClose: () => void }) {
   const { patients } = usePatientsState();
+  const [oncallOnly, setOncallOnly] = useState(false);
+
+  const shiftStart = useMemo(() => getShiftStart(), []);
+
+  const filteredPatients = useMemo(() => {
+    if (!oncallOnly) return patients;
+    return patients.filter(p => isOncallRelevant(p, shiftStart));
+  }, [patients, oncallOnly, shiftStart]);
 
   const sections = useMemo(() => {
     const map = new Map<string, PatientEntry[]>();
-    for (const p of patients) {
+    for (const p of filteredPatients) {
       const arr = map.get(p.section) ?? [];
       arr.push(p);
       map.set(p.section, arr);
     }
     return map;
-  }, [patients]);
+  }, [filteredPatients]);
 
   const text = useMemo(() => {
     const now = new Date();
@@ -121,10 +147,24 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
       minute: "2-digit",
     });
 
+    const newAdmissions = patients.filter(p => p.scannedAt && new Date(p.scannedAt) >= shiftStart);
+
     const lines: string[] = [
-      `📋 סיכום משמרת — ${dateStr} ${timeStr}`,
+      `📋 ${oncallOnly ? "מסירת תורן" : "סיכום משמרת"} — ${dateStr} ${timeStr}`,
       `${"─".repeat(35)}`,
     ];
+
+    if (newAdmissions.length > 0) {
+      lines.push("");
+      lines.push(`🆕 קבלות תורן (${newAdmissions.length}):`);
+      for (const p of newAdmissions) {
+        const header = [p.room, p.name, p.age ? `(${p.age})` : null].filter(Boolean).join(" ");
+        const dx = p.diagnosis ? ` — ${p.diagnosis}` : "";
+        const st = p.status.length > 0 ? ` [${p.status.join("/")}]` : "";
+        lines.push(`  • ${header}${dx}${st}`);
+      }
+      lines.push(`${"─".repeat(35)}`);
+    }
 
     for (const [section, pts] of sections) {
       lines.push("");
@@ -138,7 +178,7 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
       }
     }
 
-    const allTasks = patients.flatMap((p) => [...p.tasks, ...p.generatedTasks]);
+    const allTasks = filteredPatients.flatMap((p) => [...p.tasks, ...p.generatedTasks]);
     const totalDone = allTasks.filter((t) => t.done).length;
     const totalPending = allTasks.filter((t) => !t.done).length;
     const statPending = allTasks.filter(
@@ -154,7 +194,7 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
     // Safety stats
     let totalSafetyAlerts = 0;
     let patientsWithAlerts = 0;
-    for (const p of patients) {
+    for (const p of filteredPatients) {
       const count = checkDrugInteractions(p).length
         + checkRenalDoseWarnings(p).length
         + calculateLabDeltas(p).length
@@ -164,13 +204,13 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
     }
 
     // Acuity breakdown
-    const patientsWithLabs = patients.filter(p => (p.labs ?? []).length > 0).length;
-    const patientsWithNotes = patients.filter(p => p.handoverNote).length;
+    const patientsWithLabs = filteredPatients.filter(p => (p.labs ?? []).length > 0).length;
+    const patientsWithNotes = filteredPatients.filter(p => p.handoverNote).length;
 
     lines.push(`${"─".repeat(35)}`);
     lines.push(`📊 סיכום משמרת:`);
     lines.push(
-      `  חולים: ${patients.length} | ✅ ${totalDone} בוצעו | ⏳ ${totalPending} ממתינים`,
+      `  חולים: ${filteredPatients.length} | ✅ ${totalDone} בוצעו | ⏳ ${totalPending} ממתינים`,
     );
     if (statDone > 0 || statPending > 0) {
       lines.push(`  🔴 סטט: ${statDone} בוצעו, ${statPending} ממתינים | 🟡 דחוף: ${urgentDone} בוצעו`);
@@ -183,7 +223,7 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
     }
 
     return lines.join("\n");
-  }, [patients, sections]);
+  }, [patients, filteredPatients, sections, oncallOnly, shiftStart]);
 
   const handleCopy = async () => {
     try {
@@ -247,18 +287,27 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
       >
         <div className="bg-emerald-700 text-white px-4 py-3 flex items-center justify-between">
           <div>
-            <h2 className="text-base font-bold">סיכום משמרת (Sign-Out)</h2>
+            <h2 className="text-base font-bold">{oncallOnly ? "מסירת תורן" : "סיכום משמרת (Sign-Out)"}</h2>
             <p className="text-xs text-emerald-200">
               IPASS format — העתק, שתף בוואטסאפ, או ייצא
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="text-white/70 hover:text-white text-xl px-2"
-            aria-label="סגור"
-          >
-            ✕
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setOncallOnly(v => !v)}
+              className={"text-xs px-2 py-1 rounded-lg font-medium border transition-colors " + (oncallOnly ? "bg-white text-emerald-700 border-white" : "bg-emerald-800 text-emerald-100 border-emerald-600")}
+              title="הצג רק חולים שהתקבלו/טופלו בתורן"
+            >
+              {oncallOnly ? "🩺 תורן" : "📋 כולם"}
+            </button>
+            <button
+              onClick={onClose}
+              className="text-white/70 hover:text-white text-xl px-2"
+              aria-label="סגור"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4">
