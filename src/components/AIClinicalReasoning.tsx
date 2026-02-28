@@ -23,6 +23,15 @@ const GEMINI_MODEL = "gemini-3.1-pro-preview";
 
 type AIProvider = "claude" | "gemini";
 
+// Strip dangerous HTML tags before rendering AI output (XSS prevention)
+function sanitizeHTML(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<iframe[\s\S]*?<\/iframe>/gi, "")
+    .replace(/on\w+\s*=\s*["'][^"']*["']/gi, "")
+    .replace(/javascript:/gi, "");
+}
+
 // Simple markdown → HTML for AI responses
 function renderMarkdown(text: string): string {
   return text
@@ -315,11 +324,14 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
     } catch (err: unknown) {
       if ((err as Error).name === "AbortError") return;
       const msg = (err as Error).message || "";
-      // Network-level failures
       if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("fetch")) {
         setError("אין חיבור לשרת. בדוק חיבור אינטרנט או נסה שוב.");
       } else if (msg.includes("timeout") || msg.includes("Timeout")) {
         setError("תם הזמן המוקצב. נסה שוב — שאילתות מורכבות לוקחות יותר זמן.");
+      } else if (msg.includes("403") || msg.includes("מכסת")) {
+        setError("מכסת ה-API הסתיימה. בדוק את המגבלות שלך ב-Google AI Studio.");
+      } else if (msg.includes("מפתח API לא תקין")) {
+        setError("מפתח API לא תקין — בדוק את ההגדרות.");
       } else {
         setError(msg || "שגיאה לא צפויה");
       }
@@ -498,7 +510,7 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
                   className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed break-words"
                   dir="auto"
                   style={{ unicodeBidi: "plaintext" }}
-                  dangerouslySetInnerHTML={{ __html: renderMarkdown(response) }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(renderMarkdown(response)) }}
                 />
               )}
               {/* Scroll padding at bottom so content clears mobile nav bar */}
@@ -586,3 +598,4 @@ function APIKeySetup({
     </div>
   );
 }
+
