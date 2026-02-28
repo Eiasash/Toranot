@@ -119,7 +119,7 @@ function isOncallRelevant(p: PatientEntry, shiftStart: Date): boolean {
 }
 
 export function HandoffSheet({ onClose }: { onClose: () => void }) {
-  const { patients, events } = usePatientsState();
+  const { patients } = usePatientsState();
   const [oncallOnly, setOncallOnly] = useState(false);
 
   const shiftStart = useMemo(() => getShiftStart(), []);
@@ -147,13 +147,7 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
       minute: "2-digit",
     });
 
-    // Only manually-admitted patients appear in new admissions block
-    const admissionIds = new Set(
-      events
-        .filter(e => e.type === "ADMISSION" && new Date(e.at) >= shiftStart)
-        .map(e => e.patientId)
-    );
-    const newAdmissions = patients.filter(p => admissionIds.has(p.id));
+    const newAdmissions = patients.filter(p => p.scannedAt && new Date(p.scannedAt) >= shiftStart);
 
     const lines: string[] = [
       `📋 ${oncallOnly ? "מסירת תורן" : "סיכום משמרת"} — ${dateStr} ${timeStr}`,
@@ -162,12 +156,16 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
 
     if (newAdmissions.length > 0) {
       lines.push("");
-      lines.push(`🆕 קבלות תורן (${newAdmissions.length}):`);
+      const shiftDateStr = shiftStart.toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit" });
+      lines.push(`🆕 קבלות תורן ${shiftDateStr} (${newAdmissions.length}):`);
       for (const p of newAdmissions) {
         const header = [p.room, p.name, p.age ? `(${p.age})` : null].filter(Boolean).join(" ");
         const dx = p.diagnosis ? ` — ${p.diagnosis}` : "";
         const st = p.status.length > 0 ? ` [${p.status.join("/")}]` : "";
-        lines.push(`  • ${header}${dx}${st}`);
+        const admTime = p.scannedAt
+          ? ` 🕐${new Date(p.scannedAt).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })}`
+          : "";
+        lines.push(`  • ${header}${dx}${st}${admTime}`);
       }
       lines.push(`${"─".repeat(35)}`);
     }
@@ -229,7 +227,7 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
     }
 
     return lines.join("\n");
-  }, [patients, filteredPatients, sections, oncallOnly, shiftStart, events]);
+  }, [patients, filteredPatients, sections, oncallOnly, shiftStart]);
 
   const handleCopy = async () => {
     try {
