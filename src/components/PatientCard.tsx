@@ -27,9 +27,15 @@ function getShiftStart(): Date {
   if (now.getHours() < 16) s.setDate(s.getDate() - 1);
   return s;
 }
-function isNewThisShift(p: PatientEntry): boolean {
-  if (!p.scannedAt) return false;
-  return new Date(p.scannedAt) >= getShiftStart();
+// Only manually-admitted patients (NEW_ADMISSION event) get the 🆕 badge
+function isNewThisShift(p: PatientEntry, events: import("../types").WardEvent[]): boolean {
+  const shiftStart = getShiftStart();
+  return events.some(
+    e =>
+      e.type === "ADMISSION" &&
+      e.patientId === p.id &&
+      new Date(e.at) >= shiftStart
+  );
 }
 
 function NewBadge() {
@@ -215,7 +221,7 @@ function HandoverNoteInline({ patient }: { patient: PatientEntry }) {
 
 export function PatientCard({ patient }: { patient: PatientEntry }) {
   const dispatch = usePatientsDispatch();
-  const { showTomorrow, scanMode } = usePatientsState();
+  const { showTomorrow, scanMode, events } = usePatientsState();
 
   const manualNotes = patient.notes ?? [];
 
@@ -322,7 +328,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
             <span className="text-sm font-semibold truncate dark:text-gray-100 shrink-0 max-w-[120px]">
               {patient.name ?? "לא ידוע"}
             </span>
-            {isNewThisShift(patient) && <NewBadge />}
+            {isNewThisShift(patient, events) && <NewBadge />}
             {patient.room && (
               <span className="shrink-0 text-xs bg-blue-600 text-white px-1.5 py-0.5 rounded">
                 {patient.room}
@@ -407,7 +413,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
             <>
               <div className="flex items-center gap-2">
                 <AcuityBadge patient={patient} />
-                {isNewThisShift(patient) && <NewBadge />}
+                {isNewThisShift(patient, events) && <NewBadge />}
                 <span className="text-lg font-semibold truncate dark:text-gray-100">
                   {patient.name ?? "לא ידוע"}
                 </span>
@@ -863,7 +869,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
 
 export function PatientRow({ patient }: { patient: PatientEntry }) {
   const dispatch = usePatientsDispatch();
-  const { showTomorrow } = usePatientsState();
+  const { showTomorrow, events } = usePatientsState();
 
   const [expanded, setExpanded] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -916,7 +922,7 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
         </td>
         <td className="py-2.5 px-4 font-semibold text-gray-900 dark:text-gray-100 text-sm whitespace-nowrap">
           <div className="flex items-center gap-1.5">
-            {isNewThisShift(patient) && <NewBadge />}
+            {isNewThisShift(patient, events) && <NewBadge />}
             {patient.name ?? "לא ידוע"}
           </div>
         </td>
