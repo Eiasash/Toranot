@@ -3,9 +3,7 @@ import type { Task } from "../types";
 
 /**
  * TaskCountdown — shows a live countdown for tasks with dueAt.
- * Fires a browser notification when time expires.
- * 
- * Used inside TaskItem when a task has a non-null dueAt.
+ * Fires browser notification + vibration + SW alarm when time expires.
  */
 
 function formatCountdown(ms: number): string {
@@ -20,8 +18,8 @@ function formatCountdown(ms: number): string {
 
 function countdownColor(ms: number): string {
   if (ms <= 0) return "bg-red-600 text-white animate-pulse";
-  if (ms < 5 * 60 * 1000) return "bg-red-500 text-white"; // <5 min
-  if (ms < 15 * 60 * 1000) return "bg-orange-500 text-white"; // <15 min
+  if (ms < 5 * 60 * 1000) return "bg-red-500 text-white";
+  if (ms < 15 * 60 * 1000) return "bg-orange-500 text-white";
   return "bg-amber-100 text-amber-800 border border-amber-300";
 }
 
@@ -38,13 +36,12 @@ export function TaskCountdown({ task }: { task: Task }) {
     return () => clearInterval(interval);
   }, [task.dueAt, task.done]);
 
-  // Fire notification when time is up
   useEffect(() => {
     if (notified || task.done || remaining > 0) return;
     if (!task.dueAt) return;
     setNotified(true);
-    fireNotification(task.text);
-  }, [remaining, notified, task.done, task.dueAt, task.text]);
+    fireAlarm(task.id, task.text);
+  }, [remaining, notified, task.done, task.dueAt, task.text, task.id]);
 
   if (!task.dueAt || task.done) return null;
 
@@ -58,14 +55,49 @@ export function TaskCountdown({ task }: { task: Task }) {
   );
 }
 
-/** Quick timer setter — returns ISO string for dueAt */
+// ── Auto-detect timer suggestion from task text ──────────────────────────────
+// Returns suggested minutes based on clinical patterns in task text
+export function suggestTimerMinutes(text: string): number | null {
+  const t = text.toLowerCase();
+
+  // Explicit patterns: "q1h", "q2h", "every 1 hour", "1h after", "in 30 min"
+  const qMatch = t.match(/\bq(\d+(?:\.\d+)?)h\b/);
+  if (qMatch) return Math.round(parseFloat(qMatch[1]) * 60);
+
+  const inHMatch = t.match(/\bin\s+(\d+(?:\.\d+)?)\s*h(?:our)?/);
+  if (inHMatch) return Math.round(parseFloat(inHMatch[1]) * 60);
+
+  const inMinMatch = t.match(/\bin\s+(\d+)\s*(?:min|דק)/);
+  if (inMinMatch) return parseInt(inMinMatch[1]);
+
+  const afterHMatch = t.match(/(\d+(?:\.\d+)?)\s*h(?:our)?\s*after/);
+  if (afterHMatch) return Math.round(parseFloat(afterHMatch[1]) * 60);
+
+  // Clinical defaults
+  if (/post.?transfusion|after.*transfusion|after.*completion/i.test(t)) return 60;
+  if (/transfusion.*cbc|cbc.*transfusion/i.test(t)) return 60;
+  if (/repeat.*ecg|ecg.*repeat/i.test(t)) return 30;
+  if (/repeat.*bp|bp.*recheck|recheck.*bp/i.test(t)) return 30;
+  if (/recheck.*k\+|k\+.*recheck|repeat.*k\+/i.test(t)) return 120;
+  if (/bs\s*q|glucose\s*q|gluco.*check/i.test(t)) return 240;
+  if (/recheck.*na|na.*recheck/i.test(t)) return 240;
+  if (/recheck.*creatinine|cr.*recheck/i.test(t)) return 240;
+  if (/vitals.*q|q.*vitals/i.test(t)) return 60;
+  if (/urine.*output|i\/o.*check/i.test(t)) return 60;
+  if (/iv\s*insulin.*gtt|insulin.*gtt/i.test(t)) return 60;
+
+  return null;
+}
+
+/** Quick timer options — used in TaskItem */
 export function getQuickDueOptions(): Array<{ label: string; minutes: number }> {
   return [
-    { label: "10 דק׳", minutes: 10 },
+    { label: "15 דק׳", minutes: 15 },
     { label: "30 דק׳", minutes: 30 },
     { label: "1 שעה", minutes: 60 },
     { label: "2 שעות", minutes: 120 },
     { label: "4 שעות", minutes: 240 },
+    { label: "6 שעות", minutes: 360 },
   ];
 }
 
@@ -73,24 +105,47 @@ export function dueAtFromMinutes(minutes: number): string {
   return new Date(Date.now() + minutes * 60 * 1000).toISOString();
 }
 
-function fireNotification(taskText: string) {
-  // Try browser notification
+/** Schedule a persistent SW alarm for backgrounded notifications */
+export function scheduleSwAlarm(taskId: string, taskText: string, dueAt: string) {
+  if (!("serviceWorker" in navigator) || !navigator.serviceWorker.controller) return;
+  navigator.serviceWorker.controller.postMessage({
+    type: "SCHEDULE_ALARM",
+    taskId,
+    taskText,
+    dueAt,
+  });
+}
+
+/** Cancel a SW alarm */
+export function cancelSwAlarm(taskId: string) {
+  if (!("serviceWorker" in navigator) || !navigator.serviceWorker.controller) return;
+  navigator.serviceWorker.controller.postMessage({ type: "CANCEL_ALARM", taskId });
+}
+
+function fireAlarm(taskId: string, taskText: string) {
+  if ("vibrate" in navigator) navigator.vibrate([300, 100, 300, 100, 300]);
+
   if ("Notification" in window && Notification.permission === "granted") {
-    new Notification("⏰ תורנות — משימה!", {
-      body: taskText,
-      icon: "/Toranot/icon-192.png",
-      tag: `task-due-${taskText.slice(0, 20)}`,
-      requireInteraction: true,
-    });
+    try {
+      new Notification("⏰ תורנות — עבר הזמן!", {
+        body: taskText,
+        icon: "/icon-192.png",
+        tag: `task-due-${taskId}`,
+        requireInteraction: true,
+      } as NotificationOptions);
+      return;
+    } catch { /* fallback */ }
   }
 
-  // Also try vibration for mobile
-  if ("vibrate" in navigator) {
-    navigator.vibrate([200, 100, 200, 100, 200]);
+  if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({
+      type: "TASK_REMINDER",
+      title: "⏰ תורנות — עבר הזמן!",
+      body: taskText,
+    });
   }
 }
 
-/** Request notification permission (call once on app load) */
 export function requestNotificationPermission() {
   if ("Notification" in window && Notification.permission === "default") {
     Notification.requestPermission();
