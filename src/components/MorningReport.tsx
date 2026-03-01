@@ -13,8 +13,8 @@ function fmtDate(iso: string): string {
 
 export function MorningReport({ onClose }: { onClose: () => void }) {
   const { patients, events } = usePatientsState();
-  const now = Date.now();
-  const h24ago = new Date(now - 24 * 60 * 60 * 1000).toISOString();
+  const now = useMemo(() => Date.now(), []);
+  const h24ago = useMemo(() => new Date(now - 24 * 60 * 60 * 1000).toISOString(), [now]);
 
   const admissions = useMemo(() =>
     events.filter(e => e.type === "ADMISSION" && e.at >= h24ago),
