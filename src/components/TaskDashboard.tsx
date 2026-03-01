@@ -46,7 +46,8 @@ export function TaskDashboard({ onClose }: { onClose: () => void }) {
     const items: DashTask[] = [];
     for (const p of patients) {
       for (const t of [...p.tasks, ...p.generatedTasks]) {
-        if (!t.done) items.push({ task: t, patient: p });
+        if (!t.done && !(t as Task & { dismissed?: boolean }).dismissed)
+          items.push({ task: t, patient: p });
       }
     }
     items.sort(
