@@ -13,7 +13,7 @@ import { applyRules } from "../engine/rules";
 import { generateId } from "../utils/id";
 import { safeGetItem, safeSetItem } from "../utils/storage";
 import { useToranotCloudSync, type ToranotCloudState, type SyncStatus, type ConflictData } from "../cloudSync";
-import { detectScanChanges, type ScanDiff } from "../engine/smartOCR";
+import type { ScanDiff } from "../engine/smartOCR";
 
 // -----------------------------
 // Constants
@@ -280,13 +280,9 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
   switch (action.type) {
     case "IMPORT_TEXT": {
       const parsed = parsePatientList(action.text);
-      // Compute scan diff BEFORE merge so we compare old state vs fresh scan
-      const scanDiff = state.patients.length > 0
-        ? detectScanChanges(state.patients, parsed)
-        : null;
       const merged = mergeScan(state.patients, parsed);
+
       // Deduplicate beds: if two patients share room+section, keep the later one
-      // (the scanned patient is more current than the stale one)
       const seen = new Map<string, number>();
       for (let i = 0; i < merged.length; i++) {
         const p = merged[i];
@@ -295,15 +291,52 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
         seen.set(key, i);
       }
       const keepIndices = new Set(seen.values());
-      // Also keep patients without rooms and patients that didn't collide
       const deduped = merged.filter((p, i) => !p.room || keepIndices.has(i));
-      // Only show diff banner if something actually changed
-      const hasDiff = scanDiff && (
-        scanDiff.newPatients.length > 0 ||
-        scanDiff.missingPatients.length > 0 ||
-        scanDiff.changedPatients.length > 0
-      );
-      return { ...state, patients: deduped, lastScanDiff: hasDiff ? scanDiff : null };
+
+      // Compute diff from merge results.
+      // mergeScan has 3-tier matching (strict→loose→stable) which is far more
+      // robust than detectScanChanges' single-key lookup. We trust its output:
+      // patients that kept their old ID were matched; new IDs = genuine admissions.
+      let scanDiff: ScanDiff | null = null;
+      if (state.patients.length > 0) {
+        const existingIds = new Set(state.patients.map((p) => p.id));
+        const mergedIds = new Set(deduped.map((p) => p.id));
+
+        const newPatients = deduped.filter((p) => !existingIds.has(p.id));
+        const missingPatients = state.patients.filter((p) => !mergedIds.has(p.id));
+        const changedPatients = deduped
+          .filter((p) => existingIds.has(p.id))
+          .flatMap((p) => {
+            const old = state.patients.find((o) => o.id === p.id);
+            if (!old) return [];
+            const changes: string[] = [];
+            if (old.room !== p.room && p.room) changes.push(`חדר: ${old.room ?? "?"} → ${p.room}`);
+            if (old.section !== p.section) changes.push("מדור עודכן");
+            if (old.diagnosis !== p.diagnosis && p.diagnosis) changes.push("אבחנה עודכנה");
+            const oldTaskTexts = new Set(old.tasks.map((t) => t.text.trim()));
+            const newTasks = p.tasks.filter((t) => !oldTaskTexts.has(t.text.trim()));
+            if (newTasks.length > 0) changes.push(`${newTasks.length} משימות חדשות`);
+            return changes.length > 0 ? [{ patient: p, changes }] : [];
+          });
+
+        const hasDiff =
+          newPatients.length > 0 ||
+          missingPatients.length > 0 ||
+          changedPatients.length > 0;
+
+        if (hasDiff) {
+          scanDiff = {
+            newPatients,
+            missingPatients,
+            changedPatients,
+            unchanged:
+              deduped.filter((p) => existingIds.has(p.id)).length -
+              changedPatients.length,
+          };
+        }
+      }
+
+      return { ...state, patients: deduped, lastScanDiff: scanDiff };
     }
     case "SET_SECTION":
       return { ...state, activeSection: action.section };
