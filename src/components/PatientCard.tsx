@@ -366,7 +366,8 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
                   onChange={(e) => setEditRoom(e.target.value)}
                   placeholder="חדר"
                   dir="auto"
-                  className="w-20 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-gray-100"
+                  autoFocus
+                   className="w-20 border-blue-400 ring-1 ring-blue-300 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-gray-100"
                 />
               </div>
               <input
@@ -409,9 +410,13 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
                   {patient.name ?? "לא ידוע"}
                 </span>
                 {patient.room && (
-                  <span className="shrink-0 text-sm bg-blue-600 text-white px-2 py-0.5 rounded-lg">
+                  <button
+                    onClick={startEdit}
+                    className="shrink-0 text-sm bg-blue-600 text-white px-2 py-0.5 rounded-lg active:bg-blue-800 transition-colors"
+                    title="לחץ לעריכת חדר/פרטים"
+                  >
                     {patient.room}
-                  </span>
+                  </button>
                 )}
                 <button
                   onClick={startEdit}
