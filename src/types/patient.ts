@@ -48,6 +48,9 @@ export type Task = {
 
   // When this task is due (ISO string). Used for time-aware tasks.
   dueAt?: string | null;
+
+  // User explicitly dismissed this generated task — suppress on re-generate.
+  dismissed?: boolean;
 };
 
 export type PatientEntry = {
