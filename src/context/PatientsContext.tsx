@@ -205,7 +205,7 @@ export type Action =
   | { type: "ADD_PHOTO"; patientId: string; photo: import("../types").PatientPhoto }
   | { type: "REMOVE_PHOTO"; patientId: string; photoId: string }
   | { type: "REORDER_PATIENT"; patientId: string; direction: "up" | "down" }
-  | { type: "EDIT_PATIENT"; patientId: string; name?: string; room?: string; section?: PatientSection; diagnosis?: string }
+  | { type: "EDIT_PATIENT"; patientId: string; name?: string; room?: string; section?: PatientSection; diagnosis?: string; discharged?: boolean }
   | { type: "REMOVE_PATIENT"; patientId: string }
   | { type: "ARCHIVE_SHIFT"; label: string }
   | { type: "RESTORE_SHIFT"; snapshotId: string }
@@ -573,6 +573,7 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
                 ...(action.room !== undefined && { room: action.room }),
                 ...(action.section !== undefined && { section: action.section }),
                 ...(action.diagnosis !== undefined && { diagnosis: action.diagnosis }),
+                ...(action.discharged !== undefined && { discharged: action.discharged }),
               }
             : p,
         ),
