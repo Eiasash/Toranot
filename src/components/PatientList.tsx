@@ -29,7 +29,7 @@ export function PatientList() {
       : patients.filter((p) => p.section === activeSection);
     const sorted = [...sectionPatients];
     if (sortMode === "severity") {
-      sorted.sort((a, b) => calculateAcuity(b).score - calculateAcuity(a).score || (a.order ?? 0) - (b.order ?? 0));
+      sorted.sort((a, b) => { const dDiff = (a.discharged ? 1 : 0) - (b.discharged ? 1 : 0); if (dDiff !== 0) return dDiff; return calculateAcuity(b).score - calculateAcuity(a).score || (a.order ?? 0) - (b.order ?? 0); });
     } else if (sortMode === "name") {
       sorted.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "", "he"));
     } else if (sortMode === "new") {
@@ -43,13 +43,18 @@ export function PatientList() {
       if (activeSection === "ALL") {
         // Group by section order, then room within each section
         sorted.sort((a, b) => {
+          const dDiff = (a.discharged ? 1 : 0) - (b.discharged ? 1 : 0);
+          if (dDiff !== 0) return dDiff;
           const secDiff = (SECTION_ORDER[a.section] ?? 99) - (SECTION_ORDER[b.section] ?? 99);
           if (secDiff !== 0) return secDiff;
           return comparePatientsByRoom(a, b);
         });
       } else {
-        // Deterministic: room number → bed number → order (▲▼ tiebreaker)
-        sorted.sort(comparePatientsByRoom);
+        sorted.sort((a, b) => {
+          const dDiff = (a.discharged ? 1 : 0) - (b.discharged ? 1 : 0);
+          if (dDiff !== 0) return dDiff;
+          return comparePatientsByRoom(a, b);
+        });
       }
     }
     return sorted;
