@@ -811,6 +811,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
             <TaskItem
               key={task.id}
               task={task}
+              patientId={patient.id}
               onToggle={() => toggleTask(task)}
               onSetDue={(dueAt) =>
                 dispatch({
@@ -1107,6 +1108,7 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
                     <TaskItem
                       key={task.id}
                       task={task}
+                      patientId={patient.id}
                       onToggle={() => toggleTask(task)}
                       onSetDue={(dueAt) =>
                 dispatch({
