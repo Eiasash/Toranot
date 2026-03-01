@@ -4,9 +4,9 @@ import { CloudAuthPanel } from "./CloudAuthPanel";
 import { supabase } from "../cloudSync";
 import { ConfirmModal, type ConfirmDialog } from "../App";
 
-export type OverflowModal = "history" | "qrsync" | "capture" | "morning" | "ivprotocols" | "handoff_cloud";
+export type OverflowModal = "history" | "qrsync" | "capture" | "morning" | "ivprotocols" | "handoff_cloud" | "shared_shift";
 
-export function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qrsync" | "capture" | "morning" | "ivprotocols" | "handoff_cloud") => void }) {
+export function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qrsync" | "capture" | "morning" | "ivprotocols" | "handoff_cloud" | "shared_shift") => void }) {
   const [open, setOpen] = useState(false);
   const [dialog, setDialog] = useState<ConfirmDialog>({ type: "none" });
   const { darkMode, showTomorrow, scanMode, patients } = usePatientsState();
@@ -214,6 +214,18 @@ export function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qr
               {supabase && (
                 <button
                   onClick={() => { onOpenModal("handoff_cloud"); setOpen(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-slate-200 active:bg-slate-700 border-t border-slate-700 text-right"
+                >
+                  <span className="text-base">☁️</span>
+                  סנכרון ענן
+                </button>
+                {/* Share with colleagues */}
+                <button
+                  onClick={() => { onOpenModal("shared_shift"); setOpen(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-emerald-300 active:bg-slate-700 border-t border-slate-700 text-right"
+                >
+                  <span className="text-base">🤝</span>
+                  שתף עם צוות
                   className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-slate-200 active:bg-slate-700 border-t border-slate-700 text-right"
                 >
                   <span className="text-base">🤝</span>
