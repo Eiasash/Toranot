@@ -20,13 +20,7 @@ import { hapticSuccess } from "../utils/haptics";
 
 import { isNewThisShift as _isNewThisShift, getShiftStart } from "../utils/shiftTime";
 function isNewThisShift(p: PatientEntry): boolean {
-  return _isNewThisShift(p.scannedAt, {
-    hasDoneTasks: [...p.tasks, ...(p.generatedTasks ?? [])].some(t => t.done),
-    hasManualTasks: p.tasks.some(t => t.source === "manual"),
-    hasNotes: (p.notes?.length ?? 0) > 0,
-    hasLabs: (p.labs?.length ?? 0) > 0,
-    hasHandoverNote: !!p.handoverNote,
-  });
+  return !!(p as PatientEntry & { isAdmission?: boolean }).isAdmission && _isNewThisShift(p.scannedAt);
 }
 
 function NewBadge({ scannedAt }: { scannedAt?: string }) {
