@@ -322,7 +322,13 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
             <span className="text-sm font-semibold truncate dark:text-gray-100 shrink-0 max-w-[120px]">
               {patient.name ?? "לא ידוע"}
             </span>
-            {isNewThisShift(patient) && <NewBadge scannedAt={patient.scannedAt} />}
+            {isNewThisShift(patient.scannedAt, {
+      hasDoneTasks: [...patient.tasks, ...(patient.generatedTasks ?? [])].some(t => t.done),
+      hasManualTasks: patient.tasks.some(t => t.source === "manual"),
+      hasNotes: (patient.notes?.length ?? 0) > 0,
+      hasLabs: (patient.labs?.length ?? 0) > 0,
+      hasHandoverNote: !!patient.handoverNote,
+    }) && <NewBadge scannedAt={patient.scannedAt} />}
             {patient.room && (
               <span className="shrink-0 text-xs bg-blue-600 text-white px-1.5 py-0.5 rounded">
                 {patient.room}
@@ -408,7 +414,13 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
             <>
               <div className="flex items-center gap-2 relative">
                 <AcuityBadge patient={patient} />
-                {isNewThisShift(patient) && <NewBadge scannedAt={patient.scannedAt} />}
+                {isNewThisShift(patient.scannedAt, {
+      hasDoneTasks: [...patient.tasks, ...(patient.generatedTasks ?? [])].some(t => t.done),
+      hasManualTasks: patient.tasks.some(t => t.source === "manual"),
+      hasNotes: (patient.notes?.length ?? 0) > 0,
+      hasLabs: (patient.labs?.length ?? 0) > 0,
+      hasHandoverNote: !!patient.handoverNote,
+    }) && <NewBadge scannedAt={patient.scannedAt} />}
                 <span className="text-lg font-semibold truncate dark:text-gray-100">
                   {patient.name ?? "לא ידוע"}
                 </span>
@@ -972,7 +984,13 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
         </td>
         <td className="py-2.5 px-4 font-semibold text-gray-900 dark:text-gray-100 text-sm whitespace-nowrap">
           <div className="flex items-center gap-1.5">
-            {isNewThisShift(patient) && <NewBadge scannedAt={patient.scannedAt} />}
+            {isNewThisShift(patient.scannedAt, {
+      hasDoneTasks: [...patient.tasks, ...(patient.generatedTasks ?? [])].some(t => t.done),
+      hasManualTasks: patient.tasks.some(t => t.source === "manual"),
+      hasNotes: (patient.notes?.length ?? 0) > 0,
+      hasLabs: (patient.labs?.length ?? 0) > 0,
+      hasHandoverNote: !!patient.handoverNote,
+    }) && <NewBadge scannedAt={patient.scannedAt} />}
             {patient.name ?? "לא ידוע"}
           </div>
         </td>
