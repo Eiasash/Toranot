@@ -7,7 +7,15 @@ import { calculateAcuity } from "../engine/acuity";
 import { comparePatientsByRoom } from "../utils/sortPatients";
 
 import { isNewThisShift as _isNewThisShift, getShiftStart } from "../utils/shiftTime";
-function isNewThisShift(p: import("../types").PatientEntry): boolean { return _isNewThisShift(p.scannedAt); }
+function isNewThisShift(p: import("../types").PatientEntry): boolean {
+  return _isNewThisShift(p.scannedAt, {
+    hasDoneTasks: [...p.tasks, ...(p.generatedTasks ?? [])].some(t => t.done),
+    hasManualTasks: p.tasks.some(t => t.source === "manual"),
+    hasNotes: (p.notes?.length ?? 0) > 0,
+    hasLabs: (p.labs?.length ?? 0) > 0,
+    hasHandoverNote: !!p.handoverNote,
+  });
+}
 
 // Section ordering for ALL view
 const SECTION_ORDER: Record<string, number> = Object.fromEntries(
