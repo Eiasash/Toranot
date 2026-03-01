@@ -725,7 +725,7 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
     }
 
     case "NEW_ADMISSION": {
-      const admitted = normalizePatient(action.patient as RawPatient);
+      const admitted = { ...normalizePatient(action.patient as RawPatient), isAdmission: true };
       if (
         admitted.room &&
         bedOccupiedBy(state.patients, admitted.room, admitted.section, admitted.id)
