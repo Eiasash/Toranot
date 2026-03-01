@@ -118,7 +118,7 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
 
   const filteredPatients = useMemo(() => {
     if (!oncallOnly) return patients;
-    return patients.filter(p => isOncallRelevant(p, shiftStart));
+    return patients.filter(p => !p.discharged && isOncallRelevant(p, shiftStart));
   }, [patients, oncallOnly, shiftStart]);
 
   const sections = useMemo(() => {
