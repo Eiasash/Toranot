@@ -24,7 +24,8 @@ function formatPatient(p: PatientEntry): string {
   const header = [p.room, p.name, p.age ? `(${p.age})` : null]
     .filter(Boolean)
     .join(" ");
-  lines.push(`■ ${header}`);
+  const dischargedMarker = p.discharged ? " 🏠 שוחרר" : "";
+  lines.push(`■ ${header}${dischargedMarker}`);
 
   const severity = [p.diagnosis, ...p.flags].filter(Boolean).join(" | ");
   if (severity) lines.push(`  אבחנה: ${severity}`);
@@ -118,7 +119,7 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
 
   const filteredPatients = useMemo(() => {
     if (!oncallOnly) return patients;
-    return patients.filter(p => !p.discharged && isOncallRelevant(p, shiftStart));
+    return patients.filter(p => isOncallRelevant(p, shiftStart));
   }, [patients, oncallOnly, shiftStart]);
 
   const sections = useMemo(() => {
