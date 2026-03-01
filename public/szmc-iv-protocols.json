@@ -1,0 +1,536 @@
+{
+  "meta": {
+    "source": "Shaare Zedek Medical Center — IV Drug Protocols Binder",
+    "department": "Internal Medicine / Geriatrics",
+    "approved_by": "Dr. Deborah Sarah Shapira (32398), Head of Geriatrics Department, SZMC",
+    "last_updated": "May 2024",
+    "language": "he-IL",
+    "note": "All high-risk drugs require double-check (בקרה כפולה) by a second nurse"
+  },
+  "protocols": [
+    {
+      "id": "iv_insulin",
+      "drug": "Insulin (Regular)",
+      "title_he": "הנחיות למתן אינסולין מתמשך בווריד",
+      "title_en": "IV Continuous Insulin Protocol",
+      "setting": "ICU / Monitored Care (טיפול מוגבר)",
+      "source_date": "June 2022 (revised March 2018)",
+      "authors": "Dr. Yigal Halbitz (writer), Chaya Broyar (editor), Dr. Philip Levin (approver)",
+      "general_guidelines": {
+        "prerequisite": "Physician order documented in patient chart before starting",
+        "target_glucose_mg_dl": {"min": 140, "max": 180},
+        "indication": "Patient fed enterally, parenterally, or receiving IV fluids with glucose",
+        "contraindications": [
+          "Glucose < 70 mg/dL",
+          "DKA (Diabetic Ketoacidosis)",
+          "Hyperosmolar Coma"
+        ]
+      },
+      "preparation": {
+        "drug": "ACTRAPID 50 units",
+        "diluent": "NaCl 0.9% 50 ml",
+        "ratio": "1:1",
+        "double_check_required": true
+      },
+      "monitoring": {
+        "during_titration": "Blood glucose every 2 hours until target reached",
+        "after_rate_change_or_bolus": "At least 2 checks, minimum 2 hours apart, until glucose balanced",
+        "after_stabilization": "Blood glucose every 4 hours"
+      },
+      "dosing_table": {
+        "columns": ["glucose_range_mg_dl", "no_known_diabetes", "known_diabetes", "high_insulin_requirement"],
+        "rows": [
+          {
+            "glucose_range": "<70",
+            "all_columns": "STOP insulin. Give IV DEXTROSE 50% 50ml slow push over 2-5 min (physician order). Check glucose every 15 min until glucose stable above 140. When >140 restart insulin per appropriate column."
+          },
+          {
+            "glucose_range": "70-99",
+            "no_known_diabetes": "Stop insulin",
+            "known_diabetes": "Stop insulin",
+            "high_insulin_requirement": "Report to physician, consider dextrose/glucose"
+          },
+          {
+            "glucose_range": "100-140",
+            "no_known_diabetes": "Stop insulin",
+            "known_diabetes": "0.5 cc/hr, no bolus",
+            "high_insulin_requirement": "Report to physician, consider dextrose/glucose"
+          },
+          {
+            "glucose_range": "141-180",
+            "no_known_diabetes": "Stop insulin",
+            "known_diabetes": "1 cc/hr, no bolus",
+            "high_insulin_requirement": "2 cc/hr, no bolus"
+          },
+          {
+            "glucose_range": "181-200",
+            "no_known_diabetes": "No bolus, 1 cc/hr",
+            "known_diabetes": "2cc bolus, 1 cc/hr",
+            "high_insulin_requirement": "2cc bolus, 2 cc/hr"
+          },
+          {
+            "glucose_range": "201-250",
+            "no_known_diabetes": "2cc bolus, 2 cc/hr",
+            "known_diabetes": "2cc bolus, 3 cc/hr",
+            "high_insulin_requirement": "2cc bolus, 5 cc/hr"
+          },
+          {
+            "glucose_range": "251-300",
+            "no_known_diabetes": "2cc bolus, 2 cc/hr",
+            "known_diabetes": "2cc bolus, 4 cc/hr",
+            "high_insulin_requirement": "2cc bolus, 6 cc/hr"
+          },
+          {
+            "glucose_range": "301-350",
+            "no_known_diabetes": "4cc bolus, 4 cc/hr",
+            "known_diabetes": "4cc bolus, 6 cc/hr",
+            "high_insulin_requirement": "4cc bolus, 8 cc/hr"
+          },
+          {
+            "glucose_range": "351-400",
+            "no_known_diabetes": "4cc bolus, 6 cc/hr",
+            "known_diabetes": "4cc bolus, 6 cc/hr",
+            "high_insulin_requirement": "6cc bolus, 8 cc/hr"
+          },
+          {
+            "glucose_range": ">400",
+            "all_columns": "If >400 on 2 consecutive checks, move to 'high insulin requirement' column. Notify physician immediately."
+          }
+        ]
+      }
+    },
+    {
+      "id": "iv_propofol",
+      "drug": "Propofol 2%",
+      "title_he": "הנחיות למתן פרופופול 2% בווריד — הרדמה למטופל מונשם",
+      "title_en": "IV Propofol 2% — Sedation for Ventilated Patients",
+      "source_date": "2025 (updated from 2022)",
+      "setting": "ICU / Ventilated patients only",
+      "preparation": {
+        "concentration": "20 mg/ml",
+        "delivery": "Syringe pump (TCI-3) preferred",
+        "equipment_needed": [
+          "TCI-3 Syringe Pump",
+          "Blood pressure cuff",
+          "Pulse oximeter (SpO2)",
+          "70% alcohol pads",
+          "Stopcock (3-way tap)"
+        ],
+        "line_setup": "Via Y-set with Fentanyl or dedicated IV line; do NOT use same line as propofol without Y-set"
+      },
+      "dosing": {
+        "induction": "NOT used for induction in ward — only for maintenance sedation",
+        "maintenance_start_mcg_kg_min": 5,
+        "titration": "Increase by 5-10 mcg/kg/min every 10 minutes until target sedation",
+        "target_sedation": "Ramsay score 3-5 or per physician order",
+        "max_dose_mcg_kg_min": 50,
+        "max_duration_note": "Risk of PRIS increases significantly >48 hours"
+      },
+      "infusion_rate_table": {
+        "description": "Infusion rate drip (mL/hr) of Propofol 2% (20 mg/ml) by body weight",
+        "weight_columns_kg": [40, 50, 60, 70, 80, 90],
+        "rows": [
+          {"dose_mcg_kg_min": 5,  "rates_ml_hr": [0.6, 0.8, 0.9, 1.1, 1.2, 1.4]},
+          {"dose_mcg_kg_min": 10, "rates_ml_hr": [1.2, 1.5, 1.8, 2.1, 2.4, 2.7]},
+          {"dose_mcg_kg_min": 15, "rates_ml_hr": [1.8, 2.3, 2.7, 3.2, 3.6, 4.1]},
+          {"dose_mcg_kg_min": 20, "rates_ml_hr": [2.4, 3.0, 3.6, 4.2, 4.8, 5.4]},
+          {"dose_mcg_kg_min": 25, "rates_ml_hr": [3.0, 3.8, 4.5, 5.3, 6.0, 6.8]},
+          {"dose_mcg_kg_min": 30, "rates_ml_hr": [3.6, 4.5, 5.4, 6.3, 7.2, 8.1]},
+          {"dose_mcg_kg_min": 35, "rates_ml_hr": [4.2, 5.3, 6.3, 7.4, 8.4, 9.5]},
+          {"dose_mcg_kg_min": 40, "rates_ml_hr": [4.8, 6.0, 7.2, 8.4, 9.6, 10.8]},
+          {"dose_mcg_kg_min": 45, "rates_ml_hr": [5.4, 6.8, 8.1, 9.5, 10.8, 12.2]},
+          {"dose_mcg_kg_min": 50, "rates_ml_hr": [6.0, 7.5, 9.0, 10.5, 12.0, 13.5]}
+        ]
+      },
+      "pris_warning": {
+        "name": "Propofol-Related Infusion Syndrome (PRIS)",
+        "risk_factors": "Dose >50 mcg/kg/min, duration >48 hours, catecholamine use, critical illness",
+        "signs": [
+          "Metabolic acidosis (unexplained)",
+          "Rhabdomyolysis (rising CK)",
+          "Hyperkalemia",
+          "Hepatomegaly / liver failure",
+          "Cardiac failure / arrhythmias",
+          "Lipemia (triglycerides >33% rise)"
+        ],
+        "monitoring": {
+          "labs": ["CK", "pH/ABG", "Triglycerides", "Lactate"],
+          "frequency": "Every 24 hours while on propofol",
+          "adjusted_body_weight": "Use BMI ≤30 for dosing; for obese patients use Adjusted Body Weight"
+        },
+        "action_if_suspected": "Stop propofol immediately. Notify physician. Supportive care. Consider alternative sedation (Dormicum/Midazolam)."
+      },
+      "additional_notes": [
+        "Change syringe every 12 hours (infection risk — lipid emulsion)",
+        "Do NOT mix with other drugs in same syringe",
+        "Propofol is NOT suitable for non-ventilated patients in ward",
+        "IV continuous infusion — max 3 days preferred",
+        "Must use aseptic technique; 2% propofol formulation has 25 mg/ml"
+      ]
+    },
+    {
+      "id": "iv_fentanyl",
+      "drug": "Fentanyl",
+      "title_he": "הוראות למתן פנטניל בווריד",
+      "title_en": "IV Fentanyl Protocol",
+      "source_date": "May 2024",
+      "high_risk": true,
+      "dosing": {
+        "loading_dose": {
+          "dose_mcg": "12.5-25",
+          "duration": "Over 2 minutes",
+          "repeat": "May repeat if severe pain without significant side effects, after peak effect (~5 minutes from administration)"
+        },
+        "maintenance": {
+          "range_mcg_hr": "20-50",
+          "titration": "May increase every 30-60 minutes until clinical effect and pain control",
+          "max_increase_per_step_mcg_hr": 10
+        }
+      },
+      "preparation": {
+        "preferred_method": "Syringe Pump",
+        "target_concentration": "10 mcg / 1 ml",
+        "syringe_pump": {
+          "steps": [
+            "Take 1 ampoule of Fentanyl (0.5 mg / 10 ml)",
+            "Add 40 ml of NaCl 0.9%",
+            "Final: 50 ml total at 10 mcg/ml concentration"
+          ]
+        },
+        "ivac_pump": {
+          "steps": [
+            "Take 50 ml bag of NaCl 0.9%",
+            "Remove 10 ml from the bag",
+            "Insert 1 ampoule of Fentanyl (0.5 mg / 10 ml)",
+            "Set IVAC rate per physician order"
+          ]
+        }
+      },
+      "rate_table": [
+        {"dose_mcg_hr": 10, "rate_ml_hr": 1},
+        {"dose_mcg_hr": 20, "rate_ml_hr": 2},
+        {"dose_mcg_hr": 30, "rate_ml_hr": 3},
+        {"dose_mcg_hr": 50, "rate_ml_hr": 5}
+      ],
+      "double_check_required": true
+    },
+    {
+      "id": "iv_fentanyl_night",
+      "drug": "Fentanyl (Night Shift Preparation)",
+      "title_he": "הוראות למתן IV FENTANYL — הכנה ללילה",
+      "title_en": "IV Fentanyl — Night Shift Preparation",
+      "source_date": "2024",
+      "preparation": {
+        "ampoule": "IV FENTANYL 0.5 mg/10cc",
+        "total_ampoules": "21 ampoules needed for dilution = 100 mcg total per ml (check)",
+        "steps": [
+          "NACL 0.9% 100cc — remove 20 ml",
+          "Add FENTANYL 20 ml (from ampoules)",
+          "Final volume: 100 ml. Ratio: 1 ml = 1 mcg (verify per unit)"
+        ]
+      },
+      "note": "High-risk drug — requires double-check (בקרה כפולה) by second nurse",
+      "double_check_required": true
+    },
+    {
+      "id": "iv_dormicum",
+      "drug": "Dormicum (Midazolam)",
+      "title_he": "הוראות להכנת IV DORMICUM — מידזולם",
+      "title_en": "IV Dormicum (Midazolam) Preparation",
+      "source_date": "2024",
+      "preparation": {
+        "target_concentration": "1 mg / 1 ml",
+        "steps": [
+          "Take 100 ml NaCl 0.9%, remove 20 ml (leaving 80 ml)",
+          "Add Dormicum (100 mg total) = 20 ml of concentrate",
+          "Final: 100 mg in 100 ml = 1 mg/ml"
+        ]
+      },
+      "administration": "Rate per physician order. High-risk drug — double-check required.",
+      "double_check_required": true
+    },
+    {
+      "id": "iv_dopamin",
+      "drug": "Dopamine",
+      "title_he": "הוראות להכנת IV DOPAMIN",
+      "title_en": "IV Dopamine Preparation",
+      "source_date": "2024",
+      "indications": [
+        "VF (Ventricular Fibrillation) — post-resuscitation",
+        "Hemodynamic instability (shock)",
+        "Symptomatic bradyarrhythmia"
+      ],
+      "availability": "Available in MAO pharmacy during hours (14 hrs); otherwise contact specific unit",
+      "preparation": {
+        "steps": [
+          "D5% or NaCl — 100 ml base, remove volume as needed",
+          "Add 5 ampoules of Dopamine",
+          "DOPAMIN 200mg/5ml per ampoule, add ampoule contents"
+        ],
+        "final_concentration": "1000 mg in 200 ml = 5 mg/ml (approximate)"
+      },
+      "administration": "Rate per physician order. IV pump required.",
+      "double_check_required": true
+    },
+    {
+      "id": "iv_heparin",
+      "drug": "Heparin (Unfractionated)",
+      "title_he": "הוראות להכנת IV HEPARIN",
+      "title_en": "IV Heparin Preparation",
+      "source_date": "2024",
+      "preparation": {
+        "ampoule": "10,000 units = 1 HEPARIN ampoule",
+        "target_concentration": "100 units / 1 ml",
+        "steps": [
+          "Take 2 bags NaCl 0.9% (total volume needed)",
+          "Add HEPARIN ampoules to achieve 100 units/ml",
+          "Final concentration: 100 units per 1 ml"
+        ],
+        "note": "Exact volumes depend on total units ordered — follow physician instructions (IV)"
+      },
+      "contraindications": [
+        "Thrombocytopenia type II (HIT — Heparin-Induced Thrombocytopenia)",
+        "DIC (Disseminated Intravascular Coagulation) — relative, depending on clinical context",
+        "Active major bleeding"
+      ],
+      "monitoring": {
+        "labs": ["aPTT every 6 hours initially", "CBC with platelets daily", "Signs of bleeding"],
+        "clinical": [
+          "Check for hematomas at injection/IV sites",
+          "Monitor for signs of HIT (platelet drop >50% from baseline)",
+          "Watch for retroperitoneal, GI, or intracranial bleeding"
+        ]
+      },
+      "special_notes": [
+        "Vitreous body hemorrhage risk in specific patient populations",
+        "Target aPTT per institutional protocol (typically 1.5-2.5x control)",
+        "Protamine reversal: 1 mg per 100 units heparin given in last 2-3 hours"
+      ],
+      "double_check_required": true
+    },
+    {
+      "id": "iv_sbe",
+      "drug": "Antibiotic Protocols — Bacterial Endocarditis (SBE)",
+      "title_he": "טיפול אנטיביוטי — אנדוקרדיטיס חיידקית",
+      "title_en": "Bacterial Endocarditis (SBE) Treatment Protocol",
+      "source_date": "2024",
+      "treatment_table": {
+        "columns": ["pathogen", "first_line", "alternative", "penicillin_allergy", "duration"],
+        "rows": [
+          {
+            "pathogen": "Streptococcus (native valve)",
+            "first_line": "Ampicillin + Gentamicin",
+            "duration": "4-6 weeks + 2 weeks (gentamicin)"
+          },
+          {
+            "pathogen": "Staphylococcus (native valve, MSSA)",
+            "first_line": "Cloxacillin/Nafcillin",
+            "duration": "6 weeks"
+          },
+          {
+            "pathogen": "Staphylococcus (prosthetic valve)",
+            "first_line": "Vancomycin + Rifampin + Gentamicin",
+            "duration": "≥6 weeks"
+          },
+          {
+            "pathogen": "Enterococcus",
+            "first_line": "Ampicillin + Gentamicin",
+            "alternative": "Vancomycin + Gentamicin",
+            "duration": "4-6 weeks"
+          }
+        ]
+      },
+      "notes": "All doses per standard infectious disease guidelines. Blood cultures x3 before starting antibiotics. Echocardiography (TTE then TEE if needed). Consult infectious disease."
+    },
+    {
+      "id": "iv_morphine",
+      "drug": "Morphine",
+      "title_he": "הוראות למתן IV MORPHINE",
+      "title_en": "IV Morphine Preparation",
+      "source_date": "May 2024",
+      "preparation": {
+        "ampoule": "IV MORPHINE 100 mg / 5cc",
+        "target_concentration": "1 mg / 1 ml",
+        "steps": [
+          "Remove 5 ml from a 100 ml NaCl 0.9% bag",
+          "Add 5 ml of MORPHINE (100 mg total)",
+          "Final: 100 mg in 100 ml = 1 mg/ml"
+        ]
+      },
+      "administration": "Rate per physician order. Continuous infusion or bolus as prescribed.",
+      "safety": "High-risk drug — requires double-check (בקרה כפולה) by additional nurse.",
+      "double_check_required": true
+    },
+    {
+      "id": "iv_lidocaine",
+      "drug": "Lidocaine",
+      "title_he": "הוראות למתן IV LIDOCAINE",
+      "title_en": "IV Lidocaine Protocol",
+      "source_date": "2024",
+      "preparation": {
+        "base_solution": "NaCl 0.9% 500 ml",
+        "total_drug": "2000 mg Lidocaine in 500 ml",
+        "concentration": "4 mg/ml"
+      },
+      "dosing": {
+        "loading": {
+          "dose": "1-1.5 mg/kg IV",
+          "rate": "Over 5 minutes",
+          "repeat": "May repeat once after 5 minutes if no response"
+        },
+        "maintenance": {
+          "rate_mg_min": "1-4",
+          "infusion_ml_hr_by_dose": "Approximately 15-60 ml/hr depending on weight and target dose",
+          "typical_range": "1B standard: 45-90 mg/hr (approximately 1.5-2 ml/hr adjusted by weight)"
+        }
+      },
+      "indications": [
+        "Ventricular arrhythmias (VT, VF refractory to standard ACLS)",
+        "WPW-related arrhythmias (specific situations)"
+      ],
+      "toxicity_signs": [
+        "Perioral numbness / tingling",
+        "Tinnitus",
+        "Confusion / agitation",
+        "Seizures",
+        "Cardiovascular collapse (severe)"
+      ],
+      "monitoring": "Continuous cardiac monitoring. Watch for CNS toxicity signs. Check lidocaine levels if prolonged use.",
+      "double_check_required": true
+    },
+    {
+      "id": "iv_magnesium_sulfate",
+      "drug": "Magnesium Sulfate",
+      "title_he": "הוראות למתן IV MAGNESIUM SULFATE",
+      "title_en": "IV Magnesium Sulfate Protocol",
+      "source_date": "2024",
+      "preparation": {
+        "ampoule": "Magnesium Sulfate 50% 20 ml (= 4 ampoules of 5 ml, or as available)",
+        "diluent": "NaCl 0.9% 100 ml",
+        "steps": [
+          "Add MgSO4 to 100 ml NaCl 0.9%",
+          "Infuse over approximately 2 hours",
+          "May repeat per physician order — check Mg level first"
+        ]
+      },
+      "monitoring": {
+        "check_magnesium_level": "Before repeat dosing",
+        "clinical_signs": [
+          "Loss of deep tendon reflexes (early toxicity)",
+          "Respiratory depression",
+          "Hypotension",
+          "Cardiac conduction abnormalities"
+        ],
+        "antidote": "Calcium Gluconate 10 ml of 10% IV over 10 minutes if toxicity suspected (10meq/L threshold)"
+      },
+      "indications": [
+        "Hypomagnesemia (serum Mg < 1.5 mg/dL)",
+        "Torsades de Pointes",
+        "Eclampsia/Pre-eclampsia",
+        "Refractory hypokalemia (Mg needed for K correction)"
+      ],
+      "double_check_required": true
+    },
+    {
+      "id": "iv_noradrenaline",
+      "drug": "Noradrenaline (Norepinephrine)",
+      "title_he": "הוראות להכנת IV NORADRENALINE",
+      "title_en": "IV Noradrenaline Preparation",
+      "source_date": "May 2024",
+      "general_guidelines": [
+        "Given in shock states ONLY — after or concurrent with fluid resuscitation",
+        "Prefer central venous catheter; low dose peripheral IV acceptable temporarily",
+        "Via large-bore peripheral IV, ensure patent and in proper position",
+        "Run on DEDICATED separate IV line",
+        "Dilute in D5% ONLY (not NaCl — inactivation risk)",
+        "Noradrenaline has very short T½ — bag must be replaced immediately when finishing"
+      ],
+      "preparation": {
+        "concentration": "4 mg in 100 ml (= 40 mcg/ml)",
+        "steps": [
+          "Remove 4 ml from a D5% 100 ml bag",
+          "Add 1 ampoule of Noradrenaline (4 mg = 4 ml) into the bag"
+        ]
+      },
+      "administration": {
+        "start_rate": "Per physician order — typically 0.05-0.1 mcg/kg/min",
+        "titration": "Per physician order, titrate to MAP ≥65 mmHg",
+        "monitoring": "Continuous BP monitoring (arterial line preferred). Rate changes per physician order only."
+      },
+      "safety": "HIGH-RISK DRUG — requires double-check by additional nurse. Monitor for extravasation (tissue necrosis risk).",
+      "double_check_required": true
+    },
+    {
+      "id": "iv_procor",
+      "drug": "Procor (Amiodarone)",
+      "title_he": "הוראות להכנת IV PROCOR (אמיודרון)",
+      "title_en": "IV Procor (Amiodarone) Protocol",
+      "source_date": "May 2024",
+      "dosing": {
+        "loading": {
+          "dose_mg": 300,
+          "diluent": "D5% 100 ml",
+          "duration": "Over 30 minutes"
+        },
+        "maintenance": {
+          "dose_options_mg": [900, 1200],
+          "duration_options_hr": [12, 24],
+          "note": "Per physician decision and written order",
+          "diluent": "D5% 500 ml"
+        }
+      },
+      "preparation_options": [
+        {
+          "dose_mg": 900,
+          "diluent_ml": 500,
+          "diluent_type": "D5%",
+          "rate_12hr": {"mg_hr": 75, "ml_hr": 43},
+          "rate_24hr": {"mg_hr": 38, "ml_hr": 22}
+        },
+        {
+          "dose_mg": 1200,
+          "diluent_ml": 500,
+          "diluent_type": "D5%",
+          "rate_12hr": {"mg_hr": 101, "ml_hr": 43},
+          "rate_24hr": {"mg_hr": 50, "ml_hr": 22}
+        }
+      ],
+      "notes": [
+        "Phlebitis risk with peripheral IV — standard dilution in 500 ml recommended",
+        "For volume-restricted patients, may concentrate in 50 ml (requires physician written order for different dilution)"
+      ],
+      "contraindications": [
+        "Known sensitivity to amiodarone",
+        "Bradycardia < 50 bpm",
+        "AV block (2nd or 3rd degree without pacemaker)"
+      ],
+      "safety": "HIGH-RISK DRUG — requires double-check by additional nurse.",
+      "double_check_required": true
+    },
+    {
+      "id": "iv_potassium_phosphate",
+      "drug": "Potassium Phosphate",
+      "title_he": "הוראות למתן IV POTASSIUM PHOSPHAT",
+      "title_en": "IV Potassium Phosphate Protocol",
+      "source_date": "May 2024",
+      "routes": {
+        "peripheral_iv": {
+          "dose_mmol": 15,
+          "diluent_ml": 500,
+          "diluent_options": ["D5%", "NaCl 0.45%", "NaCl 0.9%"],
+          "diluent_selection": "Depends on patient's serum sodium level",
+          "duration_hours": 6
+        },
+        "central_line": {
+          "dose_mmol": 15,
+          "diluent_ml": 250,
+          "diluent_options": ["D5%", "NaCl 0.45%", "NaCl 0.9%"],
+          "diluent_selection": "Depends on patient's serum sodium level",
+          "duration_hours": 4
+        }
+      },
+      "safety": "HIGH-RISK DRUG — requires double-check by additional nurse.",
+      "double_check_required": true
+    }
+  ]
+}

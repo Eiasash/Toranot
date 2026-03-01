@@ -1,0 +1,39 @@
+{
+  "name": "toranot",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.18",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.4",
+    "tailwindcss": "^4.1.18",
+    "typescript": "^5.4.0",
+    "vite": "^7.3.1",
+    "vitest": "^4.0.18",
+    "@types/dompurify": "^3.0.6"
+  },
+  "description": "Hospital ward shift management PWA \u2014 patient tracking, task automation, drug safety alerts, and lab trend monitoring for on-call doctors",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "http://local_proxy@127.0.0.1:41358/git/Eiasash/Toranot"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.0",
+    "qrcode.react": "^4.2.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "dompurify": "^3.1.6"
+  }
+}

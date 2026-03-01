@@ -1,0 +1,247 @@
+@import "tailwindcss";
+
+/* Define the safe-top utility used in header (status bar safe area for Android PWA) */
+@utility safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+html {
+  color-scheme: light;
+  /* dvh fallback for older Android Chrome (pre-108) */
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  direction: rtl;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.dark body {
+  background-color: #000000;
+  color: #f3f4f6;
+}
+
+/* True OLED black overrides — saves battery on AMOLED, better for 3am */
+@media (prefers-color-scheme: dark) {
+  .dark .bg-gray-50 { background-color: #000000; }
+}
+.dark .dark\:bg-gray-900 { background-color: #000000 !important; }
+.dark .dark\:bg-gray-800 { background-color: #0a0a0a !important; }
+.dark .dark\:border-gray-700 { border-color: #1a1a1a !important; }
+
+/* ─── OLED Night Mode overrides ─── */
+/* True black for OLED screens — saves battery, reduces eye strain at 3am */
+.dark .bg-gray-900 { background-color: #000000 !important; }
+.dark .bg-gray-800 { background-color: #0a0a0a !important; }
+.dark .bg-slate-800 { background-color: #050510 !important; }
+.dark .bg-slate-700 { background-color: #0f0f1a !important; }
+.dark .bg-gray-50 { background-color: #000000 !important; }
+.dark .border-gray-700 { border-color: #1a1a2e !important; }
+.dark .border-gray-200 { border-color: #1a1a2e !important; }
+.dark .border-slate-700 { border-color: #1a1a2e !important; }
+
+/* Fix task text overflow on narrow devices */
+.break-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Ensure header doesn't overflow on narrow screens */
+@media (max-width: 380px) {
+  header button {
+    font-size: 0.65rem;
+    padding: 0.2rem 0.4rem;
+  }
+}
+
+/* Hide mobile scrollbar but keep scrolling */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ═══ QuickReference modal dark mode ═══ */
+.dark .quick-ref {
+  color: #e5e7eb;
+}
+.dark .quick-ref .border-gray-200,
+.dark .quick-ref .border-gray-300,
+.dark .quick-ref .border-gray-100 {
+  border-color: #1a1a2e !important;
+}
+.dark .quick-ref .bg-white,
+.dark .quick-ref .bg-gray-50 {
+  background-color: #111118 !important;
+}
+.dark .quick-ref .text-gray-500,
+.dark .quick-ref .text-gray-600 {
+  color: #9ca3af !important;
+}
+.dark .quick-ref .text-gray-700 {
+  color: #d1d5db !important;
+}
+.dark .quick-ref .text-gray-400 {
+  color: #6b7280 !important;
+}
+/* Badge colors */
+.dark .quick-ref .bg-green-50 {
+  background-color: rgba(34, 197, 94, 0.15) !important;
+}
+.dark .quick-ref .text-green-700 {
+  color: #4ade80 !important;
+}
+.dark .quick-ref .bg-orange-50 {
+  background-color: rgba(249, 115, 22, 0.15) !important;
+}
+.dark .quick-ref .text-orange-700 {
+  color: #fb923c !important;
+}
+.dark .quick-ref .bg-blue-50 {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+}
+.dark .quick-ref .text-blue-800,
+.dark .quick-ref .text-blue-900 {
+  color: #93c5fd !important;
+}
+.dark .quick-ref .text-blue-600 {
+  color: #60a5fa !important;
+}
+/* Inputs */
+.dark .quick-ref input,
+.dark .quick-ref select {
+  background-color: #111118 !important;
+  border-color: #1a1a2e !important;
+  color: #e5e7eb !important;
+}
+.dark .quick-ref input::placeholder {
+  color: #4b5563 !important;
+}
+/* Table */
+.dark .quick-ref table {
+  color: #d1d5db;
+}
+.dark .quick-ref th {
+  color: #9ca3af;
+}
+.dark .quick-ref tr {
+  border-color: #1a1a2e !important;
+}
+/* Severity / colored cards */
+.dark .quick-ref .bg-yellow-50 {
+  background-color: rgba(234, 179, 8, 0.12) !important;
+  color: #fde047 !important;
+}
+.dark .quick-ref .bg-yellow-100 {
+  background-color: rgba(234, 179, 8, 0.18) !important;
+}
+.dark .quick-ref .text-yellow-800 {
+  color: #fde047 !important;
+}
+.dark .quick-ref .bg-red-50 {
+  background-color: rgba(239, 68, 68, 0.12) !important;
+  color: #fca5a5 !important;
+}
+.dark .quick-ref .bg-red-100 {
+  background-color: rgba(239, 68, 68, 0.18) !important;
+}
+.dark .quick-ref .text-red-800 {
+  color: #fca5a5 !important;
+}
+.dark .quick-ref .bg-green-100 {
+  background-color: rgba(34, 197, 94, 0.18) !important;
+}
+.dark .quick-ref .text-green-800 {
+  color: #86efac !important;
+}
+.dark .quick-ref .bg-orange-100 {
+  background-color: rgba(249, 115, 22, 0.18) !important;
+}
+.dark .quick-ref .text-orange-800 {
+  color: #fdba74 !important;
+}
+.dark .quick-ref .border-orange-300 {
+  border-color: rgba(249, 115, 22, 0.4) !important;
+}
+.dark .quick-ref .border-yellow-300 {
+  border-color: rgba(234, 179, 8, 0.4) !important;
+}
+.dark .quick-ref .border-green-300 {
+  border-color: rgba(34, 197, 94, 0.4) !important;
+}
+/* Insulin table rows */
+.dark .quick-ref tr.bg-yellow-50 {
+  background-color: rgba(234, 179, 8, 0.1) !important;
+}
+.dark .quick-ref tr.bg-red-50 {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+}
+
+/* ─── Bottom navigation safe area ───
+   The bottom nav is 56px. Android gesture nav adds env(safe-area-inset-bottom)
+   on top. The pb-[calc(56px+env(...))] on the main div handles scroll padding,
+   but the undo toast needs to clear the nav too. */
+.bottom-nav-offset {
+  bottom: calc(56px + env(safe-area-inset-bottom));
+}
+
+/* Undo toast — positioned above the bottom nav */
+.undo-toast-position {
+  bottom: calc(72px + env(safe-area-inset-bottom));
+}
+
+/* SectionTabs: taller tap targets on mobile */
+@media (max-width: 768px) {
+  nav[role="tablist"] button {
+    min-height: 48px;
+  }
+}
+
+/* Active state visual feedback — instant, no delay.
+   Android Chrome has a 300ms default delay that makes the app feel sluggish. */
+* {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+@keyframes slide-up {
+  from { transform: translateY(20px) translateX(-50%); opacity: 0; }
+  to   { transform: translateY(0) translateX(-50%); opacity: 1; }
+}
+.animate-slide-up {
+  animation: slide-up 0.25s ease-out;
+}
+
+/* Card fade-in animation */
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-card-in {
+  animation: card-in 0.2s ease-out;
+}
+
+/* Modal slide-up from bottom */
+@keyframes modal-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.animate-modal-up {
+  animation: modal-up 0.25s ease-out;
+}

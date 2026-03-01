@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SZMC IV Protocols | פרוטוקולי IV שערי צדק</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Arial Hebrew',Arial,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;direction:rtl}
+.header{background:linear-gradient(135deg,#1e3a5f 0%,#0f172a 100%);padding:16px;text-align:center;position:sticky;top:0;z-index:100;border-bottom:2px solid #334155}
+.header h1{font-size:18px;color:#60a5fa;margin-bottom:4px}
+.header .sub{font-size:12px;color:#94a3b8}
+.search{padding:8px 16px;background:#1e293b;border-bottom:1px solid #334155;position:sticky;top:62px;z-index:99}
+.search input{width:100%;padding:10px 14px;border-radius:8px;border:1px solid #475569;background:#0f172a;color:#e2e8f0;font-size:14px;outline:none}
+.search input:focus{border-color:#60a5fa}
+.search input::placeholder{color:#64748b}
+.protocols{padding:8px}
+.card{background:#1e293b;border-radius:12px;margin-bottom:10px;border:1px solid #334155;overflow:hidden}
+.card.high-risk{border-color:#ef4444}
+.card-header{padding:14px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.card-header h2{font-size:16px;color:#f1f5f9;display:flex;align-items:center;gap:8px}
+.card-header .badge{font-size:10px;padding:2px 8px;border-radius:10px;background:#1e40af;color:#93c5fd;white-space:nowrap}
+.card-header .badge.danger{background:#991b1b;color:#fca5a5}
+.card-header .arrow{color:#64748b;transition:transform 0.2s;font-size:12px}
+.card.open .arrow{transform:rotate(180deg)}
+.card-body{display:none;padding:0 16px 16px;font-size:13px;line-height:1.7;color:#cbd5e1}
+.card.open .card-body{display:block}
+.section{margin-top:12px}
+.section-title{font-size:12px;font-weight:700;color:#60a5fa;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #334155}
+.prep-step{background:#0f172a;padding:8px 12px;border-radius:6px;margin-bottom:4px;font-size:13px;border-right:3px solid #3b82f6}
+.prep-step strong{color:#93c5fd}
+.warning{background:#451a03;border:1px solid #92400e;border-radius:8px;padding:10px 12px;margin-top:8px;font-size:12px;color:#fbbf24}
+.danger-box{background:#450a0a;border:1px solid #991b1b;border-radius:8px;padding:10px 12px;margin-top:8px;font-size:12px;color:#fca5a5}
+table{width:100%;border-collapse:collapse;margin-top:8px;font-size:11px}
+th{background:#334155;color:#93c5fd;padding:6px 4px;text-align:center;font-weight:600;position:sticky;top:0}
+td{padding:5px 4px;text-align:center;border-bottom:1px solid #1e293b}
+tr:nth-child(even){background:#0f172a}
+tr:nth-child(odd){background:#1e293b}
+.rate-table td:first-child{font-weight:700;color:#60a5fa;text-align:right;padding-right:8px}
+.double-check{display:inline-flex;align-items:center;gap:4px;background:#991b1b;color:#fca5a5;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;margin-top:6px}
+.tag-list{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.tag{background:#0f172a;padding:3px 8px;border-radius:4px;font-size:11px;color:#94a3b8;border:1px solid #334155}
+.conc{font-size:14px;font-weight:700;color:#34d399;background:#064e3b;padding:6px 12px;border-radius:6px;text-align:center;margin:8px 0}
+ul{padding-right:18px;margin-top:4px}
+li{margin-bottom:3px}
+.footer{text-align:center;padding:20px;font-size:11px;color:#475569}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>💉 פרוטוקולי IV — שערי צדק</h1>
+  <div class="sub">SZMC IV Drug Protocols • Geriatrics/Internal Medicine • Updated May 2024</div>
+</div>
+
+<div class="search">
+  <input type="text" id="searchInput" placeholder="🔍 חפש תרופה... Search drug..." oninput="filterCards()">
+</div>
+
+<div class="protocols" id="protocolsList">
+
+<!-- INSULIN -->
+<div class="card" data-keywords="insulin אינסולין actrapid glucose סוכר סוכרת dka hyperosmolar">
+  <div class="card-header" onclick="toggle(this)">
+    <h2>💉 IV Insulin (Actrapid) <span class="badge">ICU</span></h2>
+    <span class="arrow">▼</span>
+  </div>
+  <div class="card-body">
+    <div class="section"><div class="section-title">Target</div>
+    Glucose 140-180 mg/dL</div>
+    <div class="section"><div class="section-title">Contraindications</div>
+    <div class="tag-list"><span class="tag">Glucose &lt;70</span><span class="tag">DKA</span><span class="tag">Hyperosmolar Coma</span></div></div>
+    <div class="section"><div class="section-title">Preparation</div>
+    <div class="conc">ACTRAPID 50 units + NaCl 0.9% 50ml → 1 unit/ml</div>
+    <div class="double-check">⚠️ בקרה כפולה — Double Check Required</div></div>
+    <div class="section"><div class="section-title">Monitoring</div>
+    <ul>
+      <li>During titration: BG every <strong>2 hours</strong></li>
+      <li>After rate change/bolus: <strong>2 checks</strong> minimum, 2h apart</li>
+      <li>After stabilization: BG every <strong>4 hours</strong></li>
+    </ul></div>
+    <div class="section"><div class="section-title">Dosing Table</div>
+    <table>
+      <tr><th>mg/dL</th><th>No DM</th><th>DM</th><th>High Req</th></tr>
+      <tr><td>&lt;70</td><td colspan="3">STOP. D50% 50ml IV slow push. Check q15min.</td></tr>
+      <tr><td>70-99</td><td>Stop</td><td>Stop</td><td>→ MD</td></tr>
+      <tr><td>100-140</td><td>Stop</td><td>0.5 cc/hr</td><td>→ MD</td></tr>
+      <tr><td>141-180</td><td>Stop</td><td>1 cc/hr</td><td>2 cc/hr</td></tr>
+      <tr><td>181-200</td><td>1 cc/hr</td><td>2cc bol + 1cc/hr</td><td>2cc bol + 2cc/hr</td></tr>
+      <tr><td>201-250</td><td>2cc bol + 2cc/hr</td><td>2cc bol + 3cc/hr</td><td>2cc bol + 5cc/hr</td></tr>
+      <tr><td>251-300</td><td>2cc bol + 2cc/hr</td><td>2cc bol + 4cc/hr</td><td>2cc bol + 6cc/hr</td></tr>
+      <tr><td>301-350</td><td>4cc bol + 4cc/hr</td><td>4cc bol + 6cc/hr</td><td>4cc bol + 8cc/hr</td></tr>
+      <tr><td>351-400</td><td>4cc bol + 6cc/hr</td><td>4cc bol + 6cc/hr</td><td>6cc bol + 8cc/hr</td></tr>
+      <tr><td>&gt;400</td><td colspan="3">If x2 consecutive → move to High Req column. Call MD.</td></tr>
+    </table></div>
+  </div>
+</div>
+
+<!-- PROPOFOL -->
+<div class="card high-risk" data-keywords="propofol פרופופול sedation הרדמה ventilator pris מונשם">
+  <div class="card-header" onclick="toggle(this)">
+    <h2>🫧 IV Propofol 2% <span class="badge danger">High Risk</span> <span class="badge">ICU Only</span></h2>
+    <span class="arrow">▼</span>
+  </div>
+  <div class="card-body">
+    <div class="section"><div class="section-title">Dosing</div>
+    <ul>
+      <li>Start: <strong>5 mcg/kg/min</strong></li>
+      <li>Titrate: +5-10 mcg/kg/min every 10 min</li>
+      <li>Max: <strong>50 mcg/kg/min</strong></li>
+      <li>Target: Ramsay 3-5</li>
+    </ul></div>
+    <div class="section"><div class="section-title">Infusion Rate (ml/hr) by Weight</div>
+    <table class="rate-table">
+      <tr><th>mcg/kg/min</th><th>40kg</th><th>50kg</th><th>60kg</th><th>70kg</th><th>80kg</th><th>90kg</th></tr>
+      <tr><td>5</td><td>0.6</td><td>0.8</td><td>0.9</td><td>1.1</td><td>1.2</td><td>1.4</td></tr>
+      <tr><td>10</td><td>1.2</td><td>1.5</td><td>1.8</td><td>2.1</td><td>2.4</td><td>2.7</td></tr>
+      <tr><td>15</td><td>1.8</td><td>2.3</td><td>2.7</td><td>3.2</td><td>3.6</td><td>4.1</td></tr>
+      <tr><td>20</td><td>2.4</td><td>3.0</td><td>3.6</td><td>4.2</td><td>4.8</td><td>5.4</td></tr>
+      <tr><td>25</td><td>3.0</td><td>3.8</td><td>4.5</td><td>5.3</td><td>6.0</td><td>6.8</td></tr>
+      <tr><td>30</td><td>3.6</td><td>4.5</td><td>5.4</td><td>6.3</td><td>7.2</td><td>8.1</td></tr>
+      <tr><td>40</td><td>4.8</td><td>6.0</td><td>7.2</td><td>8.4</td><td>9.6</td><td>10.8</td></tr>
+      <tr><td>50</td><td>6.0</td><td>7.5</td><td>9.0</td><td>10.5</td><td>12.0</td><td>13.5</td></tr>
+    </table></div>
+    <div class="danger-box"><strong>⚠️ PRIS Warning:</strong> Risk ↑ if &gt;50 mcg/kg/min or &gt;48h. Monitor: CK, pH, TG, lactate q24h. Signs: unexplained acidosis, rhabdomyolysis, hyperK, cardiac failure. → STOP immediately.</div>
+    <div class="section"><div class="section-title">Notes</div>
+    <ul>
+      <li>Change syringe every <strong>12 hours</strong></li>
+      <li>Use Adjusted Body Weight if BMI &gt;30</li>
+      <li>Y-set with Fentanyl or dedicated line</li>
+      <li>NOT for non-ventilated ward patients</li>
+    </ul></div>
+  </div>
+</div>
+
+<!-- FENTANYL -->
+<div class="card high-risk" data-keywords="fentanyl פנטניל pain כאב opioid אופיואיד sedation">
+  <div class="card-header" onclick="toggle(this)">
+    <h2>💊 IV Fentanyl <span class="badge danger">High Risk</span></h2>
+    <span class="arrow">▼</span>
+  </div>
+  <div class="card-body">
+    <div class="section"><div class="section-title">Loading Dose</div>
+    <div class="conc">12.5-25 mcg over 2 minutes</div>
+    May repeat after 5 min peak if severe pain, no significant side effects.</div>
+    <div class="section"><div class="section-title">Maintenance</div>
+    20-50 mcg/hr. Titrate q30-60 min. Max increase: 10 mcg/hr per step.</div>
+    <div class="section"><div class="section-title">Preparation (Syringe Pump)</div>
+    <div class="prep-step"><strong>1.</strong> 1 ampoule Fentanyl (0.5 mg / 10 ml)</div>
+    <div class="prep-step"><strong>2.</strong> + 40 ml NaCl 0.9%</div>
+    <div class="conc">50 ml total → 10 mcg / 1 ml</div></div>
+    <div class="section"><div class="section-title">Rate Table</div>
+    <table><tr><th>mcg/hr</th><th>ml/hr</th></tr>
+    <tr><td>10</td><td>1</td></tr><tr><td>20</td><td>2</td></tr><tr><td>30</td><td>3</td></tr><tr><td>50</td><td>5</td></tr>
+    </table></div>
+    <div class="double-check">⚠️ בקרה כפולה — Double Check Required</div>
+  </div>
+</div>
+
+<!-- DORMICUM -->
+<div class="card high-risk" data-keywords="dormicum midazolam מידזולם דורמיקום sedation benzodiazepine">
+  <div class="card-header" onclick="toggle(this)">
+    <h2>🧪 IV Dormicum (Midazolam) <span class="badge danger">High Risk</span></h2>
+    <span class="arrow">▼</span>
+  </div>
+  <div class="card-body">
+    <div class="section"><div class="section-title">Preparation</div>
+    <div class="prep-step"><strong>1.</strong> NaCl 0.9% 100 ml — remove 20 ml</div>
+    <div class="prep-step"><strong>2.</strong> Add Dormicum 100 mg (= 20 ml concentrate)</div>
+    <div class="conc">100 mg / 100 ml → 1 mg / 1 ml</div></div>
+    <div class="section">Rate per physician order. Titrate to target sedation.</div>
+    <div class="double-check">⚠️ בקרה כפולה — Double Check Required</div>
+  </div>
+</div>
+
+<!-- MORPHINE -->
+<div class="card high-risk" data-keywords="morphine מורפין pain כאב opioid אופיואיד palliative">
+  <div class="card-header" onclick="toggle(this)">
+    <h2>💊 IV Morphine <span class="badge danger">High Risk</span></h2>
+    <span class="arrow">▼</span>
+  </div>
+  <div class="card-body">
+    <div class="section"><div class="section-title">Preparation</div>
+    <div class="prep-step"><strong>Ampoule:</strong> Morphine 100 mg / 5 cc</div>
+    <div class="prep-step"><strong>1.</strong> NaCl 0.9% 100 ml — remove 5 ml</div>
+    <div class="prep-step"><strong>2.</strong> Add 5 ml Morphine (100 mg)</div>
+    <div class="conc">100 mg / 100 ml → 1 mg / 1 ml</div></div>
+    <div class="section">Rate per physician order (continuous or bolus as prescribed).</div>
+    <div class="double-check">⚠️ בקרה כפולה — Double Check Required</div>
+  </div>
+</div>
+
+<!-- NORADRENALINE -->
+<div class="card high-risk" data-keywords="noradrenaline norepinephrine נוראדרנלין vasopressor shock הלם">
+  <div class="card-header" onclick="toggle(this)">
+    <h2>🔴 IV Noradrenaline <span class="badge danger">High Risk</span> <span class="badge">Shock</span></h2>
+    <span class="arrow">▼</span>
+  </div>
+  <div class="card-body">
+    <div class="warning">⚡ Shock states ONLY. After/concurrent with fluid resuscitation. Central line preferred.</div>
+    <div class="section"><div class="section-title">Key Rules</div>
+    <ul>
+      <li>Dilute in <strong>D5% ONLY</strong> (NOT NaCl)</li>
+      <li>Run on <strong>dedicated separate line</strong></li>
+      <li>Very short T½ — replace bag <strong>immediately</strong> when finishing</li>
+      <li>Large peripheral IV acceptable temporarily; ensure patent</li>
+    </ul></div>
+    <div class="section"><div class="section-title">Preparation</div>
+    <div class="prep-step"><strong>1.</strong> D5% 100 ml — remove 4 ml</div>
+    <div class="prep-step"><strong>2.</strong> Add 1 ampoule Noradrenaline (4 mg / 4 ml)</div>
+    <div class="conc">4 mg / 100 ml → 40 mcg / ml</div></div>
+    <div class="section">Start: ~0.05-0.1 mcg/kg/min. Titrate to MAP ≥65. Continuous BP monitoring.</div>
+    <div class="double-check">⚠️ בקרה כפולה — Extravasation → tissue necrosis!</div>
+  </div>
+</div>
+
+<!-- DOPAMINE -->
+<div class="card high-risk" data-keywords="dopamine דופמין vasopressor shock הלם bradycardia">
+  <div class="card-header" onclick="toggle(this)">
+    <h2>🔴 IV Dopamine <span class="badge danger">High Risk</span></h2>
+    <span class="arrow">▼</span>
+  </div>
+  <div class="card-body">
+    <div class="section"><div class="section-title">Indications</div>
+    <div class="tag-list"><span class="tag">VF (post-resuscitation)</span><span class="tag">Hemodynamic instability</span><span class="tag">Symptomatic bradyarrhythmia</span></div></div>
+    <div class="section"><div class="section-title">Preparation</div>
+    <div class="prep-step"><strong>Ampoule:</strong> Dopamine 200 mg / 5 ml</div>
+    <div class="prep-step">D5% or NaCl base + 5 ampoules (1000 mg total)</div>
+    <div class="conc">~5 mg/ml final concentration</div></div>
+    <div class="section">Rate per physician order. IV pump required.</div>
+    <div class="double-check">⚠️ בקרה כפולה — Double Check Required</div>
+  </div>
+</div>
+
+<!-- AMIODARONE -->
+<div class="card high-risk" data-keywords="amiodarone procor פרוקור אמיודרון arrhythmia הפרעת קצב">
+  <div class="card-header" onclick="toggle(this)">
+    <h2>⚡ IV Procor (Amiodarone) <span class="badge danger">High Risk</span></h2>
+    <span class="arrow">▼</span>
+  </div>
+  <div class="card-body">
+    <div class="section"><div class="section-title">Loading</div>
+    <div class="conc">300 mg in D5% 100 ml → over 30 minutes</div></div>
+    <div class="section"><div class="section-title">Maintenance Options</div>
+    <table>
+      <tr><th>Dose</th><th>Diluent</th><th>12hr rate</th><th>24hr rate</th></tr>
+      <tr><td>900 mg</td><td>D5% 500ml</td><td>75 mg/hr = 43 ml/hr</td><td>38 mg/hr = 22 ml/hr</td></tr>
+      <tr><td>1200 mg</td><td>D5% 500ml</td><td>101 mg/hr = 43 ml/hr</td><td>50 mg/hr = 22 ml/hr</td></tr>
+    </table></div>
+    <div class="section"><div class="section-title">Contraindications</div>
+    <div class="tag-list"><span class="tag">Amiodarone allergy</span><span class="tag">Bradycardia &lt;50</span><span class="tag">AV block (no pacer)</span></div></div>
+    <div class="warning">⚡ Phlebitis risk with peripheral IV. Use 500ml dilution standard. Volume-restricted → 50ml with MD written order.</div>
+    <div class="double-check">⚠️ בקרה כפולה — Double Check Required</div>
+  </div>
+</div>
+
+<!-- HEPARIN -->
+<div class="card high-risk" data-keywords="heparin הפרין anticoagulation נוגד קרישה dvt pe">
+  <div class="card-header" onclick="toggle(this)">
+    <h2>🩸 IV Heparin (UFH) <span class="badge danger">High Risk</span></h2>
+    <span class="arrow">▼</span>
+  </div>
+  <div class="card-body">
+    <div class="section"><div class="section-title">Preparation</div>
+    <div class="prep-step"><strong>Ampoule:</strong> 10,000 units per vial</div>
+    <div class="conc">Target: 100 units / 1 ml</div>
+    Add heparin to NaCl 0.9% bags per total units ordered.</div>
+    <div class="section"><div class="section-title">Contraindications</div>
+    <div class="tag-list"><span class="tag">HIT (type II)</span><span class="tag">DIC (relative)</span><span class="tag">Active major bleeding</span></div></div>
+    <div class="section"><div class="section-title">Monitoring</div>
+    <ul>
+      <li>aPTT q6h initially (target 1.5-2.5x control)</li>
+      <li>CBC + platelets daily (watch for HIT: &gt;50% drop)</li>
+      <li>Signs of bleeding: hematomas, retroperitoneal, GI, CNS</li>
+    </ul></div>
+    <div class="section"><strong>Reversal:</strong> Protamine 1 mg per 100 units heparin (last 2-3h)</div>
+    <div class="double-check">⚠️ בקרה כפולה — Double Check Required</div>
+  </div>
+</div>
+
+<!-- LIDOCAINE -->
+<div class="card" data-keywords="lidocaine לידוקאין arrhythmia vt vf wpw הפרעת קצב">
+  <div class="card-header" onclick="toggle(this)">
+    <h2>⚡ IV Lidocaine <span class="badge">Arrhythmia</span></h2>
+    <span class="arrow">▼</span>
+  </div>
+  <div class="card-body">
+    <div class="section"><div class="section-title">Preparation</div>
+    <div class="conc">2000 mg in NaCl 0.9% 500 ml → 4 mg/ml</div></div>
+    <div class="section"><div class="section-title">Dosing</div>
+    <ul>
+      <li><strong>Loading:</strong> 1-1.5 mg/kg IV over 5 min. May repeat x1.</li>
+      <li><strong>Maintenance:</strong> 1-4 mg/min (~15-60 ml/hr by weight)</li>
+    </ul></div>
+    <div class="section"><div class="section-title">Toxicity Signs</div>
+    <div class="tag-list"><span class="tag">Perioral numbness</span><span class="tag">Tinnitus</span><span class="tag">Confusion</span><span class="tag">Seizures</span><span class="tag">CV collapse</span></div></div>
+  </div>
+</div>
+
+<!-- MAGNESIUM -->
+<div class="card" data-keywords="magnesium מגנזיום sulfate torsades hypomagnesemia hypokalemia">
+  <div class="card-header" onclick="toggle(this)">
+    <h2>🧂 IV Magnesium Sulfate</h2>
+    <span class="arrow">▼</span>
+  </div>
+  <div class="card-body">
+    <div class="section"><div class="section-title">Preparation</div>
+    <div class="prep-step">MgSO4 50% ampoules added to NaCl 0.9% 100 ml</div>
+    <div class="conc">Infuse over ~2 hours</div></div>
+    <div class="section"><div class="section-title">Monitoring</div>
+    <ul>
+      <li>Check Mg level before repeat dosing</li>
+      <li>Watch: <strong>loss of DTR</strong> (early toxicity), respiratory depression, hypotension</li>
+      <li><strong>Antidote:</strong> Calcium Gluconate 10% 10 ml IV over 10 min</li>
+    </ul></div>
+  </div>
+</div>
+
+<!-- POTASSIUM PHOSPHATE -->
+<div class="card high-risk" data-keywords="potassium phosphate אשלגן זרחן hypophosphatemia">
+  <div class="card-header" onclick="toggle(this)">
+    <h2>🧪 IV Potassium Phosphate <span class="badge danger">High Risk</span></h2>
+    <span class="arrow">▼</span>
+  </div>
+  <div class="card-body">
+    <div class="section"><div class="section-title">Peripheral IV</div>
+    <div class="conc">15 mmol in 500 ml (D5% / NaCl 0.45% / NaCl 0.9%) → over 6 hours</div>
+    Diluent choice depends on patient's serum sodium.</div>
+    <div class="section"><div class="section-title">Central Line</div>
+    <div class="conc">15 mmol in 250 ml → over 4 hours</div></div>
+    <div class="double-check">⚠️ בקרה כפולה — Double Check Required</div>
+  </div>
+</div>
+
+<!-- SBE -->
+<div class="card" data-keywords="endocarditis sbe אנדוקרדיטיס antibiotic אנטיביוטיקה vancomycin gentamicin ampicillin">
+  <div class="card-header" onclick="toggle(this)">
+    <h2>🦠 SBE (Bacterial Endocarditis) <span class="badge">Antibiotics</span></h2>
+    <span class="arrow">▼</span>
+  </div>
+  <div class="card-body">
+    <div class="section"><div class="section-title">Treatment by Pathogen</div>
+    <table>
+      <tr><th>Pathogen</th><th>First Line</th><th>Duration</th></tr>
+      <tr><td>Strep (native)</td><td>Ampicillin + Gentamicin</td><td>4-6w + 2w</td></tr>
+      <tr><td>Staph MSSA (native)</td><td>Cloxacillin</td><td>6w</td></tr>
+      <tr><td>Staph (prosthetic)</td><td>Vanc + Rifampin + Gent</td><td>≥6w</td></tr>
+      <tr><td>Enterococcus</td><td>Ampicillin + Gent</td><td>4-6w</td></tr>
+    </table></div>
+    <div class="section"><strong>Always:</strong> 3 blood cultures before ABx. TTE → TEE. ID consult.</div>
+  </div>
+</div>
+
+</div>
+
+<div class="footer">
+  SZMC Geriatrics/Internal Medicine • Dr. D.S. Shapira (32398) • May 2024<br>
+  For clinical use only. Verify all doses before administration.
+</div>
+
+<script>
+function toggle(el){el.parentElement.classList.toggle('open')}
+function filterCards(){
+  const q=document.getElementById('searchInput').value.toLowerCase();
+  document.querySelectorAll('.card').forEach(c=>{
+    const kw=c.dataset.keywords||'';
+    const text=c.textContent.toLowerCase();
+    c.style.display=(kw.includes(q)||text.includes(q))?'':'none';
+  });
+}
+</script>
+</body>
+</html>
