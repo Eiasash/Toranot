@@ -219,7 +219,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
   const manualNotes = patient.notes ?? [];
 
   const allTasks = useMemo(
-    () => sortTasks([...patient.tasks, ...patient.generatedTasks]),
+    () => sortTasks([...patient.tasks, ...patient.generatedTasks.filter(t => !t.dismissed)]),
     [patient.tasks, patient.generatedTasks],
   );
 
@@ -947,7 +947,7 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
 
   const manualNotes = patient.notes ?? [];
 
-  const allTasks = sortTasks([...patient.tasks, ...patient.generatedTasks]);
+  const allTasks = sortTasks([...patient.tasks, ...patient.generatedTasks.filter(t => !t.dismissed)]);
   const doneCount = allTasks.filter((t) => t.done).length;
   const totalCount = allTasks.length;
 
