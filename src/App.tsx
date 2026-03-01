@@ -20,6 +20,7 @@ import { requestNotificationPermission, syncReminders } from "./utils/taskRemind
 import { formatScanDiffSummary } from "./engine/smartOCR";
 import { OverflowMenu } from "./components/OverflowMenu";
 import { ShiftHandoffModal } from "./components/ShiftHandoffModal";
+import { SharedShiftPanel } from "./components/SharedShiftPanel";
 
 // ─── Scan Diff Banner ──────────────────────────────────────
 function ScanDiffBanner() {
@@ -268,7 +269,8 @@ export type Modal =
   | "capture"
   | "morning"
   | "ivprotocols"
-  | "handoff_cloud";
+  | "handoff_cloud"
+  | "shared_shift";
 
 // ─── Bottom Navigation Bar ─────────────────────────────────
 // Primary actions at thumb-reach. 56px height + safe area inset.
@@ -547,6 +549,7 @@ function AppInner() {
       {modal === "morning"    && <MorningReport   onClose={() => setModal("none")} />}
       {modal === "ivprotocols" && <IVProtocols    onClose={() => setModal("none")} />}
       {modal === "handoff_cloud" && <ShiftHandoffModal onClose={() => setModal("none")} />}
+      {modal === "shared_shift" && <SharedShiftPanel onClose={() => setModal("none")} />}
 
       {/* Conflict resolution overlay — highest z-index */}
       <ConflictDialog />
