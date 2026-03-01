@@ -68,7 +68,7 @@ export function normalizeTask(t: RawTask): Task {
     // Ensure required string fields always have safe values
     id: typeof t.id === "string" && t.id ? t.id : Math.random().toString(36).slice(2),
     text: typeof t.text === "string" ? t.text : String(t.text ?? ""),
-    urgency: (["stat","urgent","routine"].includes(t.urgency as string)
+    urgency: (["stat","urgent","morning","extra","routine"].includes(t.urgency as string)
       ? t.urgency : "routine") as Task["urgency"],
     category: (typeof t.category === "string" ? t.category : "general") as Task["category"],
     source: (["manual","generated","imported"].includes(t.source as string)
@@ -648,7 +648,7 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
       return {
         ...state,
         patients: Array.isArray(c.patients)
-          ? c.patients.map((p) => normalizePatient(p as RawPatient))
+          ? c.patients.map((p) => { const n = normalizePatient(p as RawPatient); const rp = p as RawPatient; if (rp.discharged) n.discharged = true; if (rp.isAdmission) (n as PatientEntry & {isAdmission?:boolean}).isAdmission = true; return n; })
           : state.patients,
         shiftHistory: Array.isArray(c.shiftHistory)
           ? c.shiftHistory.map((s) => {
