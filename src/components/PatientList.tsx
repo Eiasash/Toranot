@@ -88,6 +88,14 @@ export function PatientList() {
       {/* Sort toggle + room chips — sticky so they stay visible while scrolling */}
       {filtered.length > 1 && (
         <div className="sticky top-0 z-10 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 space-y-1.5">
+          {patients.filter(p => p.discharged).length > 0 && (
+            <button
+              onClick={() => { if (confirm(`למחוק ${patients.filter(p => p.discharged).length} חולים שוחררו?`)) dispatch({ type: "REMOVE_DISCHARGED" }); }}
+              className="w-full mb-1 text-xs py-1.5 px-3 rounded-lg bg-green-50 dark:bg-green-900/30 border border-green-300 dark:border-green-700 text-green-700 dark:text-green-300 active:bg-green-100 flex items-center justify-center gap-1.5"
+            >
+              🏠 נקה שוחררו ({patients.filter(p => p.discharged).length})
+            </button>
+          )}
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
               {filtered.length} חולים {activeSection === "ALL" ? "במחלקה" : `ב${SECTION_LABEL[activeSection]}`}
