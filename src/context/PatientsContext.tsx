@@ -216,6 +216,7 @@ export type Action =
   | { type: "CLEAR_ALL" }
   | { type: "TOGGLE_SHOW_TOMORROW" }
   | { type: "REAPPLY_RULES" }
+  | { type: "REMOVE_DISCHARGED" }
   | { type: "IMPORT_BACKUP"; patients: PatientEntry[] }
   | { type: "MERGE_PATIENTS"; patients: PatientEntry[] }
   | { type: "SYNC_SHIFT_HISTORY"; shiftHistory: ShiftSnapshot[] }
