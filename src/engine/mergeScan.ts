@@ -43,7 +43,8 @@ function mergePatient(oldP: PatientEntry, newP: PatientEntry): PatientEntry {
     ...newP,
     id: oldP.id,
     order: newP.order ?? oldP.order ?? 0,
-    scannedAt: newP.scannedAt,
+    // Preserve original scannedAt so isNewThisShift doesn't reset on every re-import
+    scannedAt: oldP.scannedAt ?? newP.scannedAt,
     tasks: [...mergedExtracted, ...manualKeep],
     generatedTasks: mergedGenerated,
     notes: Array.from(new Set([...(oldP.notes ?? []), ...(newP.notes ?? [])])),
