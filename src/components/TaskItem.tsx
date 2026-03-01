@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import type { Task } from "../types";
-import { TaskCountdown, getQuickDueOptions, dueAtFromMinutes } from "./TaskCountdown";
+import { TaskCountdown, getQuickDueOptions, dueAtFromMinutes, suggestTimerMinutes, scheduleSwAlarm, cancelSwAlarm } from "./TaskCountdown";
 
 const SWIPE_THRESHOLD = 80; // px to trigger completion
 
@@ -69,6 +69,8 @@ export function TaskItem({
   const [editing, setEditing] = useState(false);
   const [showTimer, setShowTimer] = useState(false);
   const [draft, setDraft] = useState(task.note ?? "");
+  const [customMinutes, setCustomMinutes] = useState("");
+  const suggestedMinutes = suggestTimerMinutes(task.text);
   const [swipeX, setSwipeX] = useState(0);
 
   // Swipe tracking refs
@@ -79,6 +81,16 @@ export function TaskItem({
   useEffect(() => {
     setDraft(task.note ?? "");
   }, [task.note]);
+
+  // Sync SW alarm when dueAt changes
+  useEffect(() => {
+    if (task.dueAt && !task.done) {
+      scheduleSwAlarm(task.id, task.text, task.dueAt);
+    } else {
+      cancelSwAlarm(task.id);
+    }
+    return () => cancelSwAlarm(task.id);
+  }, [task.id, task.dueAt, task.done, task.text]);
 
   const save = () => {
     if (!onSetNote) {
@@ -234,41 +246,71 @@ export function TaskItem({
           {/* Quick timer setter */}
           {showTimer && !task.done && onSetDue && (
             <div
-              className="mt-2 flex flex-wrap gap-1.5"
+              className="mt-2 flex flex-col gap-2"
               onClick={(e) => e.stopPropagation()}
             >
-              {getQuickDueOptions().map((opt) => (
-                <button
-                  key={opt.minutes}
-                  type="button"
-                  onClick={() => {
-                    onSetDue(dueAtFromMinutes(opt.minutes));
-                    setShowTimer(false);
-                  }}
-                  className="text-xs px-2.5 py-1 rounded-lg border border-amber-300 bg-amber-50 text-amber-800 active:bg-amber-100"
-                >
-                  {opt.label}
-                </button>
-              ))}
-              {task.dueAt && (
+              {/* Suggested timer highlight */}
+              {suggestedMinutes && (
                 <button
                   type="button"
-                  onClick={() => {
-                    onSetDue(null);
-                    setShowTimer(false);
-                  }}
-                  className="text-xs px-2.5 py-1 rounded-lg border border-red-300 bg-red-50 text-red-700 active:bg-red-100"
+                  onClick={() => { onSetDue(dueAtFromMinutes(suggestedMinutes)); setShowTimer(false); }}
+                  className="text-xs px-3 py-1.5 rounded-lg border-2 border-blue-400 bg-blue-50 text-blue-800 font-bold flex items-center gap-1.5 active:bg-blue-100"
                 >
-                  ❌ בטל
+                  🎯 מוצע: {suggestedMinutes >= 60 ? `${suggestedMinutes/60} שעות` : `${suggestedMinutes} דק׳`}
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => setShowTimer(false)}
-                className="text-xs px-2.5 py-1 rounded-lg border border-gray-300 bg-gray-50 text-gray-600"
-              >
-                סגור
-              </button>
+              {/* Quick options */}
+              <div className="flex flex-wrap gap-1.5">
+                {getQuickDueOptions().map((opt) => (
+                  <button
+                    key={opt.minutes}
+                    type="button"
+                    onClick={() => { onSetDue(dueAtFromMinutes(opt.minutes)); setShowTimer(false); }}
+                    className="text-xs px-2.5 py-1 rounded-lg border border-amber-300 bg-amber-50 text-amber-800 active:bg-amber-100"
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              {/* Custom minutes input */}
+              <div className="flex gap-1.5 items-center">
+                <input
+                  type="number"
+                  min="1"
+                  max="720"
+                  placeholder="דקות..."
+                  value={customMinutes}
+                  onChange={(e) => setCustomMinutes(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && customMinutes) {
+                      const mins = parseInt(customMinutes);
+                      if (mins > 0) { onSetDue(dueAtFromMinutes(mins)); setShowTimer(false); setCustomMinutes(""); }
+                    }
+                  }}
+                  className="w-24 px-2 py-1 text-xs border border-gray-300 rounded-lg bg-white dark:bg-gray-800 dark:border-gray-600 text-right"
+                  dir="ltr"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const mins = parseInt(customMinutes);
+                    if (mins > 0) { onSetDue(dueAtFromMinutes(mins)); setShowTimer(false); setCustomMinutes(""); }
+                  }}
+                  className="text-xs px-2 py-1 rounded-lg bg-gray-700 text-white"
+                >
+                  הגדר
+                </button>
+                {task.dueAt && (
+                  <button
+                    type="button"
+                    onClick={() => { onSetDue(null); setShowTimer(false); }}
+                    className="text-xs px-2 py-1 rounded-lg border border-red-300 bg-red-50 text-red-700"
+                  >
+                    ❌ בטל
+                  </button>
+                )}
+                <button type="button" onClick={() => setShowTimer(false)} className="text-xs px-2 py-1 rounded-lg border border-gray-300 text-gray-600">סגור</button>
+              </div>
             </div>
           )}
         </div>
