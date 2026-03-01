@@ -242,7 +242,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
   const [editSection, setEditSection] = useState(patient.section);
   const [editDiagnosis, setEditDiagnosis] = useState(patient.diagnosis ?? "");
   const [showMovePopover, setShowMovePopover] = useState(false);
-  const [discharged, setDischarged] = useState(!!(patient as PatientEntry & { discharged?: boolean }).discharged);
+  const [discharged, setDischarged] = useState(!!(patient.discharged));
   const [moveRoom, setMoveRoom] = useState(patient.room ?? "");
   const [moveSection, setMoveSection] = useState(patient.section);
 
@@ -397,7 +397,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
                 <button onClick={() => setEditing(false)} className="text-xs px-3 py-1 rounded-lg bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200">ביטול</button>
                 <button
                   onClick={() => {
-                    dispatch({ type: "EDIT_PATIENT", patientId: patient.id, diagnosis: ((patient.diagnosis ?? "") + (discharged ? "" : " | שוחרר")).trim() });
+                    dispatch({ type: "EDIT_PATIENT", patientId: patient.id, discharged: !discharged });
                     setDischarged(!discharged);
                     setEditing(false);
                   }}
@@ -494,7 +494,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
                 )}
               </div>
               <div className="flex items-center gap-2 flex-wrap mt-1">
-                {(patient as PatientEntry & { discharged?: boolean }).discharged && (
+                {patient.discharged && (
                   <span className="text-xs bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300 px-2 py-0.5 rounded-full border border-green-300 dark:border-green-700 font-semibold">🏠 שוחרר</span>
                 )}
                 <div className="text-sm text-gray-600 dark:text-gray-400" dir="auto">
