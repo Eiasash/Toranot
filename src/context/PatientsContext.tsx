@@ -230,6 +230,7 @@ export type Action =
   | { type: "ASSIGN_TASK_TO_PATIENT"; taskId: string; patientId: string }
   | { type: "TOGGLE_UNASSIGNED_TASK"; taskId: string }
   | { type: "IMPORT_CLOUD_STATE"; state: ToranotCloudState }
+  | { type: "DELETE_TASK"; patientId: string; taskId: string }
   | { type: "DISMISS_SCAN_DIFF" };
 
 export function inferUrgencyFromText(text: string): Urgency {
@@ -629,10 +630,24 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
     case "REAPPLY_RULES":
       return {
         ...state,
-        patients: state.patients.map((p) => ({
-          ...p,
-          generatedTasks: applyRules(p),
-        })),
+        patients: state.patients.map((p) => {
+          const newGenerated = applyRules(p);
+          // Preserve done state + dismissals from existing generated tasks
+          const existingByText = new Map(
+            p.generatedTasks.map(t => [t.text.trim().toLowerCase(), t])
+          );
+          const merged = newGenerated.map(nt => {
+            const existing = existingByText.get(nt.text.trim().toLowerCase());
+            if (!existing) return nt;
+            // Preserve done state and note; if user deleted it (dismissed flag) skip
+            return { ...nt, done: existing.done, doneTime: existing.doneTime, note: existing.note ?? null };
+          }).filter(nt => {
+            // Skip tasks the user explicitly dismissed
+            const existing = existingByText.get(nt.text.trim().toLowerCase());
+            return !(existing as (typeof existing & { dismissed?: boolean }) | undefined)?.dismissed;
+          });
+          return { ...p, generatedTasks: merged };
+        }),
       };
 
     case "IMPORT_BACKUP":
@@ -805,6 +820,21 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
         ),
       };
     }
+
+    case "DELETE_TASK":
+      return {
+        ...state,
+        patients: state.patients.map((p) => {
+          if (p.id !== action.patientId) return p;
+          return {
+            ...p,
+            tasks: p.tasks.filter(t => t.id !== action.taskId),
+            generatedTasks: p.generatedTasks
+              .map(t => t.id === action.taskId ? { ...t, dismissed: true } as typeof t : t)
+              .filter(t => t.id !== action.taskId),
+          };
+        }),
+      };
 
     case "DISMISS_SCAN_DIFF":
       return { ...state, lastScanDiff: null };
