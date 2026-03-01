@@ -310,4 +310,73 @@ function addCOIHeaders(response) {
   });
 }
 
+// ── Task Alarm Handler ──────────────────────────────────────────────────────
+// Persistent alarms that fire even when app is backgrounded.
+// Registered via postMessage({ type: "SCHEDULE_ALARM", taskId, taskText, dueAt })
 
+const pendingAlarms = new Map(); // taskId → setTimeout id
+
+self.addEventListener("message", (event) => {
+  const { type, taskId, taskText, dueAt, title, body } = event.data ?? {};
+
+  if (type === "SCHEDULE_ALARM" && taskId && dueAt) {
+    // Cancel existing
+    if (pendingAlarms.has(taskId)) {
+      clearTimeout(pendingAlarms.get(taskId));
+      pendingAlarms.delete(taskId);
+    }
+    const delay = new Date(dueAt).getTime() - Date.now();
+    if (delay <= 0) {
+      fireTaskAlarm(taskId, taskText ?? "משימה");
+      return;
+    }
+    const tid = setTimeout(() => {
+      fireTaskAlarm(taskId, taskText ?? "משימה");
+      pendingAlarms.delete(taskId);
+    }, Math.min(delay, 2147483647)); // max safe setTimeout
+    pendingAlarms.set(taskId, tid);
+    return;
+  }
+
+  if (type === "CANCEL_ALARM" && taskId) {
+    if (pendingAlarms.has(taskId)) {
+      clearTimeout(pendingAlarms.get(taskId));
+      pendingAlarms.delete(taskId);
+    }
+    return;
+  }
+
+  // Legacy TASK_REMINDER support
+  if (type === "TASK_REMINDER" && title) {
+    self.registration.showNotification(title, {
+      body: body ?? "",
+      icon: "/icon-192.png",
+      requireInteraction: true,
+      vibrate: [300, 100, 300, 100, 300],
+    });
+  }
+});
+
+function fireTaskAlarm(taskId, taskText) {
+  self.registration.showNotification("⏰ תורנות — עבר הזמן!", {
+    body: taskText,
+    icon: "/icon-192.png",
+    tag: `alarm-${taskId}`,
+    requireInteraction: true,
+    vibrate: [300, 100, 300, 100, 300],
+    actions: [{ action: "dismiss", title: "ביטול" }],
+  });
+}
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  if (event.action === "dismiss") return;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window" }).then((clients) => {
+      for (const client of clients) {
+        if ("focus" in client) return client.focus();
+      }
+      return self.clients.openWindow("/");
+    })
+  );
+});
