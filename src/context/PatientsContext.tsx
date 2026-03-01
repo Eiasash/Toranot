@@ -90,6 +90,8 @@ export function normalizePatient(p: RawPatient): PatientEntry {
     notes: Array.isArray(p.notes) ? p.notes : [],
     labs: Array.isArray(p.labs) ? p.labs : [],
     order: typeof p.order === "number" ? p.order : 0,
+    ...(p.discharged ? { discharged: true } : {}),
+    ...(p.isAdmission ? { isAdmission: true } : {}),
   } as PatientEntry;
 }
 
