@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
+import { usePatientsDispatch } from "../context/PatientsContext";
 import type { Task } from "../types";
 import { TaskCountdown, getQuickDueOptions, dueAtFromMinutes, suggestTimerMinutes, scheduleSwAlarm, cancelSwAlarm } from "./TaskCountdown";
 
@@ -57,15 +58,18 @@ function backgroundFromUrgency(task: Task) {
 
 export function TaskItem({
   task,
+  patientId,
   onToggle,
   onSetNote,
   onSetDue,
 }: {
   task: Task;
+  patientId?: string;
   onToggle: () => void;
   onSetNote?: (note: string | null) => void;
   onSetDue?: (dueAt: string | null) => void;
 }) {
+  const dispatch = usePatientsDispatch();
   const [editing, setEditing] = useState(false);
   const [showTimer, setShowTimer] = useState(false);
   const [draft, setDraft] = useState(task.note ?? "");
@@ -353,6 +357,22 @@ export function TaskItem({
             >
               ✎
             </button>
+
+            {/* Delete button */}
+            {patientId && (
+              <button
+                type="button"
+                title="מחק משימה"
+                aria-label="מחק משימה"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  dispatch({ type: "DELETE_TASK", patientId, taskId: task.id });
+                }}
+                className="text-sm min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-red-400 dark:text-red-500 active:bg-red-50"
+              >
+                🗑
+              </button>
+            )}
           </div>
         </div>
       </div>
