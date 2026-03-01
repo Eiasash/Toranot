@@ -242,6 +242,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
   const [editSection, setEditSection] = useState(patient.section);
   const [editDiagnosis, setEditDiagnosis] = useState(patient.diagnosis ?? "");
   const [showMovePopover, setShowMovePopover] = useState(false);
+  const [discharged, setDischarged] = useState(!!(patient as PatientEntry & { discharged?: boolean }).discharged);
   const [moveRoom, setMoveRoom] = useState(patient.room ?? "");
   const [moveSection, setMoveSection] = useState(patient.section);
 
@@ -321,7 +322,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
         {acuityScore > 0 && <AcuityBadge patient={patient} />}
         <div className="min-w-0 flex-1 overflow-hidden">
           <div className="flex items-center gap-2 overflow-hidden">
-            <span className="text-sm font-semibold truncate dark:text-gray-100 shrink-0 max-w-[120px]">
+            <span className="text-sm font-semibold dark:text-gray-100 shrink-0">
               {patient.name ?? "לא ידוע"}
             </span>
             {isNewThisShift(patient) && <NewBadge scannedAt={patient.scannedAt} />}
@@ -396,13 +397,23 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
                 <button onClick={() => setEditing(false)} className="text-xs px-3 py-1 rounded-lg bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200">ביטול</button>
                 <button
                   onClick={() => {
+                    dispatch({ type: "EDIT_PATIENT", patientId: patient.id, diagnosis: ((patient.diagnosis ?? "") + (discharged ? "" : " | שוחרר")).trim() });
+                    setDischarged(!discharged);
+                    setEditing(false);
+                  }}
+                  className={`text-xs px-3 py-1 rounded-lg mr-auto ${discharged ? "bg-green-600" : "bg-orange-500"} text-white`}
+                >
+                  {discharged ? "↩️ בטל שחרור" : "🏠 שחרור"}
+                </button>
+                <button
+                  onClick={() => {
                     if (confirm(`למחוק את ${patient.name ?? "מטופל"}?`)) {
                       dispatch({ type: "REMOVE_PATIENT", patientId: patient.id });
                     }
                   }}
-                  className="text-xs px-3 py-1 rounded-lg bg-red-600 text-white mr-auto"
+                  className="text-xs px-2 py-1 rounded-lg bg-red-600 text-white"
                 >
-                  🗑️ מחק
+                  🗑️
                 </button>
               </div>
             </div>
@@ -411,7 +422,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
               <div className="flex items-center gap-2 relative">
                 <AcuityBadge patient={patient} />
                 {isNewThisShift(patient) && <NewBadge scannedAt={patient.scannedAt} />}
-                <span className="text-lg font-semibold truncate dark:text-gray-100">
+                <span className="text-lg font-semibold dark:text-gray-100">
                   {patient.name ?? "לא ידוע"}
                 </span>
                 {patient.room && (
@@ -482,8 +493,13 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
                   </div>
                 )}
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1" dir="auto">
-                {patient.diagnosis ?? ""}
+              <div className="flex items-center gap-2 flex-wrap mt-1">
+                {(patient as PatientEntry & { discharged?: boolean }).discharged && (
+                  <span className="text-xs bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300 px-2 py-0.5 rounded-full border border-green-300 dark:border-green-700 font-semibold">🏠 שוחרר</span>
+                )}
+                <div className="text-sm text-gray-600 dark:text-gray-400" dir="auto">
+                  {patient.diagnosis ?? ""}
+                </div>
               </div>
             </>
           )}
