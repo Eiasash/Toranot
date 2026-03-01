@@ -239,6 +239,9 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
   const [editRoom, setEditRoom] = useState(patient.room ?? "");
   const [editSection, setEditSection] = useState(patient.section);
   const [editDiagnosis, setEditDiagnosis] = useState(patient.diagnosis ?? "");
+  const [showMovePopover, setShowMovePopover] = useState(false);
+  const [moveRoom, setMoveRoom] = useState(patient.room ?? "");
+  const [moveSection, setMoveSection] = useState(patient.section);
 
   const saveEdit = () => {
     const nextName = editName.trim() || undefined;
@@ -403,21 +406,25 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
             </div>
           ) : (
             <>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 relative">
                 <AcuityBadge patient={patient} />
                 {isNewThisShift(patient) && <NewBadge scannedAt={patient.scannedAt} />}
                 <span className="text-lg font-semibold truncate dark:text-gray-100">
                   {patient.name ?? "לא ידוע"}
                 </span>
                 {patient.room && (
-                  <button
-                    onClick={startEdit}
-                    className="shrink-0 text-sm bg-blue-600 text-white px-2 py-0.5 rounded-lg active:bg-blue-800 transition-colors"
-                    title="לחץ לעריכת חדר/פרטים"
-                  >
+                  <span className="shrink-0 text-sm bg-blue-600 text-white px-2 py-0.5 rounded-lg">
                     {patient.room}
-                  </button>
+                  </span>
                 )}
+                {/* 🛏️ Move room button — always visible */}
+                <button
+                  onClick={() => { setMoveRoom(patient.room ?? ""); setMoveSection(patient.section); setShowMovePopover(true); }}
+                  className="shrink-0 text-base px-1.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-700 active:bg-slate-200 dark:active:bg-slate-600 transition-colors"
+                  title="העבר חדר"
+                >
+                  🛏️
+                </button>
                 <button
                   onClick={startEdit}
                   className="shrink-0 text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-1"
@@ -425,6 +432,53 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
                 >
                   ✏️
                 </button>
+                {/* Quick move popover */}
+                {showMovePopover && (
+                  <div className="absolute top-10 right-0 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg p-3 space-y-2 min-w-[180px]">
+                    <div className="text-xs font-semibold text-gray-700 dark:text-gray-200">🛏️ העברת חדר</div>
+                    <input
+                      autoFocus
+                      value={moveRoom}
+                      onChange={e => setMoveRoom(e.target.value)}
+                      placeholder="מס׳ חדר"
+                      dir="ltr"
+                      className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-gray-100"
+                      onKeyDown={e => {
+                        if (e.key === "Enter") {
+                          const r = moveRoom.trim();
+                          if (r) dispatch({ type: "MOVE_PATIENT", patientId: patient.id, toRoom: r, toSection: moveSection });
+                          setShowMovePopover(false);
+                        }
+                        if (e.key === "Escape") setShowMovePopover(false);
+                      }}
+                    />
+                    <select
+                      value={moveSection}
+                      onChange={e => setMoveSection(e.target.value as typeof moveSection)}
+                      className="w-full text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-gray-100"
+                    >
+                      {SECTIONS.map(s => <option key={s} value={s}>{SECTION_LABEL[s]}</option>)}
+                    </select>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          const r = moveRoom.trim();
+                          if (r) dispatch({ type: "MOVE_PATIENT", patientId: patient.id, toRoom: r, toSection: moveSection });
+                          setShowMovePopover(false);
+                        }}
+                        className="flex-1 py-1.5 bg-blue-600 text-white text-xs rounded-lg active:bg-blue-700"
+                      >
+                        העבר
+                      </button>
+                      <button
+                        onClick={() => setShowMovePopover(false)}
+                        className="flex-1 py-1.5 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs rounded-lg"
+                      >
+                        ביטול
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-400 mt-1" dir="auto">
                 {patient.diagnosis ?? ""}
