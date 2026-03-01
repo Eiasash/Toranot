@@ -8,7 +8,7 @@
  * Cross-Origin Isolation headers for SharedArrayBuffer (Tesseract.js).
  */
 
-const CACHE_VERSION = 1772393929381; // force-update 2026-02-28
+const CACHE_VERSION = 1772394615805; // force-update 2026-02-28
 const CACHE_NAME = `toranot-v${CACHE_VERSION}`;
 
 const PRECACHE_ASSETS = [
