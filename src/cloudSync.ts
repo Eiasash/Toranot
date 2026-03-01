@@ -339,3 +339,60 @@ export async function pullHandoff(code: string): Promise<ToranotCloudState | nul
 
   return data.state as ToranotCloudState;
 }
+
+// ── Shared Shift (read-only multi-user ward sharing) ─────────────────────────
+
+function generateCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}
+
+/** Create or refresh a shared snapshot of the current ward state. Returns the share code. */
+export async function createSharedShift(state: ToranotCloudState): Promise<string> {
+  const uid = await getUserId();
+  if (!supabase || !uid) throw new Error("Not logged in");
+
+  const code = generateCode();
+  const expires = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(); // 8h
+
+  const { error } = await supabase.from("shared_shifts").insert({
+    code,
+    creator_id: uid,
+    state,
+    expires_at: expires,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) throw error;
+  return code;
+}
+
+/** Update an existing shared shift with current state. */
+export async function updateSharedShift(code: string, state: ToranotCloudState): Promise<void> {
+  const uid = await getUserId();
+  if (!supabase || !uid) return;
+  await supabase
+    .from("shared_shifts")
+    .update({ state, updated_at: new Date().toISOString() })
+    .eq("code", code)
+    .eq("creator_id", uid);
+}
+
+/** Pull a shared shift by code. Returns null if not found / expired. */
+export async function pullSharedShift(code: string): Promise<{ state: ToranotCloudState; updatedAt: string } | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from("shared_shifts")
+    .select("state, updated_at")
+    .eq("code", code.toUpperCase().trim())
+    .gt("expires_at", new Date().toISOString())
+    .maybeSingle();
+  if (error || !data) return null;
+  return { state: data.state as ToranotCloudState, updatedAt: data.updated_at as string };
+}
+
+/** Delete a shared shift (cleanup). */
+export async function deleteSharedShift(code: string): Promise<void> {
+  const uid = await getUserId();
+  if (!supabase || !uid) return;
+  await supabase.from("shared_shifts").delete().eq("code", code).eq("creator_id", uid);
+}
