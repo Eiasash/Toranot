@@ -8,13 +8,9 @@ import { comparePatientsByRoom } from "../utils/sortPatients";
 
 import { isNewThisShift as _isNewThisShift, getShiftStart } from "../utils/shiftTime";
 function isNewThisShift(p: import("../types").PatientEntry): boolean {
-  return _isNewThisShift(p.scannedAt, {
-    hasDoneTasks: [...p.tasks, ...(p.generatedTasks ?? [])].some(t => t.done),
-    hasManualTasks: p.tasks.some(t => t.source === "manual"),
-    hasNotes: (p.notes?.length ?? 0) > 0,
-    hasLabs: (p.labs?.length ?? 0) > 0,
-    hasHandoverNote: !!p.handoverNote,
-  });
+  // Only show NEW badge for patients explicitly admitted this shift (isAdmission flag),
+  // never for scan-imported patients — scan re-imports always look "new" otherwise.
+  return !!(p as import("../types").PatientEntry & { isAdmission?: boolean }).isAdmission && _isNewThisShift(p.scannedAt);
 }
 
 // Section ordering for ALL view
