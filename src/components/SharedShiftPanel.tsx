@@ -133,6 +133,7 @@ export function SharedShiftPanel({ onClose }: { onClose: () => void }) {
     setCopied(true); setTimeout(() => setCopied(false), 2000);
   };
 
+  // Host needs auth to create shares; guests can join without any account
   const isLoggedIn = !!supabase;
 
   return (
@@ -146,9 +147,9 @@ export function SharedShiftPanel({ onClose }: { onClose: () => void }) {
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-xl px-2">✕</button>
         </div>
 
-        {!isLoggedIn && (
+        {tab === "host" && !isLoggedIn && (
           <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-            ⚠️ נדרשת התחברות לחשבון כדי לשתף
+            ⚠️ נדרשת התחברות לענן כדי לשתף — לצפייה במשמרת של עמית, עבור ל"הצטרף"
           </div>
         )}
 
@@ -240,7 +241,7 @@ export function SharedShiftPanel({ onClose }: { onClose: () => void }) {
                   />
                   <button
                     onClick={handleJoin}
-                    disabled={loading || guestInput.length < 4}
+                    disabled={loading || guestInput.length < 4 || !supabase}
                     className="px-4 py-3 rounded-xl bg-blue-600 text-white text-sm font-semibold active:bg-blue-700 disabled:opacity-50"
                   >
                     {loading ? "..." : "הצטרף"}
