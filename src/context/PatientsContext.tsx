@@ -828,10 +828,13 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
           if (p.id !== action.patientId) return p;
           return {
             ...p,
+            // Manual tasks: hard-delete
             tasks: p.tasks.filter(t => t.id !== action.taskId),
-            generatedTasks: p.generatedTasks
-              .map(t => t.id === action.taskId ? { ...t, dismissed: true } as typeof t : t)
-              .filter(t => t.id !== action.taskId),
+            // Generated tasks: mark dismissed=true so REAPPLY_RULES won't re-add them
+            // Do NOT remove — keep in array so the dismissed flag survives re-renders
+            generatedTasks: p.generatedTasks.map(t =>
+              t.id === action.taskId ? { ...t, dismissed: true, done: true } : t
+            ),
           };
         }),
       };
