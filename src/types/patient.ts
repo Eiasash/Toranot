@@ -78,6 +78,7 @@ export type PatientEntry = {
 
   // Sticky handover note — persists across shift archives
   handoverNote?: string;
+  discharged?: boolean;
 
   // Photo attachments (base64 data URLs, stored in localStorage)
   photos?: PatientPhoto[];
