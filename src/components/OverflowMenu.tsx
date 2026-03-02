@@ -212,25 +212,23 @@ export function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qr
               )}
               {/* Cloud Handoff */}
               {supabase && (
-                <button
-                  onClick={() => { onOpenModal("handoff_cloud"); setOpen(false); }}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-slate-200 active:bg-slate-700 border-t border-slate-700 text-right"
-                >
-                  <span className="text-base">☁️</span>
-                  סנכרון ענן
-                </button>
-                {/* Share with colleagues */}
-                <button
-                  onClick={() => { onOpenModal("shared_shift"); setOpen(false); }}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-emerald-300 active:bg-slate-700 border-t border-slate-700 text-right"
-                >
-                  <span className="text-base">🤝</span>
-                  שתף עם צוות
-                  className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-slate-200 active:bg-slate-700 border-t border-slate-700 text-right"
-                >
-                  <span className="text-base">🤝</span>
-                  מסירה בענן
-                </button>
+                <>
+                  <button
+                    onClick={() => { onOpenModal("handoff_cloud"); setOpen(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-slate-200 active:bg-slate-700 border-t border-slate-700 text-right"
+                  >
+                    <span className="text-base">☁️</span>
+                    סנכרון ענן
+                  </button>
+                  {/* Share with colleagues */}
+                  <button
+                    onClick={() => { onOpenModal("shared_shift"); setOpen(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-emerald-300 active:bg-slate-700 border-t border-slate-700 text-right"
+                  >
+                    <span className="text-base">🤝</span>
+                    שתף עם צוות
+                  </button>
+                </>
               )}
               {/* Clear all */}
               {patients.length > 0 && (

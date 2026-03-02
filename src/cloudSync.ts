@@ -163,13 +163,23 @@ export function useToranotCloudSync(
     if (choice === "cloud" && pendingCloudState.current) {
       lastPushedJson.current = stableJson(pendingCloudState.current);
       dispatch({ type: "IMPORT_CLOUD_STATE", state: pendingCloudState.current });
+    } else if (choice === "local") {
+      // BUG FIX: the push effect may have already completed before the user
+      // resolved the conflict (race: push fires ~2.5s after mount, conflict dialog
+      // can sit longer). That means lastPushedJson already matches local state, so
+      // the push effect won't re-fire → cloud keeps the old version → conflict
+      // reappears on every boot.
+      // Fix: push immediately and stamp lastPushedJson so the debounced push is suppressed.
+      const json = stableJson(cloudState);
+      lastPushedJson.current = json; // suppress duplicate push
+      setStatus("syncing");
+      pushCloud(cloudState)
+        .then(() => { setStatus("synced"); setLastSync(new Date()); })
+        .catch((e) => { console.warn("[Toranot] conflict-resolve push failed", e); setStatus("error"); });
     }
-    // "local" = do nothing, next push will overwrite cloud
     pendingCloudState.current = null;
     setConflict(null);
-    setStatus("synced");
-    setLastSync(new Date());
-  }, [dispatch]);
+  }, [dispatch, cloudState]);
 
   // Pull on mount (and on auth change)
   useEffect(() => {
