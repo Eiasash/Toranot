@@ -222,7 +222,7 @@ async function extractFromLetter(
 
   const endpoint = "/api/claude";
   const headers: Record<string, string> = { "content-type": "application/json" };
-  const secret = localStorage.getItem("toranot-api-secret") ?? "";
+  const secret = import.meta.env.VITE_API_SECRET ?? "";
   if (secret) headers["x-api-secret"] = secret;
 
   const body = { model: "claude-sonnet-4-6", max_tokens: 1500, system: EXTRACTION_SYSTEM, messages: [{ role: "user", content: messageContent }] };
