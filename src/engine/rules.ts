@@ -842,8 +842,12 @@ export function applyRules(patient: PatientEntry): Task[] {
     ...patient.flags,
     ...patient.tasks.map((t) => t.text),
   ].join(" ");
-  const planText = [...(patient.planNotes ?? []), ...(patient.tomorrowNotes ?? [])].join(" ");
-  const allText = [tasksText, diagnosisText, planText].join(" ");
+  // ⚠️ planNotes / tomorrowNotes are intentionally EXCLUDED from allText.
+  // Plan notes describe the patient's existing management ("on fentanyl drip",
+  // "continue amiodarone") — they are NOT explicit on-call action requests.
+  // Including them caused rules to generate red/urgent tasks from background
+  // plan text, violating the golden rule: on-call tasks must be explicitly requested.
+  const allText = [tasksText, diagnosisText].join(" ");
 
   for (const rule of RULES) {
     if (rule.group && matchedGroups.has(rule.group)) continue;

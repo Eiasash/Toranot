@@ -742,10 +742,11 @@ describe("rules engine — cross-cutting behavior", () => {
   // ═══ IV Protocol Monitoring Rules ═══
 
   describe("IV Insulin", () => {
-    it("triggers on 'insulin drip' in planNotes", () => {
+    it("does NOT trigger on 'insulin drip' in planNotes — plan text is not a task", () => {
+      // Golden rule: planNotes describe the existing plan, not on-call actions.
+      // A patient on insulin drip per plan ≠ the on-call doctor needs to act.
       const tasks = applyRules(makePatient({ planNotes: ["insulin drip 2cc/hr"] }));
-      expect(generatedSources(tasks)).toContain("אינסולין IV");
-      expect(tasks.some(t => t.text.includes("BS q2h"))).toBe(true);
+      expect(generatedSources(tasks)).not.toContain("אינסולין IV");
     });
 
     it("triggers on 'אינסולין מתמשך' in status", () => {
@@ -755,10 +756,9 @@ describe("rules engine — cross-cutting behavior", () => {
   });
 
   describe("IV Heparin", () => {
-    it("triggers on 'heparin drip'", () => {
+    it("does NOT trigger on 'heparin drip' in planNotes — plan text is not a task", () => {
       const tasks = applyRules(makePatient({ planNotes: ["heparin drip per protocol"] }));
-      expect(generatedSources(tasks)).toContain("הפרין IV");
-      expect(tasks.some(t => t.text.includes("PTT q6h"))).toBe(true);
+      expect(generatedSources(tasks)).not.toContain("הפרין IV");
     });
 
     it("triggers on 'UFH'", () => {
@@ -768,10 +768,9 @@ describe("rules engine — cross-cutting behavior", () => {
   });
 
   describe("IV Vasopressors", () => {
-    it("triggers on noradrenaline", () => {
+    it("does NOT trigger on noradrenaline in planNotes — plan text is not a task", () => {
       const tasks = applyRules(makePatient({ planNotes: ["noradrenaline 0.1 mcg/kg/min"] }));
-      expect(generatedSources(tasks)).toContain("נוראדרנלין / vasopressor");
-      expect(tasks.some(t => t.text.includes("MAP ≥65"))).toBe(true);
+      expect(generatedSources(tasks)).not.toContain("נוראדרנלין / vasopressor");
     });
 
     it("triggers on נוראדרנלין in Hebrew", () => {
@@ -781,10 +780,9 @@ describe("rules engine — cross-cutting behavior", () => {
   });
 
   describe("IV Amiodarone", () => {
-    it("triggers on amiodarone", () => {
+    it("does NOT trigger on amiodarone in planNotes — plan text is not a task", () => {
       const tasks = applyRules(makePatient({ planNotes: ["amiodarone loading"] }));
-      expect(generatedSources(tasks)).toContain("אמיודרון IV");
-      expect(tasks.some(t => t.text.includes("QTc"))).toBe(true);
+      expect(generatedSources(tasks)).not.toContain("אמיודרון IV");
     });
 
     it("triggers on procor/פרוקור", () => {
@@ -794,31 +792,30 @@ describe("rules engine — cross-cutting behavior", () => {
   });
 
   describe("IV Opioids", () => {
-    it("triggers on morphine drip", () => {
+    it("does NOT trigger on morphine drip in planNotes — plan text is not a task", () => {
+      // Core bug fix: "patient is on fentanyl/morphine" in the plan should not
+      // generate red/urgent monitoring tasks for the on-call doctor.
       const tasks = applyRules(makePatient({ planNotes: ["morphine drip 2mg/hr"] }));
-      expect(generatedSources(tasks)).toContain("אופיואידים IV");
-      expect(tasks.some(t => t.text.includes("RR"))).toBe(true);
+      expect(generatedSources(tasks)).not.toContain("אופיואידים IV");
     });
 
-    it("triggers on fentanyl infusion", () => {
+    it("does NOT trigger on fentanyl infusion in planNotes", () => {
       const tasks = applyRules(makePatient({ planNotes: ["fentanyl infusion"] }));
-      expect(generatedSources(tasks)).toContain("אופיואידים IV");
+      expect(generatedSources(tasks)).not.toContain("אופיואידים IV");
     });
 
-    it("NOT suppressed in comfort care (used for symptom relief)", () => {
-      const tasks = applyRules(makePatient({
-        flags: ["comfort care"],
-        planNotes: ["morphine drip"],
-      }));
+    it("DOES trigger on morphine drip in status (explicit on-call context)", () => {
+      // If the on-call doctor explicitly has morphine drip in their status/task,
+      // then monitoring tasks are appropriate.
+      const tasks = applyRules(makePatient({ status: ["morphine drip 2mg/hr IV"] }));
       expect(generatedSources(tasks)).toContain("אופיואידים IV");
     });
   });
 
   describe("Blood Transfusion", () => {
-    it("triggers on עירוי דם", () => {
+    it("does NOT trigger on עירוי דם in planNotes — plan text is not a task", () => {
       const tasks = applyRules(makePatient({ planNotes: ["עירוי דם PRBC"] }));
-      expect(generatedSources(tasks)).toContain("עירוי דם");
-      expect(tasks.some(t => t.text.includes("q15min"))).toBe(true);
+      expect(generatedSources(tasks)).not.toContain("עירוי דם");
     });
 
     it("triggers on PRBC", () => {
@@ -826,36 +823,47 @@ describe("rules engine — cross-cutting behavior", () => {
       expect(generatedSources(tasks)).toContain("עירוי דם");
     });
 
-    it("suppressed in comfort care", () => {
+    it("suppressed in comfort care when in status", () => {
+      // Suppression logic still valid — just test via status not planNotes
       const tasks = applyRules(makePatient({
         flags: ["palliative"],
-        planNotes: ["עירוי דם"],
+        status: ["עירוי דם PRBC מתוכנן"],
       }));
       expect(generatedSources(tasks)).not.toContain("עירוי דם");
     });
   });
 
   describe("IV protocol + comfort care suppression", () => {
-    it("insulin drip suppressed in comfort care", () => {
+    it("insulin drip suppressed in comfort care (when in status)", () => {
+      // planNotes no longer triggers — test via status to verify suppression logic
       const tasks = applyRules(makePatient({
         flags: ["comfort care"],
-        planNotes: ["insulin drip"],
+        status: ["insulin drip actrapid 2cc/hr"],
       }));
       expect(generatedSources(tasks)).not.toContain("אינסולין IV");
     });
 
-    it("vasopressor suppressed in comfort care", () => {
+    it("vasopressor suppressed in comfort care (when in status)", () => {
       const tasks = applyRules(makePatient({
         flags: ["טיפול מנחם"],
-        planNotes: ["noradrenaline"],
+        status: ["noradrenaline 0.1 mcg/kg/min"],
       }));
       expect(generatedSources(tasks)).not.toContain("נוראדרנלין / vasopressor");
     });
 
-    it("midazolam NOT suppressed in comfort care", () => {
+    it("midazolam in planNotes does NOT trigger (plan text, not task)", () => {
+      // planNotes no longer triggers any rule — comfort care or not
       const tasks = applyRules(makePatient({
         flags: ["פליאטיב"],
         planNotes: ["dormicum drip"],
+      }));
+      expect(generatedSources(tasks)).not.toContain("דורמיקום IV");
+    });
+
+    it("midazolam in status DOES trigger (explicit on-call item)", () => {
+      // Even in non-comfort-care patients, midazolam in status generates monitoring
+      const tasks = applyRules(makePatient({
+        status: ["dormicum midazolam drip infusion"],
       }));
       expect(generatedSources(tasks)).toContain("דורמיקום IV");
     });
@@ -864,10 +872,9 @@ describe("rules engine — cross-cutting behavior", () => {
   // ═══ DELIRIUM DRUG PROTOCOLS ═══
 
   describe("Haloperidol protocol", () => {
-    it("triggers on הלופרידול in planNotes", () => {
+    it("does NOT trigger on הלופרידול in planNotes — plan text is not a task", () => {
       const tasks = applyRules(makePatient({ planNotes: ["הלופרידול 0.5mg IV"] }));
-      expect(generatedSources(tasks)).toContain("הלופרידול");
-      expect(tasks.some(t => t.text.includes("QTc"))).toBe(true);
+      expect(generatedSources(tasks)).not.toContain("הלופרידול");
     });
 
     it("triggers on haldol in status", () => {
@@ -875,25 +882,24 @@ describe("rules engine — cross-cutting behavior", () => {
       expect(generatedSources(tasks)).toContain("הלופרידול");
     });
 
-    it("warns about Parkinson/DLB", () => {
-      const tasks = applyRules(makePatient({ planNotes: ["haloperidol"] }));
+    it("warns about Parkinson/DLB when in status", () => {
+      const tasks = applyRules(makePatient({ status: ["haloperidol 0.5mg IM"] }));
       expect(tasks.some(t => t.text.includes("DLB") && t.text.includes("Quetiapine"))).toBe(true);
     });
 
-    it("NOT suppressed in comfort care (agitation management is comfort care)", () => {
+    it("NOT suppressed in comfort care when in status (agitation management is comfort care)", () => {
       const tasks = applyRules(makePatient({
         flags: ["comfort care"],
-        planNotes: ["haloperidol"],
+        status: ["haloperidol 0.5mg IM PRN agitation"],
       }));
       expect(generatedSources(tasks)).toContain("הלופרידול");
     });
   });
 
   describe("Quetiapine protocol", () => {
-    it("triggers on quetiapine", () => {
+    it("does NOT trigger on quetiapine in planNotes", () => {
       const tasks = applyRules(makePatient({ planNotes: ["quetiapine 25mg HS"] }));
-      expect(generatedSources(tasks)).toContain("קווטיאפין");
-      expect(tasks.some(t => t.text.includes("אורתוסטטי"))).toBe(true);
+      expect(generatedSources(tasks)).not.toContain("קווטיאפין");
     });
 
     it("triggers on סרוקוול", () => {
@@ -901,20 +907,19 @@ describe("rules engine — cross-cutting behavior", () => {
       expect(generatedSources(tasks)).toContain("קווטיאפין");
     });
 
-    it("NOT suppressed in comfort care (comfort drug)", () => {
+    it("NOT suppressed in comfort care when in status (comfort drug)", () => {
       const tasks = applyRules(makePatient({
         flags: ["palliative"],
-        planNotes: ["quetiapine 12.5mg"],
+        status: ["quetiapine 12.5mg HS"],
       }));
       expect(generatedSources(tasks)).toContain("קווטיאפין");
     });
   });
 
   describe("Olanzapine protocol", () => {
-    it("triggers on olanzapine", () => {
+    it("does NOT trigger on olanzapine in planNotes", () => {
       const tasks = applyRules(makePatient({ planNotes: ["olanzapine 2.5mg IM"] }));
-      expect(generatedSources(tasks)).toContain("אולנזפין");
-      expect(tasks.some(t => t.text.includes("benzodiazepines"))).toBe(true);
+      expect(generatedSources(tasks)).not.toContain("אולנזפין");
     });
 
     it("triggers on zyprexa", () => {
@@ -924,23 +929,21 @@ describe("rules engine — cross-cutting behavior", () => {
   });
 
   describe("Risperidone protocol", () => {
-    it("triggers on risperidone", () => {
+    it("does NOT trigger on risperidone in planNotes", () => {
       const tasks = applyRules(makePatient({ planNotes: ["risperidone 0.5mg"] }));
-      expect(generatedSources(tasks)).toContain("ריספרידון");
-      expect(tasks.some(t => t.text.includes("EPS"))).toBe(true);
+      expect(generatedSources(tasks)).not.toContain("ריספרידון");
     });
 
-    it("includes FDA Black Box warning", () => {
-      const tasks = applyRules(makePatient({ planNotes: ["risperdal"] }));
+    it("includes FDA Black Box warning when in status", () => {
+      const tasks = applyRules(makePatient({ status: ["risperidone risperdal 0.5mg BID"] }));
       expect(tasks.some(t => t.text.includes("Black Box"))).toBe(true);
     });
   });
 
   describe("Dexmedetomidine protocol", () => {
-    it("triggers on precedex", () => {
+    it("does NOT trigger on precedex in planNotes", () => {
       const tasks = applyRules(makePatient({ planNotes: ["precedex infusion"] }));
-      expect(generatedSources(tasks)).toContain("דקסמדטומידין (Precedex)");
-      expect(tasks.some(t => t.text.includes("bradycardia"))).toBe(true);
+      expect(generatedSources(tasks)).not.toContain("דקסמדטומידין (Precedex)");
     });
 
     it("triggers on דקסמדטומידין", () => {
@@ -948,26 +951,25 @@ describe("rules engine — cross-cutting behavior", () => {
       expect(generatedSources(tasks)).toContain("דקסמדטומידין (Precedex)");
     });
 
-    it("NOT suppressed in comfort care (sedation for terminal agitation)", () => {
+    it("NOT suppressed in comfort care when in status (sedation for terminal agitation)", () => {
       const tasks = applyRules(makePatient({
         flags: ["EOL"],
-        planNotes: ["precedex"],
+        status: ["dexmedetomidine precedex infusion"],
       }));
       expect(generatedSources(tasks)).toContain("דקסמדטומידין (Precedex)");
     });
   });
 
   describe("Trazodone protocol", () => {
-    it("triggers on trazodone", () => {
+    it("does NOT trigger on trazodone in planNotes — plan text is not a task", () => {
       const tasks = applyRules(makePatient({ planNotes: ["trazodone 50mg HS"] }));
-      expect(generatedSources(tasks)).toContain("טרזודון");
-      expect(tasks.some(t => t.text.includes("orthostatic"))).toBe(true);
+      expect(generatedSources(tasks)).not.toContain("טרזודון");
     });
 
-    it("NOT suppressed in comfort care", () => {
+    it("NOT suppressed in comfort care when in status", () => {
       const tasks = applyRules(makePatient({
         flags: ["comfort care"],
-        planNotes: ["טרזודון 25mg"],
+        status: ["trazodone טרזודון 25mg HS"],
       }));
       expect(generatedSources(tasks)).toContain("טרזודון");
     });

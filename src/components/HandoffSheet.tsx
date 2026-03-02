@@ -47,25 +47,8 @@ function formatPatient(p: PatientEntry): string {
   if (notes.length > 0) lines.push(`  הערות: ${notes.join(", ")}`);
   if (p.tomorrowNotes.length > 0) lines.push(`  מחר: ${p.tomorrowNotes.join(", ")}`);
   if (p.handoverNote) lines.push(`  📌 ${p.handoverNote}`);
-  const interactions = checkDrugInteractions(p);
-  const renalWarnings = checkRenalDoseWarnings(p);
-  const labDeltas = calculateLabDeltas(p);
-  const beers = checkBeersCriteria(p);
-  const critInteractions = interactions.filter(i => i.severity === "critical");
-  const critRenal = renalWarnings.filter(w => w.severity === "critical");
-  const critLabs = labDeltas.filter(d => d.severity === "critical");
-  const critBeers = beers.filter(b => b.severity === "avoid");
-  const totalCrit = critInteractions.length + critRenal.length + critLabs.length + critBeers.length;
-  if (totalCrit > 0) {
-    lines.push(`  ⚠️ התראות בטיחות:`);
-    for (const ix of critInteractions) lines.push(`    🔴 ${ix.risk}: ${ix.detail}`);
-    for (const w of critRenal) lines.push(`    🔴 ${w.drug} — ${w.adjustment}`);
-    for (const d of critLabs) {
-      const arrow = d.direction === "up" ? "↑" : d.direction === "down" ? "↓" : "→";
-      lines.push(`    🔴 ${d.label}: ${d.baseline}${arrow}${d.latest}`);
-    }
-    for (const b of critBeers) lines.push(`    🚫 Beers: ${b.drug} — ${b.recommendation}`);
-  }
+  // Per-patient safety alerts omitted from text handoff — see DrugSafetyAlerts view.
+  // Aggregate alert count still shown in shift summary below.
   return lines.join("\n");
 }
 
@@ -151,12 +134,9 @@ function PatientCard({ p, isNew }: { p: PatientEntry; isNew: boolean }) {
   const done = allTasks.filter(t => t.done);
   const labSummary = formatLabsForHandoff(p);
 
-  // Safety alerts
-  const interactions = checkDrugInteractions(p).filter(i => i.severity === "critical");
-  const renalWarnings = checkRenalDoseWarnings(p).filter(w => w.severity === "critical");
-  const labDeltas = calculateLabDeltas(p).filter(d => d.severity === "critical");
-  const beers = checkBeersCriteria(p).filter(b => b.severity === "avoid");
-  const hasSafety = interactions.length + renalWarnings.length + labDeltas.length + beers.length > 0;
+  // Safety alerts suppressed in handoff view — they clutter the letter with
+  // background/chronic medication warnings that are not on-call action items.
+  // Alerts are available in the patient detail DrugSafetyAlerts view.
 
   const statCount = pending.filter(t => t.urgency === "stat").length;
 
@@ -269,19 +249,7 @@ function PatientCard({ p, isNew }: { p: PatientEntry; isNew: boolean }) {
           </p>
         )}
 
-        {/* Safety alerts */}
-        {hasSafety && (
-          <div className="bg-red-950/40 border border-red-800/60 rounded px-2 py-1.5 space-y-0.5">
-            <p className="text-xs font-bold text-red-400">⚠️ התראות בטיחות</p>
-            {interactions.map((ix, i) => <p key={i} className="text-xs text-red-300">🔴 {ix.risk}: {ix.detail}</p>)}
-            {renalWarnings.map((w, i) => <p key={i} className="text-xs text-red-300">🔴 {w.drug} — {w.adjustment}</p>)}
-            {labDeltas.map((d, i) => {
-              const arrow = d.direction === "up" ? "↑" : d.direction === "down" ? "↓" : "→";
-              return <p key={i} className="text-xs text-red-300">🔴 {d.label}: {d.baseline}{arrow}{d.latest}</p>;
-            })}
-            {beers.map((b, i) => <p key={i} className="text-xs text-orange-300">🚫 Beers: {b.drug} — {b.recommendation}</p>)}
-          </div>
-        )}
+        {/* Safety alerts removed from handoff — see DrugSafetyAlerts in patient detail view */}
       </div>
     </div>
   );
