@@ -16,7 +16,7 @@ import { usePatientsDispatch, usePatientsState, useCloudSync } from "./context/P
 import { QRSync } from "./components/QRSync";
 import { QuickCaptureSheet } from "./components/QuickCaptureSheet";
 import { MorningReport } from "./components/MorningReport";
-import { requestNotificationPermission, syncReminders } from "./utils/taskReminders";
+import { requestNotificationPermission, syncReminders, cancelAllReminders } from "./utils/taskReminders";
 import { formatScanDiffSummary } from "./engine/smartOCR";
 import { OverflowMenu } from "./components/OverflowMenu";
 import { ShiftHandoffModal } from "./components/ShiftHandoffModal";
@@ -458,6 +458,8 @@ function AppInner() {
 
   useEffect(() => { requestNotificationPermission(); }, []);
   useEffect(() => { syncReminders(patients); }, [patients]);
+  // Cancel all reminder timers when the patient list is cleared
+  useEffect(() => { if (patients.length === 0) cancelAllReminders(); }, [patients.length]);
 
   const openRef = useCallback(() => {
     setModal((prev) => (prev === "reference" ? "none" : "reference"));

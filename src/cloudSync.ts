@@ -254,6 +254,9 @@ export function useToranotCloudSync(
   // Debounced push on state change
   useEffect(() => {
     if (!supabase) return;
+    // Never push while a conflict is pending — user hasn't decided yet.
+    // Pushing local state during conflict would overwrite cloud before resolution.
+    if (conflict !== null) return;
 
     getUserId().then((uid) => {
       if (!uid) return;
@@ -280,7 +283,7 @@ export function useToranotCloudSync(
     return () => {
       if (pushTimer.current) window.clearTimeout(pushTimer.current);
     };
-  }, [cloudState]);
+  }, [cloudState, conflict]);
 
   return { status, lastSync, conflict, resolveConflict };
 }

@@ -70,8 +70,8 @@ export function normalizeTask(t: RawTask): Task {
     text: typeof t.text === "string" ? t.text : String(t.text ?? ""),
     urgency: (["stat","urgent","morning","extra","routine"].includes(t.urgency as string)
       ? t.urgency : "routine") as Task["urgency"],
-    category: (typeof t.category === "string" ? t.category : "general") as Task["category"],
-    source: (["manual","generated","imported"].includes(t.source as string)
+    category: (typeof t.category === "string" ? t.category : "other") as Task["category"],
+    source: (["manual","generated","extracted"].includes(t.source as string)
       ? t.source : "manual") as Task["source"],
   } as Task;
 }
@@ -625,7 +625,7 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
       return { ...state, darkMode: !state.darkMode };
 
     case "CLEAR_ALL":
-      return { ...state, patients: [], events: [], unassignedTasks: [], shiftHistory: [] };
+      return { ...state, patients: [], events: [], unassignedTasks: [] }; // intentionally keep shiftHistory
 
     case "REAPPLY_RULES":
       return {
@@ -639,14 +639,18 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
           const merged = newGenerated.map(nt => {
             const existing = existingByText.get(nt.text.trim().toLowerCase());
             if (!existing) return nt;
-            // Preserve done state and note; if user deleted it (dismissed flag) skip
             return { ...nt, done: existing.done, doneTime: existing.doneTime, note: existing.note ?? null };
           }).filter(nt => {
-            // Skip tasks the user explicitly dismissed
             const existing = existingByText.get(nt.text.trim().toLowerCase());
             return !(existing as (typeof existing & { dismissed?: boolean }) | undefined)?.dismissed;
           });
-          return { ...p, generatedTasks: merged };
+          // Re-include dismissed tasks (with dismissed:true) so subsequent REAPPLY_RULES
+          // still has them in existingByText. Without this, dismissed tasks re-appear
+          // after the second REAPPLY_RULES call because the first call dropped them.
+          const dismissedStubs = p.generatedTasks.filter(t =>
+            (t as typeof t & { dismissed?: boolean }).dismissed
+          );
+          return { ...p, generatedTasks: [...merged, ...dismissedStubs] };
         }),
       };
 
