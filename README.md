@@ -38,6 +38,7 @@ Generates on-call tasks automatically based on detected conditions:
 
 ### Ward Operations
 - **New admission modal** — Add on-call admissions manually with freestyle text parsing (`49/2 כהן יוסף 82 pneumonia DNR`). Clinical rules fire immediately on admission.
+- **Admission letter AI extraction** — Attach a PDF, image (JPG/PNG/WEBP), or DOCX admission letter. Claude Sonnet extracts name, age, diagnosis, room/bed, DNR status, home medications, and generates a concise morning presentation paragraph. Fields auto-fill the admission form; morning presentation is editable and copyable for ward rounds.
 - **Bed collision prevention** — Prevents two patients sharing the same room+section across all entry points
 - **Smart rescan** — Re-importing preserves manual tasks, completion state, notes. Detects patient transfers between sections.
 - **Patient movement tracking** — Log bed moves with timestamps
