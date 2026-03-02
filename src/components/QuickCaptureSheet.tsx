@@ -41,7 +41,7 @@ export function QuickCaptureSheet({ onClose }: { onClose: () => void }) {
   const [text, setText] = useState("");
   const [result, setResult] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { patients, activeSection } = usePatientsState();
+  const { patients } = usePatientsState();
   const dispatch = usePatientsDispatch();
 
   useEffect(() => { textareaRef.current?.focus(); }, []);

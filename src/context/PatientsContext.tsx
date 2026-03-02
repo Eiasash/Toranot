@@ -654,6 +654,9 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
         }),
       };
 
+    case "REMOVE_DISCHARGED":
+      return { ...state, patients: state.patients.filter((p) => !p.discharged) };
+
     case "IMPORT_BACKUP":
       return { ...state, patients: action.patients.map(normalizePatient) };
 

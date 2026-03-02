@@ -4,7 +4,15 @@ import { safeGetItem, safeSetItem } from "../utils/storage";
 // -----------------------------
 // Constants
 // -----------------------------
-const API_KEY_STORAGE_KEY = "toranot_anthropic_key";
+const API_KEY_STORAGE_KEY = "toranot-anthropic-key"; // unified key — was 'toranot_anthropic_key' (broken)
+// One-time migration: if old underscore key exists, copy to unified key and clear
+try {
+  const legacy = localStorage.getItem("toranot_anthropic_key");
+  if (legacy && !localStorage.getItem("toranot-anthropic-key")) {
+    localStorage.setItem("toranot-anthropic-key", legacy);
+    localStorage.removeItem("toranot_anthropic_key");
+  }
+} catch { /* quota */ }
 const OCR_MODEL = "claude-sonnet-4-6";
 const OCR_MAX_TOKENS = 4096;
 const IMAGE_MAX_EDGE = 2400;
