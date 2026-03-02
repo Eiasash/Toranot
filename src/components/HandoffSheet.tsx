@@ -55,8 +55,11 @@ function formatPatient(p: PatientEntry): string {
 import { isOnCallTime, getShiftStart } from "../utils/shiftTime";
 
 function isOncallRelevant(p: PatientEntry, shiftStart: Date): boolean {
+  // Manually added admissions are always on-call relevant regardless of time
+  if (p.isAdmission) return true;
   if (p.scannedAt && isOnCallTime(new Date(p.scannedAt)) && new Date(p.scannedAt) >= shiftStart) return true;
-  if (p.tasks.some(t => t.source !== "generated")) return true;
+  // Only manual tasks indicate on-call action — "extracted" tasks exist on every scanned patient
+  if (p.tasks.some(t => t.source === "manual")) return true;
   if ([...p.tasks, ...p.generatedTasks].some(t => t.done)) return true;
   if (p.handoverNote) return true;
   return false;
@@ -66,7 +69,10 @@ function buildTextHandoff(patients: PatientEntry[], filteredPatients: PatientEnt
   const now = new Date();
   const dateStr = now.toLocaleDateString("he-IL");
   const timeStr = now.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
-  const newAdmissions = filteredPatients.filter(p => p.scannedAt && isOnCallTime(new Date(p.scannedAt)) && new Date(p.scannedAt) >= shiftStart);
+  const newAdmissions = filteredPatients.filter(p =>
+    p.isAdmission ||
+    (p.scannedAt && isOnCallTime(new Date(p.scannedAt)) && new Date(p.scannedAt) >= shiftStart)
+  );
   const lines: string[] = [
     `📋 ${oncallOnly ? "מסירת תורן" : "סיכום משמרת"} — ${dateStr} ${timeStr}`,
     `${"─".repeat(35)}`,
@@ -293,7 +299,12 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
   const newAdmissionIds = useMemo(() => {
     return new Set(
       patients
-        .filter(p => p.scannedAt && isOnCallTime(new Date(p.scannedAt)) && new Date(p.scannedAt) >= shiftStart)
+        .filter(p =>
+          // Explicit isAdmission flag (set by modal, survives daytime adds)
+          p.isAdmission ||
+          // OCR-scanned during on-call window
+          (p.scannedAt && isOnCallTime(new Date(p.scannedAt)) && new Date(p.scannedAt) >= shiftStart)
+        )
         .map(p => p.id)
     );
   }, [patients, shiftStart]);

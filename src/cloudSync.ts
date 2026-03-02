@@ -225,10 +225,18 @@ export function useToranotCloudSync(
           new Set((arr as { id?: string }[]).map(p => p.id ?? "").filter(Boolean));
         const localIds = patientIds(localPatients);
         const remoteIds = patientIds(remotePatients);
-        const setsEqual = localIds.size === remoteIds.size && [...localIds].every(id => remoteIds.has(id));
+        // Only conflict when BOTH sides have patients the other doesn't.
+        // One-sided differences (cloud has more, or local has more) means one side
+        // is simply behind — apply cloud silently. Conflicting on one-sided diffs
+        // triggered a false "conflict" every boot on a second device, which is the
+        // common case when a colleague opens the app before pulling.
+        const localOnlyIds = [...localIds].filter(id => !remoteIds.has(id));
+        const cloudOnlyIds = [...remoteIds].filter(id => !localIds.has(id));
+        const isGenuineConflict = localHasData && cloudHasData
+          && localOnlyIds.length > 0 && cloudOnlyIds.length > 0;
 
-        if (localHasData && cloudHasData && !setsEqual) {
-          // Conflict! Let user choose
+        if (isGenuineConflict) {
+          // Both sides have unique patients — genuinely diverged, need user decision
           pendingCloudState.current = remote;
           setConflict({
             localCount: localPatients.length,

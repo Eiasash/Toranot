@@ -751,7 +751,9 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
     }
 
     case "NEW_ADMISSION": {
-      const admitted = { ...normalizePatient(action.patient as RawPatient), isAdmission: true };
+      const admittedBase = normalizePatient(action.patient as RawPatient);
+      // Apply rules immediately so on-call doctor sees generated tasks right after admission
+      const admitted = { ...admittedBase, isAdmission: true, generatedTasks: applyRules(admittedBase) };
       if (
         admitted.room &&
         bedOccupiedBy(state.patients, admitted.room, admitted.section, admitted.id)
