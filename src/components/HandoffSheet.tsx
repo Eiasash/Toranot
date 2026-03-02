@@ -135,6 +135,7 @@ function urgencyDot(u: Task["urgency"]) {
 }
 
 function PatientCard({ p, isNew }: { p: PatientEntry; isNew: boolean }) {
+  const [morningExpanded, setMorningExpanded] = useState(false);
   const allTasks = [...p.tasks, ...p.generatedTasks].filter(t => !t.dismissed);
   const pending = allTasks.filter(t => !t.done);
   const done = allTasks.filter(t => t.done);
@@ -210,11 +211,31 @@ function PatientCard({ p, isNew }: { p: PatientEntry; isNew: boolean }) {
           </p>
         )}
 
-        {/* Handover note */}
+        {/* Morning presentation / handover note */}
         {p.handoverNote && (
-          <p className="text-xs text-amber-200 bg-amber-900/20 border border-amber-700/40 rounded px-2 py-1">
-            📌 {p.handoverNote}
-          </p>
+          <div className="border border-blue-700/40 rounded overflow-hidden">
+            <button
+              onClick={() => setMorningExpanded(v => !v)}
+              className="w-full flex items-center justify-between px-2 py-1.5 bg-blue-900/30 text-xs text-blue-300 hover:bg-blue-900/50 transition-colors"
+            >
+              <span>🌅 הצגת בוקר</span>
+              <span>{morningExpanded ? "▲" : "▼"}</span>
+            </button>
+            {morningExpanded && (
+              <div className="px-2 py-2 bg-blue-950/20 space-y-1">
+                {/* Strip the "📋 Morning: " prefix if present */}
+                <p className="text-xs text-blue-200 whitespace-pre-wrap leading-relaxed" dir="ltr">
+                  {p.handoverNote.replace(/^📋 Morning:\s*/i, "")}
+                </p>
+                <button
+                  onClick={() => navigator.clipboard.writeText(p.handoverNote!.replace(/^📋 Morning:\s*/i, "")).catch(() => {})}
+                  className="text-[10px] bg-blue-700 text-white px-2 py-0.5 rounded opacity-70 hover:opacity-100"
+                >
+                  העתק
+                </button>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Pending tasks */}
@@ -288,6 +309,7 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
   const { patients } = usePatientsState();
   const [oncallOnly, setOncallOnly] = useState(false);
   const [view, setView] = useState<"visual" | "text">("visual");
+
 
   const shiftStart = useMemo(() => getShiftStart(), []);
 

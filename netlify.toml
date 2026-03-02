@@ -4,6 +4,14 @@
 
 [functions]
   directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+[functions."claude"]
+  included_files = []
+
+# Per-function timeout overrides (max 26s on nf_team_dev)
+[functions."claude".config]
+  timeout = 26
 
 [[headers]]
   for = "/*"

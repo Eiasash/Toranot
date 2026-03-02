@@ -29,6 +29,8 @@ interface Rule {
 // DNR/DNI alone is NOT enough — many DNR patients still get full medical care.
 // Only explicit comfort/palliative flags trigger suppression.
 const COMFORT_CARE_PATTERN = /comfort\s*care|palliative|פליאטיב|טיפול תומך בלבד|טיפול מנחם|EOL|end.of.life|הנוחות בלבד|טיפולי נוחות/i;
+// High-dose combined sedation (fentanyl + dormicum/midazolam) strongly implies end-of-life comfort sedation
+const COMFORT_SEDATION_PATTERN = /(?=.*(?:fentanyl|פנטניל))(?=.*(?:dormicum|midazolam|מידזולם|מידאזולם))/i;
 
 // Rule groups that are suppressed for comfort-care-only patients.
 // These represent aggressive workup/intervention that conflicts with comfort goals.
@@ -833,7 +835,7 @@ export function applyRules(patient: PatientEntry): Task[] {
   // workup and intervention tasks. DNR/DNI alone does NOT suppress —
   // only explicit comfort-care / palliative / end-of-life flags do.
   const allFlags = [...patient.flags, ...patient.status, ...(patient.notes ?? []), patient.handoverNote ?? ""].join(" ");
-  const isComfortCareOnly = COMFORT_CARE_PATTERN.test(allFlags);
+  const isComfortCareOnly = COMFORT_CARE_PATTERN.test(allFlags) || COMFORT_SEDATION_PATTERN.test(allFlags);
 
   // Pre-build text blobs for each trigger scope
   const diagnosisText = patient.diagnosis ?? "";

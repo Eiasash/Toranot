@@ -7,6 +7,7 @@ import {
   fetchWithTimeout,
   logUpstreamError,
   validateMessages,
+  UPSTREAM_TIMEOUT_LONG_MS,
 } from "./_utils.ts";
 
 // ─── Model normalization ──────────────────────────────────────────────────────
@@ -94,6 +95,13 @@ export default async (req: Request, _context: Context) => {
   if (typeof b?.temperature === "number") payload.temperature = b.temperature;
   if (typeof b?.top_p === "number") payload.top_p = b.top_p;
 
+  // Use longer timeout when request contains file content blocks (PDF/image)
+  const hasFileBlocks = messages.some(m =>
+    Array.isArray(m.content) &&
+    (m.content as {type:string}[]).some(b => b.type === "image" || b.type === "document")
+  );
+  const timeoutMs = hasFileBlocks ? UPSTREAM_TIMEOUT_LONG_MS : undefined;
+
   let upstream: Response;
   try {
     upstream = await fetchWithTimeout("https://api.anthropic.com/v1/messages", {
@@ -104,7 +112,7 @@ export default async (req: Request, _context: Context) => {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify(payload),
-    });
+    }, timeoutMs);
   } catch {
     return new Response("Upstream timeout", { status: 504 });
   }
