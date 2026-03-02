@@ -113,6 +113,33 @@ const COMMON_DIAGNOSES = [
   "Hip fracture", "Falls", "DVT", "Anemia", "Functional decline", "Malignancy workup",
 ];
 
+// Organised by category for the chip picker
+const DX_CATEGORIES: { label: string; items: string[] }[] = [
+  { label: "זיהום 🦠", items: ["Pneumonia", "Aspiration pneumonia", "UTI", "Urosepsis", "Sepsis", "Cellulitis", "C. diff", "COVID-19", "Cholangitis", "Endocarditis"] },
+  { label: "לב ❤️", items: ["ACS", "NSTEMI", "AF with RVR", "Acute HF", "HFrEF", "HFpEF", "Hypertensive urgency", "Syncope", "PE", "DVT"] },
+  { label: "ריאות 🫁", items: ["COPD exacerbation", "CO2 retention", "Pleural effusion", "Asthma", "Respiratory failure"] },
+  { label: "נוירו 🧠", items: ["Delirium", "Stroke", "TIA", "Seizure", "SAH", "AMS"] },
+  { label: "כליה/מטבולי 🧪", items: ["AKI", "AKI on CKD", "DKA", "HHS", "Hyponatremia", "Hyperkalemia", "Hypoglycemia"] },
+  { label: "כירורגי/אורתו 🦴", items: ["Hip fracture", "GI bleed", "Bowel obstruction", "Acute abdomen", "Falls", "Calcaneal fracture"] },
+  { label: "שונות", items: ["Anemia", "Malignancy", "Functional decline", "Cholecystitis", "Pancreatitis", "Liver failure"] },
+];
+
+// Common geriatric combos — one tap fills the whole diagnosis field
+const DX_COMBOS = [
+  "Pneumonia + AKI",
+  "Sepsis + AKI",
+  "COPD exacerbation + CO2 retention",
+  "Acute HF + AF with RVR",
+  "Pneumonia + Delirium",
+  "UTI + Delirium",
+  "ACS + Acute HF",
+  "Hip fracture + Delirium",
+  "Pleural effusion + Acute HF",
+  "DKA + AKI",
+  "Stroke + Aspiration pneumonia",
+  "HHS + Pneumonia",
+];
+
 const QUICK_DX = ["Pneumonia", "UTI", "ACS", "Delirium", "AKI", "HF", "Sepsis", "Stroke", "COPD", "AF with RVR", "GI bleed", "Hip fracture"];
 
 const COMMON_ADMISSION_MEDS = [
@@ -268,6 +295,22 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
   const [meds, setMeds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [parsed, setParsed] = useState(false);
+
+  // ── Diagnosis picker state ──
+  const [dxSearch, setDxSearch] = useState("");
+  const [activeDxCat, setActiveDxCat] = useState(0);
+  const [showDxPicker, setShowDxPicker] = useState(false);
+
+  // Toggle a single diagnosis item in/out of the diagnosis string
+  const toggleDx = (item: string) => {
+    setDiagnosis(prev => {
+      const parts = prev.split(" + ").map(s => s.trim()).filter(Boolean);
+      if (parts.includes(item)) return parts.filter(p => p !== item).join(" + ");
+      return [...parts, item].join(" + ");
+    });
+  };
+
+  const activeDxParts = diagnosis.split(" + ").map(s => s.trim()).filter(Boolean);
 
   // ── Letter extraction state ──
   const [letterFile, setLetterFile] = useState<File | null>(null);
@@ -548,37 +591,109 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
 
             <div>
               <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">אבחנה *</label>
-              <input
-                type="text"
-                list="dx-suggestions"
-                value={diagnosis}
-                onChange={(e) => setDiagnosis(e.target.value)}
-                placeholder="Pneumonia / דלקת ריאות"
-                dir="auto"
-                className={inputCls}
-              />
-              <datalist id="dx-suggestions">
-                {COMMON_DIAGNOSES.map(d => <option key={d} value={d} />)}
-              </datalist>
-              <div className="flex flex-wrap gap-1 mt-1.5">
-                {QUICK_DX.map(d => (
-                  <button
-                    key={d}
-                    type="button"
-                    onClick={() => {
-                      const parts = diagnosis.split(/[,+\s]+/).map(s => s.trim()).filter(Boolean);
-                      if (parts.includes(d)) {
-                        setDiagnosis(parts.filter(p => p !== d).join(" + "));
-                      } else {
-                        setDiagnosis(diagnosis.trim() ? diagnosis.trim() + " + " + d : d);
-                      }
-                    }}
-                    className={"text-[10px] px-2 py-0.5 rounded-full border transition-colors " + (diagnosis.split(/[,+\s]+/).map(s=>s.trim()).includes(d) ? "bg-blue-600 text-white border-blue-600" : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600")}
-                  >
+
+              {/* Active diagnoses display + free-text input */}
+              <div
+                className={`${inputCls} min-h-[40px] flex flex-wrap gap-1 items-center cursor-text`}
+                onClick={() => setShowDxPicker(true)}
+              >
+                {activeDxParts.map(d => (
+                  <span key={d} className="inline-flex items-center gap-1 bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full">
                     {d}
-                  </button>
+                    <button
+                      type="button"
+                      onClick={e => { e.stopPropagation(); toggleDx(d); }}
+                      className="opacity-70 hover:opacity-100 font-bold leading-none"
+                    >×</button>
+                  </span>
                 ))}
+                <input
+                  type="text"
+                  value={dxSearch}
+                  onChange={e => { setDxSearch(e.target.value); setShowDxPicker(true); }}
+                  onFocus={() => setShowDxPicker(true)}
+                  placeholder={activeDxParts.length === 0 ? "חפש אבחנה..." : "+ הוסף..."}
+                  className="flex-1 min-w-[80px] bg-transparent outline-none text-sm placeholder:text-gray-400"
+                  dir="auto"
+                />
               </div>
+
+              {/* Combos row */}
+              <div className="mt-1.5">
+                <p className="text-[10px] text-gray-400 mb-1">קומבינציות נפוצות:</p>
+                <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide">
+                  {DX_COMBOS.map(combo => (
+                    <button
+                      key={combo}
+                      type="button"
+                      onClick={() => { setDiagnosis(combo); setDxSearch(""); setShowDxPicker(false); }}
+                      className={"text-[10px] px-2 py-1 rounded-lg border whitespace-nowrap transition-colors flex-shrink-0 " +
+                        (diagnosis === combo
+                          ? "bg-purple-600 text-white border-purple-600"
+                          : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 active:bg-purple-100")}
+                    >
+                      {combo}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Picker panel */}
+              {showDxPicker && (
+                <div className="mt-1 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 shadow-lg overflow-hidden">
+                  {/* Category tabs */}
+                  <div className="flex gap-0.5 overflow-x-auto p-1.5 border-b border-gray-100 dark:border-gray-700 scrollbar-hide">
+                    {DX_CATEGORIES.map((cat, i) => (
+                      <button
+                        key={cat.label}
+                        type="button"
+                        onClick={() => { setActiveDxCat(i); setDxSearch(""); }}
+                        className={"text-[10px] px-2 py-1 rounded-lg whitespace-nowrap transition-colors flex-shrink-0 " +
+                          (activeDxCat === i
+                            ? "bg-blue-600 text-white"
+                            : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700")}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Items */}
+                  <div className="flex flex-wrap gap-1 p-2 max-h-32 overflow-y-auto">
+                    {(dxSearch.trim()
+                      ? DX_CATEGORIES.flatMap(c => c.items).filter(item =>
+                          item.toLowerCase().includes(dxSearch.toLowerCase())
+                        )
+                      : DX_CATEGORIES[activeDxCat].items
+                    ).map(item => (
+                      <button
+                        key={item}
+                        type="button"
+                        onClick={() => { toggleDx(item); setDxSearch(""); }}
+                        className={"text-xs px-2 py-1 rounded-full border transition-colors " +
+                          (activeDxParts.includes(item)
+                            ? "bg-blue-600 text-white border-blue-600"
+                            : "bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 active:bg-blue-50")}
+                      >
+                        {activeDxParts.includes(item) ? "✓ " : ""}{item}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex justify-between items-center px-2 py-1.5 border-t border-gray-100 dark:border-gray-700">
+                    <span className="text-[10px] text-gray-400">
+                      {activeDxParts.length > 0 ? activeDxParts.join(" + ") : "לא נבחרה אבחנה"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowDxPicker(false)}
+                      className="text-xs text-blue-600 font-semibold px-2 py-0.5"
+                    >
+                      סגור ✓
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>
