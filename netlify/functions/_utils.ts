@@ -5,7 +5,7 @@
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-export const MAX_BODY_BYTES = 50_000;
+export const MAX_BODY_BYTES = 5_000_000; // 5MB — supports base64-encoded admission letter files
 export const UPSTREAM_TIMEOUT_MS = 9_000;
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -43,20 +43,60 @@ export function checkBodySize(req: Request): Response | null {
   return null;
 }
 
+// Content block types forwarded to Claude upstream
+type TextBlock = { type: "text"; text: string };
+type ImageBlock = { type: "image"; source: { type: "base64"; media_type: string; data: string } };
+type DocumentBlock = { type: "document"; source: { type: "base64"; media_type: string; data: string } };
+type ContentBlock = TextBlock | ImageBlock | DocumentBlock;
+type ClaudeMessage = { role: "user" | "assistant"; content: string | ContentBlock[] };
+
 /**
  * Validates that each message in an array has the expected shape.
+ * Supports both plain string content and rich content block arrays
+ * (text, image, document) for file-based requests (admission letters etc).
  * Strips unknown keys — never forward raw caller input to upstream APIs.
  */
 export function validateMessages(
   messages: unknown[]
-): { role: "user" | "assistant"; content: string }[] | null {
-  const valid: { role: "user" | "assistant"; content: string }[] = [];
+): ClaudeMessage[] | null {
+  const valid: ClaudeMessage[] = [];
   for (const m of messages) {
     if (typeof m !== "object" || m === null) return null;
     const { role, content } = m as Record<string, unknown>;
     if (role !== "user" && role !== "assistant") return null;
-    if (typeof content !== "string") return null;
-    valid.push({ role, content });
+
+    if (typeof content === "string") {
+      valid.push({ role, content });
+    } else if (Array.isArray(content)) {
+      // Validate each content block
+      const blocks: ContentBlock[] = [];
+      for (const block of content) {
+        if (typeof block !== "object" || block === null) return null;
+        const b = block as Record<string, unknown>;
+        if (b.type === "text") {
+          if (typeof b.text !== "string") return null;
+          blocks.push({ type: "text", text: b.text });
+        } else if (b.type === "image") {
+          const src = b.source as Record<string, unknown>;
+          if (!src || src.type !== "base64") return null;
+          if (typeof src.media_type !== "string" || typeof src.data !== "string") return null;
+          const allowed = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+          if (!allowed.includes(src.media_type)) return null;
+          blocks.push({ type: "image", source: { type: "base64", media_type: src.media_type, data: src.data } });
+        } else if (b.type === "document") {
+          const src = b.source as Record<string, unknown>;
+          if (!src || src.type !== "base64") return null;
+          if (typeof src.media_type !== "string" || typeof src.data !== "string") return null;
+          if (src.media_type !== "application/pdf") return null;
+          blocks.push({ type: "document", source: { type: "base64", media_type: src.media_type, data: src.data } });
+        } else {
+          return null; // unknown block type — reject
+        }
+      }
+      valid.push({ role, content: blocks });
+    } else {
+      return null;
+    }
   }
   return valid;
 }

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import type { PatientEntry, PatientSection } from "../types";
 import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
 import { generateId } from "../utils/id";
@@ -123,6 +123,134 @@ const COMMON_ADMISSION_MEDS = [
   "Benzodiazepines", "Antipsychotics",
 ];
 
+// ── File → base64 helper ──
+async function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      // Strip data URL prefix: "data:...;base64,"
+      resolve(result.split(",")[1]);
+    };
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.readAsDataURL(file);
+  });
+}
+
+// ── DOCX text extractor (no dependency — reads raw XML from zip) ──
+async function extractDocxText(file: File): Promise<string> {
+  // DOCX is a zip; we unzip in browser using JSZip loaded from CDN
+  try {
+    const url = "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js";
+    if (!("JSZip" in window)) {
+      await new Promise<void>((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = url;
+        s.onload = () => resolve();
+        s.onerror = () => reject(new Error("JSZip load failed"));
+        document.head.appendChild(s);
+      });
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const JSZip = (window as any).JSZip as { loadAsync: (data: ArrayBuffer) => Promise<{ files: Record<string, { async: (type: string) => Promise<string> }> }> };
+    const ab = await file.arrayBuffer();
+    const zip = await JSZip.loadAsync(ab);
+    const xml = await zip.files["word/document.xml"].async("string");
+    return xml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 15000);
+  } catch {
+    throw new Error("לא ניתן לקרוא קובץ DOCX. נסה להמיר ל-PDF.");
+  }
+}
+
+// ── Structured extraction prompt ──
+const EXTRACTION_SYSTEM = `You are a clinical data extraction assistant for a geriatric ward in Israel.
+Extract structured information from this hospital admission letter and return ONLY valid JSON, no other text.
+The JSON must have this exact shape:
+{
+  "name": "patient full name in Hebrew or as written",
+  "age": number or null,
+  "diagnosis": "primary + secondary diagnoses, comma separated, concise",
+  "room": "room number as string e.g. 49 or null",
+  "bed": number or null,
+  "status": "" | "DNR" | "DNI" | "DNR/DNI",
+  "meds": ["list of relevant chronic/home medications, max 8"],
+  "morningPresentation": "Concise morning handover in English suitable for ward rounds. Format: [Name, Age] admitted [date if known] with [chief complaint]. PMH: [key comorbidities]. Presenting: [vitals/exam findings if available]. Workup: [key labs/imaging]. Assessment: [working diagnosis]. Plan: [key management steps]. Pending: [outstanding issues for morning team].",
+  "remarks": "Any other clinically relevant info not captured above (e.g. social, functional status, allergies)"
+}`;
+
+interface ExtractedData {
+  name?: string;
+  age?: number | null;
+  diagnosis?: string;
+  room?: string | null;
+  bed?: number | null;
+  status?: "" | "DNR" | "DNI" | "DNR/DNI";
+  meds?: string[];
+  morningPresentation?: string;
+  remarks?: string;
+}
+
+async function extractFromLetter(
+  file: File,
+): Promise<ExtractedData> {
+  const fileType = file.type;
+  const isImage = fileType.startsWith("image/");
+  const isPdf = fileType === "application/pdf";
+  const isDocx = fileType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    || file.name.endsWith(".docx");
+
+  let messageContent: unknown;
+
+  if (isImage) {
+    const data = await fileToBase64(file);
+    messageContent = [
+      { type: "image", source: { type: "base64", media_type: fileType, data } },
+      { type: "text", text: "Extract the clinical information from this admission letter." },
+    ];
+  } else if (isPdf) {
+    const data = await fileToBase64(file);
+    messageContent = [
+      { type: "document", source: { type: "base64", media_type: "application/pdf", data } },
+      { type: "text", text: "Extract the clinical information from this admission letter." },
+    ];
+  } else if (isDocx) {
+    const text = await extractDocxText(file);
+    messageContent = `Extract the clinical information from this admission letter text:\n\n${text}`;
+  } else {
+    throw new Error("פורמט לא נתמך. יש להשתמש ב-PDF, תמונה (JPG/PNG) או DOCX.");
+  }
+
+  const endpoint = "/api/claude";
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  const secret = localStorage.getItem("toranot-api-secret") ?? "";
+  if (secret) headers["x-api-secret"] = secret;
+
+  const body = { model: "claude-sonnet-4-6", max_tokens: 1500, system: EXTRACTION_SYSTEM, messages: [{ role: "user", content: messageContent }] };
+
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const err = await res.text().catch(() => "");
+    throw new Error(`API error ${res.status}: ${err.slice(0, 100)}`);
+  }
+
+  const data = await res.json();
+  const text = (data?.content?.[0]?.text ?? "").trim();
+  
+  // Strip markdown code fences if present
+  const cleaned = text.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/\s*```$/i, "").trim();
+  
+  try {
+    return JSON.parse(cleaned) as ExtractedData;
+  } catch {
+    throw new Error("לא ניתן לנתח את התשובה. נסה שוב.");
+  }
+}
+
 export function AddAdmissionModal({ onClose, onSuccess }: Props) {
   const { patients } = usePatientsState();
   const dispatch = usePatientsDispatch();
@@ -141,6 +269,13 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [parsed, setParsed] = useState(false);
 
+  // ── Letter extraction state ──
+  const [letterFile, setLetterFile] = useState<File | null>(null);
+  const [extracting, setExtracting] = useState(false);
+  const [morningPresentation, setMorningPresentation] = useState("");
+  const [showMorning, setShowMorning] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const handleFreestyleParse = useCallback(() => {
     if (!freestyle.trim()) return;
     const p = parseFreestyle(freestyle);
@@ -153,6 +288,41 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
     setParsed(true);
     setShowStructured(true);
   }, [freestyle]);
+
+  // ── Letter upload handler ──
+  const handleLetterExtract = useCallback(async () => {
+    if (!letterFile) return;
+    setExtracting(true);
+    setError(null);
+    try {
+      const extracted = await extractFromLetter(letterFile);
+      
+      // Auto-fill fields from extraction
+      if (extracted.name) setName(extracted.name);
+      if (extracted.age) setAge(String(extracted.age));
+      if (extracted.diagnosis) setDiagnosis(extracted.diagnosis);
+      if (extracted.room) setRoom(extracted.room);
+      if (extracted.bed) setBed(extracted.bed as 1 | 2 | 3);
+      if (extracted.status) setStatus(extracted.status);
+      if (extracted.meds && extracted.meds.length > 0) {
+        setMeds(prev => Array.from(new Set([...prev, ...extracted.meds!])));
+      }
+      if (extracted.remarks) {
+        setRemarks(prev => prev ? `${prev}\n${extracted.remarks}` : extracted.remarks!);
+      }
+      if (extracted.morningPresentation) {
+        setMorningPresentation(extracted.morningPresentation);
+        setShowMorning(true);
+      }
+      
+      setShowStructured(true);
+      setParsed(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "שגיאה בניתוח המכתב");
+    } finally {
+      setExtracting(false);
+    }
+  }, [letterFile]);
 
   function validate(): string | null {
     if (!side) return "יש לבחור צד";
@@ -209,6 +379,8 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
       scannedAt: new Date().toISOString(),
       confidence: 1,
       order: Date.now(),
+      // Morning presentation stored as handoverNote — shows in handoff sheet
+      ...(morningPresentation.trim() ? { handoverNote: `📋 Morning: ${morningPresentation.trim()}` } : {}),
     } as PatientEntry;
 
     dispatch({ type: "NEW_ADMISSION", patient });
@@ -220,7 +392,9 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white dark:bg-gray-900 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[90vh] overflow-y-auto p-5 space-y-4 shadow-xl">
+      <div
+        className="bg-white dark:bg-gray-900 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[90vh] overflow-y-auto p-5 space-y-4 shadow-xl"
+      >
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">קבלה חדשה</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-xl px-1">×</button>
@@ -229,6 +403,74 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
         {error && (
           <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">{error}</div>
         )}
+
+        {/* ── Letter upload section ── */}
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/40 rounded-xl p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">📄 מכתב קבלה</span>
+            <span className="text-xs text-blue-500 dark:text-blue-400">PDF · תמונה · DOCX</span>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex-1 px-3 py-2 text-xs border-2 border-dashed border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors truncate"
+            >
+              {letterFile ? `✓ ${letterFile.name}` : "📎 בחר קובץ..."}
+            </button>
+            <button
+              type="button"
+              onClick={handleLetterExtract}
+              disabled={!letterFile || extracting}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold disabled:opacity-40 active:bg-blue-700 whitespace-nowrap"
+            >
+              {extracting ? "⏳ מנתח..." : "נתח 🤖"}
+            </button>
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            className="hidden"
+            onChange={e => {
+              const f = e.target.files?.[0];
+              if (f) { setLetterFile(f); setError(null); }
+            }}
+          />
+
+          {/* Morning presentation preview */}
+          {morningPresentation && (
+            <div className="mt-1">
+              <button
+                type="button"
+                onClick={() => setShowMorning(v => !v)}
+                className="text-xs font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1"
+              >
+                🌅 הצגת בוקר {showMorning ? "▲" : "▼"}
+              </button>
+              {showMorning && (
+                <div className="mt-1.5 relative">
+                  <textarea
+                    value={morningPresentation}
+                    onChange={e => setMorningPresentation(e.target.value)}
+                    rows={6}
+                    dir="ltr"
+                    className="w-full px-2 py-1.5 text-xs border border-blue-200 dark:border-blue-700 rounded-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 resize-none font-mono leading-relaxed"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { navigator.clipboard.writeText(morningPresentation).catch(() => {}); }}
+                    className="absolute top-1.5 left-1.5 text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded opacity-70 hover:opacity-100"
+                  >
+                    העתק
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* ── Freestyle input ── */}
         <div>
