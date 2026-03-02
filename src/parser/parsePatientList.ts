@@ -376,7 +376,11 @@ export function parsePatientList(text: string): PatientEntry[] {
         });
       }
       pendingOrphans.length = 0;
-
+      // Re-run rules AFTER flushing orphans so rule engine sees them
+      // (orphans were added after initial applyRules in parsePatientLine)
+      if (patient.tasks.length > 0) {
+        patient.generatedTasks = applyRules(patient);
+      }
       patient.order = patients.length;
       patients.push(patient);
     } else {

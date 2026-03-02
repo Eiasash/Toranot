@@ -83,7 +83,7 @@ function buildTextHandoff(patients: PatientEntry[], filteredPatients: PatientEnt
   const now = new Date();
   const dateStr = now.toLocaleDateString("he-IL");
   const timeStr = now.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
-  const newAdmissions = patients.filter(p => p.scannedAt && isOnCallTime(new Date(p.scannedAt)) && new Date(p.scannedAt) >= shiftStart);
+  const newAdmissions = filteredPatients.filter(p => p.scannedAt && isOnCallTime(new Date(p.scannedAt)) && new Date(p.scannedAt) >= shiftStart);
   const lines: string[] = [
     `📋 ${oncallOnly ? "מסירת תורן" : "סיכום משמרת"} — ${dateStr} ${timeStr}`,
     `${"─".repeat(35)}`,
@@ -288,8 +288,8 @@ function PatientCard({ p, isNew }: { p: PatientEntry; isNew: boolean }) {
 }
 
 function SectionBlock({ label, patients, newIds }: { label: string; patients: PatientEntry[]; newIds: Set<string> }) {
-  const pendingCount = patients.flatMap(p => [...p.tasks, ...p.generatedTasks]).filter(t => !t.done).length;
-  const statCount = patients.flatMap(p => [...p.tasks, ...p.generatedTasks]).filter(t => !t.done && t.urgency === "stat").length;
+  const pendingCount = patients.flatMap(p => [...p.tasks, ...p.generatedTasks.filter(t => !(t as any).dismissed)]).filter(t => !t.done).length;
+  const statCount = patients.flatMap(p => [...p.tasks, ...p.generatedTasks.filter(t => !(t as any).dismissed)]).filter(t => !t.done && t.urgency === "stat").length;
 
   return (
     <div className="mb-5">
