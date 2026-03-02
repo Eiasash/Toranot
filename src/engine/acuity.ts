@@ -29,7 +29,7 @@ export interface AcuityBreakdown {
 }
 
 export function calculateAcuity(patient: PatientEntry): AcuityBreakdown {
-  const allTasks = [...patient.tasks, ...patient.generatedTasks];
+  const allTasks = [...patient.tasks, ...patient.generatedTasks.filter(t => !(t as any).dismissed)];
   const openTasks = allTasks.filter((t) => !t.done);
 
   const statCount = openTasks.filter((t) => t.urgency === "stat").length;
@@ -61,7 +61,7 @@ export function calculateAcuity(patient: PatientEntry): AcuityBreakdown {
   ).length;
 
   // Active scenarios (status lines that triggered generated tasks)
-  const activeScenarios = patient.generatedTasks.filter((t) => !t.done).length;
+  const activeScenarios = patient.generatedTasks.filter((t) => !t.done && !(t as any).dismissed).length;
 
   const components = [
     { label: "סטט פתוחים", count: statCount, weight: 5, subtotal: statCount * 5 },

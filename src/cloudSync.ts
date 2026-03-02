@@ -78,7 +78,19 @@ async function getUserId(): Promise<string | null> {
 }
 
 function stableJson(x: unknown): string {
-  return JSON.stringify(x);
+  // Sort keys recursively so object field order doesn't cause false change detection.
+  // Without sorting, two identical states with different key insertion order
+  // produce different JSON strings → unnecessary cloud pushes every render.
+  function sortedReplacer(key: string, val: unknown): unknown {
+    if (val && typeof val === "object" && !Array.isArray(val)) {
+      return Object.keys(val as object).sort().reduce((acc: Record<string, unknown>, k) => {
+        acc[k] = (val as Record<string, unknown>)[k];
+        return acc;
+      }, {});
+    }
+    return val;
+  }
+  return JSON.stringify(x, sortedReplacer);
 }
 
 async function pullCloud(): Promise<{

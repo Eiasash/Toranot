@@ -187,7 +187,7 @@ export function GlobalSearch({ onClose }: { onClose: () => void }) {
                 מטופלים
               </div>
               {patientResults.map(p => {
-                const acuityScore = [...p.tasks, ...p.generatedTasks].reduce((s, t) => {
+                const acuityScore = [...p.tasks, ...p.generatedTasks.filter(t => !(t as any).dismissed)].reduce((s, t) => {
                   if (t.done) return s;
                   return s + (t.urgency === "stat" ? 3 : t.urgency === "urgent" ? 2 : 0);
                 }, 0);

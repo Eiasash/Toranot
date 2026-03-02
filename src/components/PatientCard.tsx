@@ -242,7 +242,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
   const [editSection, setEditSection] = useState(patient.section);
   const [editDiagnosis, setEditDiagnosis] = useState(patient.diagnosis ?? "");
   const [showMovePopover, setShowMovePopover] = useState(false);
-  const [discharged, setDischarged] = useState(!!(patient.discharged));
+  const discharged = !!(patient.discharged); // derive directly - avoids stale state on cloud sync
   const [moveRoom, setMoveRoom] = useState(patient.room ?? "");
   const [moveSection, setMoveSection] = useState(patient.section);
 
@@ -398,7 +398,6 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
                 <button
                   onClick={() => {
                     dispatch({ type: "EDIT_PATIENT", patientId: patient.id, discharged: !discharged });
-                    setDischarged(!discharged);
                     setEditing(false);
                   }}
                   className={`text-xs px-3 py-1 rounded-lg mr-auto ${discharged ? "bg-green-600" : "bg-orange-500"} text-white`}
@@ -407,9 +406,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
                 </button>
                 <button
                   onClick={() => {
-                    if (confirm(`למחוק את ${patient.name ?? "מטופל"}?`)) {
-                      dispatch({ type: "REMOVE_PATIENT", patientId: patient.id });
-                    }
+                    dispatch({ type: "REMOVE_PATIENT", patientId: patient.id });
                   }}
                   className="text-xs px-2 py-1 rounded-lg bg-red-600 text-white"
                 >
