@@ -200,14 +200,19 @@ describe("mergeScan", () => {
     expect((mergedTask as any).note).toBe("BS 250ml");
   });
 
-  it("updates scannedAt timestamp on rescan", () => {
+  it("preserves original scannedAt across rescans (so isNewThisShift doesn't reset)", () => {
+    const originalTime = "2026-01-01T10:00:00.000Z";
     const first = parsePatientList(SCAN_TEXT);
+    first[0].scannedAt = originalTime;
 
     const second = parsePatientList(SCAN_TEXT);
+    second[0].scannedAt = new Date(Date.now() + 60000).toISOString(); // later timestamp
+
     const merged = mergeScan(first, second);
 
-    // The merged patient should have the new scannedAt
-    expect(merged[0].scannedAt).toBe(second[0].scannedAt);
+    // mergeScan intentionally preserves oldP.scannedAt so re-imports
+    // don't reset the "new this shift" detection for existing patients.
+    expect(merged[0].scannedAt).toBe(originalTime);
   });
 
   // ─── Order preservation tests ───
