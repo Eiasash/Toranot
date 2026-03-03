@@ -3,6 +3,14 @@ import { type PatientSection, detectSectionFromHeader, detectSectionFromRoom } f
 import { generateId } from "../utils/id";
 import { applyRules } from "../engine/rules";
 
+/** Strip Unicode BiDi control characters that invisibly break Hebrew regex matching.
+ *  RTL markers (U+200F, U+200E), embedding chars (U+202A–U+202E), and isolates
+ *  (U+2066–U+2069) are commonly injected by WhatsApp and iOS clipboard.
+ */
+function stripBidi(text: string): string {
+  return text.replace(/[‎‏‪-‮⁦-⁩﻿]/g, "");
+}
+
 /**
  * Parse a pasted Hebrew patient list into PatientEntry objects.
  *
@@ -335,6 +343,7 @@ function parsePatientLine(
 }
 
 export function parsePatientList(text: string): PatientEntry[] {
+  text = stripBidi(text);
   const lines = text.split("\n");
   const patients: PatientEntry[] = [];
   let currentSection: PatientSection = "SIDE_A";
