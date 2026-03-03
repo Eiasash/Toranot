@@ -65,6 +65,16 @@ const DRUG_PATTERNS: Record<string, RegExp> = {
   fluconazole: /fluconazole|פלוקונזול|diflucan/i,
   carbamazepine: /carbamazepine|קרבמזפין|tegretol|טגרטול/i,
   phenytoin: /phenytoin|פניטואין|dilantin/i,
+  furosemide: /furosemide|פורוסמיד|lasix|לאסיקס|torsemide|torasemide/i,
+  // Anticholinergic burden — Beers Criteria 2023 high-risk drugs
+  anticholinergic_oxybutynin: /oxybutynin|אוקסיבוטינין|ditropan/i,
+  anticholinergic_tolterodine: /tolterodine|טולטרודין|detrol/i,
+  anticholinergic_solifenacin: /solifenacin|סוליפנצין|vesicare/i,
+  anticholinergic_amitriptyline: /amitriptyline|אמיטריפטילין|elatrol/i,
+  anticholinergic_hydroxyzine: /hydroxyzine|הידרוקסיזין|atarax/i,
+  anticholinergic_diphenhydramine: /diphenhydramine|diphenhydr|benadryl|nytol/i,
+  anticholinergic_meclizine: /meclizine|meclizin/i,
+  anticholinergic_chlorphenamine: /chlorphenamine|chlorphenir|piriton/i,
 };
 
 const INTERACTIONS: DrugInteraction[] = [
@@ -106,12 +116,20 @@ const INTERACTIONS: DrugInteraction[] = [
 
   // ── Nephrotoxicity ──
   { drugA: "gentamicin", drugB: "vancomycin", severity: "major", risk: "נפרוטוקסיות", detail: "שני ABx נפרוטוקסיים. עקוב Cr יומי, שקול חלופה" },
-  { drugA: "nsaid", drugB: "acei", severity: "major", risk: "AKI", detail: "NSAID + ACEi = סיכון AKI. Triple whammy עם diuretic" },
+  { drugA: "nsaid", drugB: "acei", severity: "critical", risk: "Triple Whammy → AKI חריף", detail: "NSAID + ACEi/ARB = הפחתת זרימת דם כלייתית. עם משתן = Triple Whammy — AKI חריף בקשישים. הפסק NSAID" },
+  { drugA: "nsaid", drugB: "arb", severity: "critical", risk: "Triple Whammy → AKI חריף", detail: "NSAID + ARB + משתן = Triple Whammy — AKI חריף. הפסק NSAID מיידית" },
+  { drugA: "nsaid", drugB: "furosemide", severity: "critical", risk: "Triple Whammy → AKI", detail: "NSAID מנטרל ואזודילטציה כלייתית של Prostaglandins → AKI עם Furosemide" },
   { drugA: "nsaid", drugB: "metformin", severity: "major", risk: "AKI + לקטיק אצידוזיס", detail: "NSAID → AKI → הצטברות Metformin → לקטיק אצידוזיס" },
 
   // ── Digoxin ──
   { drugA: "digoxin", drugB: "amiodarone", severity: "critical", risk: "טוקסיות דיגוקסין", detail: "Amiodarone מעלה רמת Digoxin x2. הפחת Digoxin 50%!" },
 
+  // ── Anticholinergic combinations (Beers 2023) ──
+  { drugA: "anticholinergic_oxybutynin", drugB: "anticholinergic_amitriptyline", severity: "critical", risk: "נטל אנטיכולינרגי גבוה → דליריום", detail: "Oxybutynin + Amitriptyline = נטל אנטיכולינרגי ≥4. סיכון דליריום, בלבול, אצירת שתן. בקשישים — הפסק לפחות אחד" },
+  { drugA: "anticholinergic_oxybutynin", drugB: "anticholinergic_hydroxyzine", severity: "major", risk: "נטל אנטיכולינרגי", detail: "שני תרופות אנטיכולינרגיות — סיכון דליריום ונפילה בקשישים. שקול חלופה" },
+  { drugA: "anticholinergic_tolterodine", drugB: "anticholinergic_amitriptyline", severity: "critical", risk: "נטל אנטיכולינרגי גבוה → דליריום", detail: "Tolterodine + Amitriptyline = נטל אנטיכולינרגי גבוה. Beers 2023: הימנע בגיל > 65" },
+  { drugA: "anticholinergic_diphenhydramine", drugB: "benzodiazepine", severity: "critical", risk: "דיכוי CNS + נטל אנטיכולינרגי", detail: "Diphenhydramine (אנטיהיסטמין) + Benzo = סיכון נפילות, דליריום, דיכוי נשימתי. אסור בגיל > 65" },
+  // ── Triple Whammy already covered in nephrotoxicity above ──
   // ── Seizure threshold ──
   { drugA: "carbamazepine", drugB: "warfarin", severity: "major", risk: "INR ↓↓", detail: "CBZ inducer CYP → מוריד INR. צריך מינון Warfarin גבוה יותר" },
 ];
