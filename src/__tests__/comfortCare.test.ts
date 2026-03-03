@@ -215,14 +215,27 @@ describe("COMFORT_SUPPRESSED_GROUPS — extended group list regression", () => {
     expect(applyRules(pc("דליריום אגיטציה")).find(t => t.generatedFrom === "דליריום")).toBeDefined();
   });
 
-  it("does NOT suppress midazolam monitoring (comfort sedation)", () => {
+  it("suppresses midazolam Q2H vital monitoring for comfort patients", () => {
+    // Q2H RR/SpO2 checks on a dying patient contradict comfort goals
     const p = makePatient({ flags: ["טיפול מנחם"], status: ["midazolam drip"] });
-    expect(applyRules(p).find(t => t.generatedFrom === "דורמיקום IV")).toBeDefined();
+    expect(applyRules(p).find(t => t.generatedFrom === "דורמיקום IV")).toBeUndefined();
   });
 
-  it("does NOT suppress opioid monitoring (pain management)", () => {
+  it("suppresses opioid Q2H vital monitoring for comfort patients", () => {
+    // Suppressed: quantitative monitoring contradicts palliative comfort goals
     const p = makePatient({ flags: ["טיפול מנחם"], status: ["morphine drip running"] });
-    expect(applyRules(p).find(t => t.generatedFrom === "אופיואידים IV")).toBeDefined();
+    expect(applyRules(p).find(t => t.generatedFrom === "אופיואידים IV")).toBeUndefined();
+  });
+
+  it("generates qualitative comfort symptom check for palliative patients on sedation", () => {
+    const p = makePatient({ flags: ["טיפול מנחם"], status: ["morphine drip running"] });
+    const check = applyRules(p).find(t => t.generatedFrom === "בדיקת סימפטומים — טיפול מנחם");
+    expect(check).toBeDefined();
+  });
+
+  it("does NOT generate comfort symptom check for non-palliative patients", () => {
+    const p = makePatient({ flags: [], status: ["morphine drip running"] });
+    expect(applyRules(p).find(t => t.generatedFrom === "בדיקת סימפטומים — טיפול מנחם")).toBeUndefined();
   });
 });
 
