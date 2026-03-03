@@ -28,7 +28,7 @@ export function MorningReport({ onClose }: { onClose: () => void }) {
 
   const openUrgent = useMemo(() =>
     patients.flatMap(p =>
-      [...p.tasks, ...p.generatedTasks.filter(t => !(t as any).dismissed)]
+      [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)]
         .filter(t => !t.done && (t.urgency === "stat" || t.urgency === "urgent"))
         .map(t => ({ task: t, patient: p }))
     ).sort((a, b) => (a.task.urgency === "stat" ? -1 : 1) - (b.task.urgency === "stat" ? -1 : 1)),
