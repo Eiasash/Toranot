@@ -945,7 +945,7 @@ export function applyRules(patient: PatientEntry): Task[] {
   // If the patient is flagged for comfort care only, suppress aggressive
   // workup and intervention tasks. DNR/DNI alone does NOT suppress —
   // only explicit comfort-care / palliative / end-of-life flags do.
-  const allFlags = [...patient.flags, ...patient.status, ...(patient.notes ?? []), patient.handoverNote ?? ""].join(" ");
+  const allFlags = [patient.diagnosis ?? "", ...patient.flags, ...patient.status, ...(patient.notes ?? []), patient.handoverNote ?? ""].join(" ");
   const isComfortCareOnly = COMFORT_CARE_PATTERN.test(allFlags) || COMFORT_SEDATION_PATTERN.test(allFlags);
 
   // Pre-build text blobs for each trigger scope
