@@ -532,7 +532,7 @@ function AppInner() {
       <SectionTabs />
 
       <main className="flex-1 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 lg:bg-white dark:lg:bg-gray-900">
-        <div className="w-full lg:max-w-6xl lg:mx-auto">
+        <div id={`panel-${activeSection}`} role="tabpanel" aria-label={SECTION_LABEL[activeSection] ?? activeSection} className="w-full lg:max-w-6xl lg:mx-auto">
           <PatientList />
         </div>
       </main>
