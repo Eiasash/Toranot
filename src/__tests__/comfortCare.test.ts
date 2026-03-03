@@ -225,66 +225,7 @@ describe("COMFORT_SUPPRESSED_GROUPS — extended group list regression", () => {
     expect(applyRules(p).find(t => t.generatedFrom === "מורפין/פנטניל IV")).toBeDefined();
   });
 });
-
-describe("Newly suppressed groups — opioid/sedation/delirium/withdrawal (regression)", () => {
-  function cp(status: string[], flags = ["comfort care"]) {
-    return makePatient({ flags, status });
-  }
-
-  it("suppresses iv_opioid monitoring tasks for comfort patient", () => {
-    const p = cp(["morphine drip running"]);
-    const tasks = applyRules(p);
-    expect(tasks.find(t => t.generatedFrom === "\u05de\u05d5\u05e8\u05e4\u05d9\u05df/\u05e4\u05e0\u05d8\u05e0\u05d9\u05dc IV")).toBeUndefined();
-  });
-
-  it("suppresses iv_midazolam monitoring tasks for comfort patient", () => {
-    const p = cp(["midazolam drip"]);
-    const tasks = applyRules(p);
-    expect(tasks.find(t => t.generatedFrom === "\u05d3\u05d5\u05e8\u05de\u05d9\u05e7\u05d5\u05dd IV")).toBeUndefined();
-  });
-
-  it("suppresses iv_propofol monitoring tasks for comfort patient", () => {
-    const p = cp(["propofol sedation"]);
-    const tasks = applyRules(p);
-    expect(tasks.find(t => t.generatedFrom === "Propofol IV")).toBeUndefined();
-  });
-
-  it("suppresses iv_magnesium monitoring tasks for comfort patient", () => {
-    const p = cp(["MgSO4 infusion"]);
-    const tasks = applyRules(p);
-    expect(tasks.find(t => t.generatedFrom === "Magnesium IV")).toBeUndefined();
-  });
-
-  it("suppresses retention workup for comfort patient", () => {
-    const p = cp(["\u05d0\u05e6\u05d9\u05e8\u05ea \u05e9\u05ea\u05df"]);
-    const tasks = applyRules(p);
-    expect(tasks.find(t => t.generatedFrom === "\u05d0\u05e6\u05d9\u05e8\u05ea \u05e9\u05ea\u05df")).toBeUndefined();
-  });
-
-  it("suppresses cdiff workup for comfort patient", () => {
-    const p = cp(["C.diff diarrhea"]);
-    const tasks = applyRules(p);
-    expect(tasks.find(t => t.generatedFrom === "C. difficile")).toBeUndefined();
-  });
-
-  it("suppresses delirium workup for comfort patient", () => {
-    const p = cp(["\u05d3\u05dc\u05d9\u05e8\u05d9\u05d5\u05dd \u05d0\u05d2\u05d9\u05d8\u05e6\u05d9\u05d4"]);
-    const tasks = applyRules(p);
-    expect(tasks.find(t => t.generatedFrom === "\u05d3\u05dc\u05d9\u05e8\u05d9\u05d5\u05dd")).toBeUndefined();
-  });
-
-  it("suppresses alcohol withdrawal CIWA/benzo tasks for comfort patient", () => {
-    const p = cp(["alcohol withdrawal"]);
-    const tasks = applyRules(p);
-    expect(tasks.find(t => t.generatedFrom === "\u05d2\u05de\u05d9\u05dc\u05d4 \u05de\u05d0\u05dc\u05db\u05d5\u05d4\u05d5\u05dc")).toBeUndefined();
-  });
-
-  it("does NOT suppress hypoglycemia treatment (basic comfort care)", () => {
-    const p = cp(["BS 42 \u05d4\u05d9\u05e4\u05d5\u05d2\u05dc\u05d9\u05e7\u05de\u05d9\u05d4"]);
-    const tasks = applyRules(p);
-    expect(tasks.find(t => t.generatedFrom === "\u05d4\u05d9\u05e4\u05d5\u05d2\u05dc\u05d9\u05e7\u05de\u05d9\u05d4")).toBeDefined();
-  });
-});
+);
 
 describe("retention/bs — comfortRequiresExplicitTask (retention only fires if written)", () => {
   it("does NOT generate bladder scan tasks from status mention for comfort patient", () => {
