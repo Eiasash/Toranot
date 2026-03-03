@@ -285,3 +285,51 @@ describe("Newly suppressed groups — opioid/sedation/delirium/withdrawal (regre
     expect(tasks.find(t => t.generatedFrom === "\u05d4\u05d9\u05e4\u05d5\u05d2\u05dc\u05d9\u05e7\u05de\u05d9\u05d4")).toBeDefined();
   });
 });
+
+describe("retention/bs — comfortRequiresExplicitTask (retention only fires if written)", () => {
+  it("does NOT generate bladder scan tasks from status mention for comfort patient", () => {
+    // 'retention' in status/flags alone should NOT fire for comfort patients
+    const p = makePatient({
+      flags: ["comfort care"],
+      status: ["אצירת שתן חשודה"],  // mentioned in status, not written as explicit task
+    });
+    const tasks = applyRules(p);
+    expect(tasks.find(t => t.generatedFrom === "עצירת שתן")).toBeUndefined();
+  });
+
+  it("DOES generate bladder scan tasks when doctor explicitly writes it for comfort patient", () => {
+    // If the on-call doctor writes 'retention' as an explicit task, the rule fires
+    const p = makePatient({
+      flags: ["comfort care"],
+      tasks: [{ text: "אצירת שתן — מטופל מתלונן, בדוק אם בכאב" }],
+    });
+    const tasks = applyRules(p);
+    expect(tasks.find(t => t.generatedFrom === "עצירת שתן")).toBeDefined();
+  });
+
+  it("does NOT generate BS tasks from status/flags mention for comfort patient", () => {
+    const p = makePatient({
+      flags: ["comfort care"],
+      status: ["Bladder Scan needed"],  // in status, not an explicit task
+    });
+    const tasks = applyRules(p);
+    expect(tasks.find(t => t.generatedFrom === "BS (Bladder Scan)")).toBeUndefined();
+  });
+
+  it("DOES generate BS tasks when doctor explicitly writes 'Bladder Scan' for comfort patient", () => {
+    const p = makePatient({
+      flags: ["comfort care"],
+      tasks: [{ text: "Bladder Scan — בדוק retention" }],
+    });
+    const tasks = applyRules(p);
+    expect(tasks.find(t => t.generatedFrom === "BS (Bladder Scan)")).toBeDefined();
+  });
+
+  it("non-comfort patient: retention still fires from status (unchanged)", () => {
+    const p = makePatient({
+      status: ["אצירת שתן"],
+    });
+    const tasks = applyRules(p);
+    expect(tasks.find(t => t.generatedFrom === "עצירת שתן")).toBeDefined();
+  });
+});
