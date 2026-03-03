@@ -119,7 +119,7 @@ export function PatientList() {
   }
 
   return (
-    <>
+    <div role="tabpanel" id={`panel-${activeSection}`} aria-label={activeSection === "ALL" ? "כל החולים" : SECTION_LABEL[activeSection]}>
       {/* Sort toggle + room chips — sticky so they stay visible while scrolling */}
       {filtered.length > 1 && (
         <div className="sticky top-0 z-10 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 space-y-1.5">
@@ -259,6 +259,6 @@ export function PatientList() {
           </tbody>
         </table>
       </div>
-    </>
+    </div>
   );
 }
