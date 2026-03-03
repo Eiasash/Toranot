@@ -1,26 +1,27 @@
-import { useState, useEffect, useCallback, Component, type ErrorInfo } from "react";
+import { useState, useEffect, useCallback, Component, type ErrorInfo, lazy, Suspense } from "react";
 import { PatientsProvider } from "./context/PatientsContext";
 import { createHandoff, pullHandoff, type ToranotCloudState } from "./cloudSync";
 import { SectionTabs } from "./components/SectionTabs";
 import { InputArea } from "./components/InputArea";
 import { PatientList } from "./components/PatientList";
-import { QuickReference } from "./components/QuickReference";
-import { IVProtocols } from "./components/IVProtocols";
-import { HandoffSheet } from "./components/HandoffSheet";
-import { TaskDashboard } from "./components/TaskDashboard";
-import { ShiftHistory } from "./components/ShiftHistory";
-import { GlobalSearch } from "./components/GlobalSearch";
+// Heavy modals — code-split so they don't block initial render
+const QuickReference  = lazy(() => import("./components/QuickReference").then(m => ({ default: m.QuickReference })));
+const IVProtocols     = lazy(() => import("./components/IVProtocols").then(m => ({ default: m.IVProtocols })));
+const HandoffSheet    = lazy(() => import("./components/HandoffSheet").then(m => ({ default: m.HandoffSheet })));
+const TaskDashboard   = lazy(() => import("./components/TaskDashboard").then(m => ({ default: m.TaskDashboard })));
+const ShiftHistory    = lazy(() => import("./components/ShiftHistory").then(m => ({ default: m.ShiftHistory })));
+const GlobalSearch    = lazy(() => import("./components/GlobalSearch").then(m => ({ default: m.GlobalSearch })));
 import { UndoToastContainer } from "./components/UndoToast";
 import { ShiftTimer } from "./components/ShiftTimer";
 import { usePatientsDispatch, usePatientsState, useCloudSync } from "./context/PatientsContext";
-import { QRSync } from "./components/QRSync";
-import { QuickCaptureSheet } from "./components/QuickCaptureSheet";
-import { MorningReport } from "./components/MorningReport";
+const QRSync            = lazy(() => import("./components/QRSync").then(m => ({ default: m.QRSync })));
+const QuickCaptureSheet = lazy(() => import("./components/QuickCaptureSheet").then(m => ({ default: m.QuickCaptureSheet })));
+const MorningReport     = lazy(() => import("./components/MorningReport").then(m => ({ default: m.MorningReport })));
 import { requestNotificationPermission, syncReminders, cancelAllReminders } from "./utils/taskReminders";
 import { formatScanDiffSummary } from "./engine/smartOCR";
 import { OverflowMenu } from "./components/OverflowMenu";
-import { ShiftHandoffModal } from "./components/ShiftHandoffModal";
-import { SharedShiftPanel } from "./components/SharedShiftPanel";
+const ShiftHandoffModal = lazy(() => import("./components/ShiftHandoffModal").then(m => ({ default: m.ShiftHandoffModal })));
+const SharedShiftPanel  = lazy(() => import("./components/SharedShiftPanel").then(m => ({ default: m.SharedShiftPanel })));
 import { SECTION_LABEL } from "./types";
 
 // ─── Scan Diff Banner ──────────────────────────────────────
@@ -541,18 +542,20 @@ function AppInner() {
       {/* ── Bottom navigation ── */}
       <BottomNav onAction={handleBottomNav} pendingStat={pendingStat} />
 
-      {/* ── Modals ── */}
-      {modal === "reference"  && <QuickReference onClose={() => setModal("none")} />}
-      {modal === "handoff"    && <HandoffSheet    onClose={() => setModal("none")} />}
-      {modal === "dashboard"  && <TaskDashboard   onClose={() => setModal("none")} />}
-      {modal === "history"    && <ShiftHistory    onClose={() => setModal("none")} />}
-      {modal === "search"     && <GlobalSearch    onClose={() => setModal("none")} />}
-      {modal === "qrsync"     && <QRSync          onClose={() => setModal("none")} />}
-      {modal === "capture"    && <QuickCaptureSheet onClose={() => setModal("none")} />}
-      {modal === "morning"    && <MorningReport   onClose={() => setModal("none")} />}
-      {modal === "ivprotocols" && <IVProtocols    onClose={() => setModal("none")} />}
-      {modal === "handoff_cloud" && <ShiftHandoffModal onClose={() => setModal("none")} />}
-      {modal === "shared_shift" && <SharedShiftPanel onClose={() => setModal("none")} />}
+      {/* ── Modals (lazy-loaded — only fetched when first opened) ── */}
+      <Suspense fallback={null}>
+        {modal === "reference"  && <QuickReference onClose={() => setModal("none")} />}
+        {modal === "handoff"    && <HandoffSheet    onClose={() => setModal("none")} />}
+        {modal === "dashboard"  && <TaskDashboard   onClose={() => setModal("none")} />}
+        {modal === "history"    && <ShiftHistory    onClose={() => setModal("none")} />}
+        {modal === "search"     && <GlobalSearch    onClose={() => setModal("none")} />}
+        {modal === "qrsync"     && <QRSync          onClose={() => setModal("none")} />}
+        {modal === "capture"    && <QuickCaptureSheet onClose={() => setModal("none")} />}
+        {modal === "morning"    && <MorningReport   onClose={() => setModal("none")} />}
+        {modal === "ivprotocols" && <IVProtocols    onClose={() => setModal("none")} />}
+        {modal === "handoff_cloud" && <ShiftHandoffModal onClose={() => setModal("none")} />}
+        {modal === "shared_shift" && <SharedShiftPanel onClose={() => setModal("none")} />}
+      </Suspense>
 
       {/* Conflict resolution overlay — highest z-index */}
       <ConflictDialog />
