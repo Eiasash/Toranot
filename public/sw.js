@@ -255,12 +255,11 @@ self.addEventListener("notificationclick", (event) => {
 // because the SW stays alive briefly after the message.
 self.addEventListener("message", (event) => {
   if (!event.data) return;
+  const { type, taskId, taskText, dueAt, title, body, tag, delay, urgency, patientId } = event.data;
 
-  if (event.data.type === "SCHEDULE_NOTIFICATION") {
-    const { title, body, tag, delay, urgency, patientId, taskId } = event.data;
-    
+  // ── Schedule a timed notification (short delays only — SW may be killed) ──
+  if (type === "SCHEDULE_NOTIFICATION") {
     if (delay && delay > 0) {
-      // Delayed notification — use setTimeout in SW context
       setTimeout(() => {
         self.registration.showNotification(title, {
           body,
@@ -269,9 +268,7 @@ self.addEventListener("message", (event) => {
           tag: tag || "toranot-" + Date.now(),
           renotify: true,
           requireInteraction: urgency === "stat",
-          vibrate: urgency === "stat"
-            ? [200, 100, 200, 100, 200]
-            : [200, 100, 200],
+          vibrate: urgency === "stat" ? [200, 100, 200, 100, 200] : [200, 100, 200],
           data: { url: "./", patientId, taskId },
           actions: [
             { action: "done", title: "✓ בוצע" },
@@ -280,7 +277,6 @@ self.addEventListener("message", (event) => {
         });
       }, delay);
     } else {
-      // Immediate notification
       event.waitUntil(
         self.registration.showNotification(title, {
           body,
@@ -289,9 +285,7 @@ self.addEventListener("message", (event) => {
           tag: tag || "toranot-" + Date.now(),
           renotify: true,
           requireInteraction: urgency === "stat",
-          vibrate: urgency === "stat"
-            ? [200, 100, 200, 100, 200]
-            : [200, 100, 200],
+          vibrate: urgency === "stat" ? [200, 100, 200, 100, 200] : [200, 100, 200],
           data: { url: "./", patientId, taskId },
           actions: [
             { action: "done", title: "✓ בוצע" },
@@ -300,54 +294,29 @@ self.addEventListener("message", (event) => {
         }),
       );
     }
+    return;
   }
 
-  if (event.data.type === "SKIP_WAITING") {
-    self.skipWaiting();
-  }
-});
-
-function addCOIHeaders(response) {
-  const newHeaders = new Headers(response.headers);
-  newHeaders.set("Cross-Origin-Opener-Policy", "same-origin");
-  newHeaders.set("Cross-Origin-Embedder-Policy", "require-corp");
-  newHeaders.set("Cross-Origin-Resource-Policy", "cross-origin");
-
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers: newHeaders,
-  });
-}
-
-// ── Task Alarm Handler ──────────────────────────────────────────────────────
-// Persistent alarms that fire even when app is backgrounded.
-// Registered via postMessage({ type: "SCHEDULE_ALARM", taskId, taskText, dueAt })
-
-const pendingAlarms = new Map(); // taskId → setTimeout id
-
-self.addEventListener("message", (event) => {
-  const { type, taskId, taskText, dueAt, title, body } = event.data ?? {};
-
+  // ── Schedule a persistent alarm (survives SW restart via Map) ──
   if (type === "SCHEDULE_ALARM" && taskId && dueAt) {
-    // Cancel existing
     if (pendingAlarms.has(taskId)) {
       clearTimeout(pendingAlarms.get(taskId));
       pendingAlarms.delete(taskId);
     }
-    const delay = new Date(dueAt).getTime() - Date.now();
-    if (delay <= 0) {
+    const alarmDelay = new Date(dueAt).getTime() - Date.now();
+    if (alarmDelay <= 0) {
       fireTaskAlarm(taskId, taskText ?? "משימה");
       return;
     }
     const tid = setTimeout(() => {
       fireTaskAlarm(taskId, taskText ?? "משימה");
       pendingAlarms.delete(taskId);
-    }, Math.min(delay, 2147483647)); // max safe setTimeout
+    }, Math.min(alarmDelay, 2147483647));
     pendingAlarms.set(taskId, tid);
     return;
   }
 
+  // ── Cancel a pending alarm ──
   if (type === "CANCEL_ALARM" && taskId) {
     if (pendingAlarms.has(taskId)) {
       clearTimeout(pendingAlarms.get(taskId));
@@ -356,7 +325,13 @@ self.addEventListener("message", (event) => {
     return;
   }
 
-  // Legacy TASK_REMINDER support
+  // ── Skip waiting to activate new SW immediately ──
+  if (type === "SKIP_WAITING") {
+    self.skipWaiting();
+    return;
+  }
+
+  // ── Legacy: direct notification from app ──
   if (type === "TASK_REMINDER" && title) {
     self.registration.showNotification(title, {
       body: body ?? "",
@@ -366,6 +341,7 @@ self.addEventListener("message", (event) => {
     });
   }
 });
+
 
 function fireTaskAlarm(taskId, taskText) {
   self.registration.showNotification("⏰ תורנות — עבר הזמן!", {
@@ -377,4 +353,5 @@ function fireTaskAlarm(taskId, taskText) {
     actions: [{ action: "dismiss", title: "ביטול" }],
   });
 }
+
 
