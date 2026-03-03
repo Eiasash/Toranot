@@ -225,7 +225,6 @@ describe("COMFORT_SUPPRESSED_GROUPS — extended group list regression", () => {
     expect(applyRules(p).find(t => t.generatedFrom === "מורפין/פנטניל IV")).toBeDefined();
   });
 });
-);
 
 describe("retention/bs — comfortRequiresExplicitTask (retention only fires if written)", () => {
   it("does NOT generate bladder scan tasks from status mention for comfort patient", () => {
