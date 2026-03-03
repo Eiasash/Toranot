@@ -155,7 +155,7 @@ describe("COMFORT_SEDATION_PATTERN — Hebrew Dormicum regression", () => {
     // Image shows: "תחת דורמיקום 10 fentanyl"
     const p = makePatient({
       status: ["תחת דורמיקום 10 fentanyl"],
-      tasks: [{ text: "COPD EXCERBATION" }],
+      tasks: [{ text: "COPD exacerbation" }],
     });
     const tasks = applyRules(p);
     expect(tasks.find(t => t.generatedFrom === "החמרת COPD")).toBeUndefined();
@@ -163,8 +163,8 @@ describe("COMFORT_SEDATION_PATTERN — Hebrew Dormicum regression", () => {
 
   it("does NOT trigger from fentanyl alone", () => {
     const p = makePatient({
-      status: ["fentanyl patch 25mcg"],
-      tasks: [{ text: "COPD EXCERBATION" }],
+      status: ["fentanyl patch 25mcg/h"],
+      tasks: [{ text: "COPD exacerbation" }],
     });
     expect(applyRules(p).find(t => t.generatedFrom === "החמרת COPD")).toBeDefined();
   });
@@ -172,7 +172,7 @@ describe("COMFORT_SEDATION_PATTERN — Hebrew Dormicum regression", () => {
   it("does NOT trigger from dormicum alone", () => {
     const p = makePatient({
       status: ["דורמיקום 2.5mg PRN"],
-      tasks: [{ text: "COPD EXCERBATION" }],
+      tasks: [{ text: "COPD exacerbation" }],
     });
     expect(applyRules(p).find(t => t.generatedFrom === "החמרת COPD")).toBeDefined();
   });
@@ -180,7 +180,7 @@ describe("COMFORT_SEDATION_PATTERN — Hebrew Dormicum regression", () => {
   it("detects English dormicum + fentanyl", () => {
     const p = makePatient({
       status: ["dormicum + fentanyl drip"],
-      tasks: [{ text: "COPD EXCERBATION" }],
+      tasks: [{ text: "COPD exacerbation" }],
     });
     expect(applyRules(p).find(t => t.generatedFrom === "החמרת COPD")).toBeUndefined();
   });
@@ -188,7 +188,7 @@ describe("COMFORT_SEDATION_PATTERN — Hebrew Dormicum regression", () => {
   it("detects midazolam + fentanyl", () => {
     const p = makePatient({
       status: ["midazolam 5 + fentanyl infusion"],
-      tasks: [{ text: "COPD EXCERBATION" }],
+      tasks: [{ text: "COPD exacerbation" }],
     });
     expect(applyRules(p).find(t => t.generatedFrom === "החמרת COPD")).toBeUndefined();
   });
@@ -222,7 +222,7 @@ describe("COMFORT_SUPPRESSED_GROUPS — extended group list regression", () => {
 
   it("does NOT suppress opioid monitoring (pain management)", () => {
     const p = makePatient({ flags: ["טיפול מנחם"], status: ["morphine drip running"] });
-    expect(applyRules(p).find(t => t.generatedFrom === "מורפין/פנטניל IV")).toBeDefined();
+    expect(applyRules(p).find(t => t.generatedFrom === "אופיואידים IV")).toBeDefined();
   });
 });
 
