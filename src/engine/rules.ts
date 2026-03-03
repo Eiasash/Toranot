@@ -30,62 +30,58 @@ interface Rule {
 // Only explicit comfort/palliative flags trigger suppression.
 const COMFORT_CARE_PATTERN = /comfort\s*care|palliative|פליאטיב|טיפול תומך בלבד|טיפול מנחם|EOL|end.of.life|הנוחות בלבד|טיפולי נוחות/i;
 // High-dose combined sedation (fentanyl + dormicum/midazolam) strongly implies end-of-life comfort sedation
-// Hebrew "דורמיקום" is the common OCR output for Dormicum — must be listed explicitly
 const COMFORT_SEDATION_PATTERN = /(?=.*(?:fentanyl|פנטניל))(?=.*(?:dormicum|דורמיקום|midazolam|מידזולם|מידאזולם))/i;
 
 // Rule groups that are suppressed for comfort-care-only patients.
 // These represent aggressive workup/intervention that conflicts with comfort goals.
 const COMFORT_SUPPRESSED_GROUPS = new Set([
-  // ── Infectious / resuscitation workup ──
+  // ── Infectious / inflammatory workup ──
   "sepsis",       // blood cultures, lactate, aggressive abx
-  "fever",        // blood cultures, aggressive infection workup
-  "pneumonia",    // blood cultures, ABx initiation, CURB-65
-  "uti",          // urine culture initiation (can be done by team if needed)
-
-  // ── Respiratory ──
-  "copd",         // BiPAP, intubation, ABG — not goals-concordant in comfort sedation
-  "desat",        // O2 escalation + BiPAP/intubation escalation path
-
-  // ── Cardiac / vascular ──
+  "fever",        // blood cultures, CBC, source hunting
+  "pneumonia",    // blood cultures, ABx ladder, CURB-65
+  "uti",          // urine culture, blood cultures
+  "cellulitis",   // IV antibiotics workup (skin infection symptoms still managed, but auto-ABx suppressed)
+  // ── Cardiac / respiratory ──
   "acs",          // troponin, cath lab, heparin
+  "chf",          // aggressive diuresis, echo workup
+  "copd",         // BiPAP, ABG, bronchodilator ladder, steroids
+  "desat",        // ABG, BiPAP/intubation — O2 for comfort still given clinically
+  "htnemergency", // IV antihypertensives
   "dvtpe",        // CTA, anticoagulation
-  "chf",          // aggressive diuresis, fluid monitoring
-  "htnemergency", // aggressive antihypertensive therapy
-  "syncope",      // cardiac workup, tilt table
-
-  // ── Neurological ──
-  "stroke",       // CT head, tPA, neurology consult
-  // delirium WORKUP suppressed — opioids/benzos are comfort meds here, not to be stopped
-  // Individual antipsychotic-monitoring rules (delirium_haloperidol etc.) NOT suppressed
-  "delirium",
-
+  "syncope",      // CT head, echo, Holter
   // ── Metabolic / renal ──
-  "aki",          // renal workup, fluid boluses
-  "hypoNa",       // Na correction protocol
-  "hyperK",       // aggressive K management
-  "hypoK",        // aggressive replacement
-
-  // ── GI / surgical ──
-  "gibleed",      // type & screen, GI consult, scope
-  "abdomen",      // surgical consult, CT abdomen
-
-  // ── General ──
+  "aki",          // renal workup, fluid boluses, nephrology
+  "hyperK",       // Calcium gluconate, Kayexalate, dialysis
+  "hypoK",        // aggressive repletion protocols
+  "hypoNa",       // sodium correction protocols
+  "diabetes",     // aggressive BS monitoring, insulin correction
+  // ── Neurological / surgical ──
+  "stroke",       // CT head, tPA, neurology
+  "abdomen",      // CT, surgical consult
+  "fall",         // CT head, X-ray, ortho consult
+  // ── Haematological / other ──
   "transfusion",  // T&S, transfusion protocol
+  "gibleed",      // type & screen, GI consult, scope
+  "anemia",       // type & screen, workup
+  "warfarin",     // reversal protocols, INR targets
   "preop",        // pre-op workup
-  "anemia",       // workup
   "newadmit",     // full admission workup
-  "withdrawal",   // detox protocol (irrelevant in comfort sedation)
-
-  // ── IV protocols — aggressive monitoring not appropriate ──
+  // ── IV protocols suppressed (aggressive monitoring / intervention) ──
   "iv_insulin",
   "iv_heparin",
   "iv_vasopressor",
   "iv_dopamine",
   "iv_amiodarone",
   "iv_kphos",
-  // NOT suppressed: iv_opioid, iv_midazolam, iv_propofol, iv_magnesium — comfort meds
-  // NOT suppressed: delirium_haloperidol/quetiapine/etc. — symptom monitoring IS comfort care
-  // NOT suppressed: fall, catheter, isolation — safety tasks remain relevant
+  // ── NOT suppressed — these ARE part of comfort care ──
+  // "iv_opioid"     — pain / dyspnoea management
+  // "iv_midazolam"  — comfort sedation
+  // "iv_propofol"   — comfort sedation
+  // "iv_magnesium"  — symptom management
+  // "retention"     — urinary retention = pain; catheter = comfort
+  // "delirium"      — agitation management (non-pharmacological + cautious meds)
+  // "delirium_*"    — specific antipsychotic monitoring for agitation
+  // "cdiff"         — symptomatic treatment still appropriate
 ]);
 
 const RULES: Rule[] = [
