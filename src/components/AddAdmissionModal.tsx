@@ -364,12 +364,11 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
         setMeds(prev => Array.from(new Set([...prev, ...safeMeds])));
       }
       if (extracted.remarks) {
-        setRemarks(prev => prev ? `${prev}
-${extracted.remarks}` : extracted.remarks!);
+        setRemarks(prev => prev ? `${prev}\n${extracted.remarks}` : extracted.remarks!);
       }
       if (extracted.morningPresentation) {
         setMorningPresentation(extracted.morningPresentation);
-      }s";
+      }
 import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
 import { generateId } from "../utils/id";
 
