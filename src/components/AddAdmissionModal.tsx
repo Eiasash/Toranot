@@ -612,7 +612,16 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
                   value={dxSearch}
                   onChange={e => { setDxSearch(e.target.value); setShowDxPicker(true); }}
                   onFocus={() => setShowDxPicker(true)}
-                  placeholder={activeDxParts.length === 0 ? "חפש אבחנה..." : "+ הוסף..."}
+                  onKeyDown={e => {
+                    if ((e.key === "Enter" || e.key === ",") && dxSearch.trim()) {
+                      e.preventDefault();
+                      toggleDx(dxSearch.trim().replace(/,+$/, ""));
+                      setDxSearch("");
+                    } else if (e.key === "Backspace" && !dxSearch && activeDxParts.length > 0) {
+                      toggleDx(activeDxParts[activeDxParts.length - 1]);
+                    }
+                  }}
+                  placeholder={activeDxParts.length === 0 ? "חפש או הקלד חופשי (Enter לאישור)" : "+ הוסף (Enter לאישור)"}
                   className="flex-1 min-w-[80px] bg-transparent outline-none text-sm placeholder:text-gray-400"
                   dir="auto"
                 />
@@ -712,6 +721,21 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
                   </button>
                 ))}
               </div>
+              {/* Free-text drug entry */}
+              <input
+                type="text"
+                placeholder="תרופה אחרת... (Enter להוספה)"
+                dir="auto"
+                className="mt-1.5 w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 outline-none focus:border-amber-400"
+                onKeyDown={e => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const val = (e.target as HTMLInputElement).value.trim();
+                    if (val && !meds.includes(val)) setMeds(prev => [...prev, val]);
+                    (e.target as HTMLInputElement).value = "";
+                  }
+                }}
+              />
             </div>
 
             <div>
