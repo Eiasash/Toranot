@@ -120,9 +120,8 @@ export default async (req: Request, _context: Context) => {
     payload.systemInstruction = { parts: [{ text: b.system }] };
   }
 
-  // Google AI Studio API keys require query param — Bearer token is for OAuth2 only.
-  // Note: key appears in Netlify function logs; restrict log access accordingly.
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  // Use x-goog-api-key header — prevents key from appearing in Netlify function logs.
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
   let upstream: Response;
   try {
@@ -130,6 +129,7 @@ export default async (req: Request, _context: Context) => {
       method: "POST",
       headers: {
         "content-type": "application/json",
+        "x-goog-api-key": apiKey,
       },
       body: JSON.stringify(payload),
     });
