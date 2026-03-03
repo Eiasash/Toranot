@@ -191,30 +191,40 @@ self.addEventListener("notificationclick", (event) => {
   }
 
   if (action === "snooze" && data.taskId) {
-    // Snooze: re-show notification in 15 minutes
+    // SW is killed within ~30s after event handling — setTimeout(15min) never fires here.
+    // Send SNOOZE_TASK to any open app window so the app reschedules the alarm correctly.
     event.waitUntil(
-      new Promise((resolve) => {
-        setTimeout(() => {
-          self.registration
-            .showNotification(event.notification.title + " (תזכורת חוזרת)", {
-              body: event.notification.body,
-              icon: "./icon-192.png",
-              badge: "./icon-192.png",
-              tag: "snooze-" + data.taskId,
-              renotify: true,
-              vibrate: [200, 100, 200],
-              data: data,
-              actions: [
-                { action: "done", title: "✓ בוצע" },
-                { action: "snooze", title: "⏰ +15 דק׳" },
-              ],
-            })
-            .then(resolve);
-        }, 15 * 60 * 1000);
-      }),
+      self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+        const newDueAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+        for (const client of clients) {
+          client.postMessage({
+            type: "SNOOZE_TASK",
+            taskId: data.taskId,
+            patientId: data.patientId,
+            newDueAt,
+          });
+        }
+        // No app window open — show notification immediately as fallback
+        if (clients.length === 0) {
+          return self.registration.showNotification(event.notification.title, {
+            body: event.notification.body,
+            icon: "./icon-192.png",
+            badge: "./icon-192.png",
+            tag: "snooze-" + data.taskId,
+            renotify: true,
+            requireInteraction: true,
+            vibrate: [200, 100, 200],
+            data: data,
+            actions: [
+              { action: "done", title: "✓ בוצע" },
+            ],
+          });
+        }
+      })
     );
     return;
   }
+
 
   // Default: open/focus the app
   const urlToOpen = data.url || "./";
@@ -368,15 +378,3 @@ function fireTaskAlarm(taskId, taskText) {
   });
 }
 
-self.addEventListener("notificationclick", (event) => {
-  event.notification.close();
-  if (event.action === "dismiss") return;
-  event.waitUntil(
-    self.clients.matchAll({ type: "window" }).then((clients) => {
-      for (const client of clients) {
-        if ("focus" in client) return client.focus();
-      }
-      return self.clients.openWindow("/");
-    })
-  );
-});
