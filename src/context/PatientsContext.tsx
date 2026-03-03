@@ -943,11 +943,22 @@ export function PatientsProvider({ children }: { children: ReactNode }) {
       const { taskId, patientId, newDueAt } = (e as CustomEvent).detail ?? {};
       if (taskId && patientId && newDueAt) dispatch({ type: "SET_TASK_DUE", patientId, taskId, dueAt: newDueAt });
     };
+    const handleFocusPatient = (e: Event) => {
+      const { patientId } = (e as CustomEvent).detail ?? {};
+      if (!patientId) return;
+      // Scroll the patient card into view — the card renders with data-patient-id attribute
+      requestAnimationFrame(() => {
+        const el = document.getElementById(`patient-${patientId}`);
+        el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    };
     window.addEventListener("toranot:task-done", handleTaskDone);
     window.addEventListener("toranot:task-snooze", handleTaskSnooze);
+    window.addEventListener("toranot:focus-patient", handleFocusPatient);
     return () => {
       window.removeEventListener("toranot:task-done", handleTaskDone);
       window.removeEventListener("toranot:task-snooze", handleTaskSnooze);
+      window.removeEventListener("toranot:focus-patient", handleFocusPatient);
     };
   }, [dispatch]);
 
@@ -995,5 +1006,6 @@ export function usePatientsDispatch() {
 export function useCloudSync() {
   return useContext(CloudSyncContext);
 }
+
 
 
