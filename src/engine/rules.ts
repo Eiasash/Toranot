@@ -22,6 +22,14 @@ interface Rule {
   group?: string;
   triggerField?: "all" | "tasks" | "diagnosis";
   tasks: RuleTask[];
+  /**
+   * When true AND the patient is comfort-care-only:
+   * instead of suppressing entirely, re-check the trigger against
+   * ONLY explicit task text (not status/flags).
+   * Use for symptom-driven procedures that should only fire when the
+   * doctor explicitly wrote them (retention, bladder scan).
+   */
+  comfortRequiresExplicitTask?: boolean;
 }
 
 // ── Comfort care / palliative detection ──
@@ -81,8 +89,8 @@ const COMFORT_SUPPRESSED_GROUPS = new Set([
   "iv_propofol",
   "iv_magnesium",
   // Symptom-driven procedures: appropriate only on explicit order
-  "retention",           // catheter — hint advises; explicit task if distressed
-  "bs",                  // bladder scan — same as retention
+  // retention: uses comfortRequiresExplicitTask instead of full suppression
+  // bs: uses comfortRequiresExplicitTask instead of full suppression
   "cdiff",               // isolation + Vanco — hint advises
   // Delirium: full workup + antipsychotic ladder suppressed.
   // Terminal agitation managed on explicit written order. Hints remain.
@@ -183,6 +191,7 @@ const RULES: Rule[] = [
     trigger: /\bBS\b|Bladder\s*Scan|בלדר\s*סקאן|סריקה\s*של\s*שלפוחית/i,
     source: "BS (Bladder Scan)",
     group: "bs",
+    comfortRequiresExplicitTask: true, // only fires for comfort patients if doctor explicitly wrote it
     tasks: [
       { text: "BS (Bladder Scan) — קטטר חד פעמי אם >400ml", urgency: "routine", category: "procedure" },
     ],
@@ -716,6 +725,7 @@ const RULES: Rule[] = [
     source: "עצירת שתן",
     group: "retention",
     triggerField: "tasks",
+    comfortRequiresExplicitTask: true, // only fires for comfort patients if doctor explicitly wrote it
     tasks: [
       { text: "Bladder Scan — אם >300ml → הכנס קטטר", urgency: "stat", category: "procedure" },
       { text: "אם >1L → שחרור איטי (500ml כל 30 דק) — סכנת post-obstructive diuresis", urgency: "urgent", category: "other" },
@@ -901,8 +911,15 @@ export function applyRules(patient: PatientEntry): Task[] {
   for (const rule of RULES) {
     if (rule.group && matchedGroups.has(rule.group)) continue;
 
-    // Suppress aggressive rules for comfort-care-only patients
-    if (isComfortCareOnly && rule.group && COMFORT_SUPPRESSED_GROUPS.has(rule.group)) continue;
+    // Suppress aggressive rules for comfort-care-only patients.
+    // Exception: comfortRequiresExplicitTask rules are NOT suppressed entirely —
+    // instead they are allowed through but their trigger text is narrowed to
+    // ONLY explicit patient tasks (not status/flags), so they only fire when
+    // the on-call doctor explicitly wrote the procedure.
+    if (isComfortCareOnly && rule.group && COMFORT_SUPPRESSED_GROUPS.has(rule.group)) {
+      if (!rule.comfortRequiresExplicitTask) continue;
+      // Fall through — but we will restrict textToMatch to explicit tasks only (see below)
+    }
 
     // Pick which text to match against (default: tasks only, never diagnosis)
     let textToMatch: string;
@@ -915,6 +932,12 @@ export function applyRules(patient: PatientEntry): Task[] {
         break;
       default:
         textToMatch = tasksText;
+    }
+
+    // For comfort-care patients with comfortRequiresExplicitTask rules,
+    // override textToMatch to ONLY the explicit task list text.
+    if (isComfortCareOnly && rule.comfortRequiresExplicitTask) {
+      textToMatch = patient.tasks.map((t) => t.text).join(" ");
     }
 
     if (rule.trigger.test(textToMatch)) {
