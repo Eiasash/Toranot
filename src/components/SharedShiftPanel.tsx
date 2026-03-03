@@ -3,6 +3,7 @@ import { usePatientsState, usePatientsDispatch } from "../context/PatientsContex
 import {
   createSharedShift,
   updateSharedShift,
+  updateSharedShiftAsGuest,
   deleteSharedShift,
   pullSharedShift,
   supabase,
@@ -37,22 +38,30 @@ export function SharedShiftPanel({ onClose }: { onClose: () => void }) {
   const [copied, setCopied] = useState(false);
   const [guestInput, setGuestInput] = useState("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const stateRef = useRef(state);
+
+  // Keep stateRef current so intervals always see latest state
+  useEffect(() => { stateRef.current = state; }, [state]);
 
   const stopPoll = useCallback(() => {
     if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
   }, []);
 
-  // Guest polling — every 30s pull latest state from share code
-  const startGuestPoll = useCallback((code: string) => {
+  // Guest polling — pull + push every 20s (bidirectional)
+  const startGuestSync = useCallback((code: string) => {
     stopPoll();
-    const poll = async () => {
-      const result = await pullSharedShift(code);
-      if (!result) return;
-      dispatch({ type: "IMPORT_CLOUD_STATE", state: result.state });
-      setLastSync(new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" }));
+    const sync = async () => {
+      try {
+        const result = await pullSharedShift(code);
+        if (!result) return;
+        dispatch({ type: "IMPORT_CLOUD_STATE", state: result.state });
+        setLastSync(new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" }));
+        // Push guest's own edits back to shared record
+        await updateSharedShiftAsGuest(code, toCloudState(stateRef.current));
+      } catch { /* silent */ }
     };
-    poll();
-    pollRef.current = setInterval(poll, 30_000);
+    sync();
+    pollRef.current = setInterval(sync, 20_000);
   }, [dispatch, stopPoll]);
 
   // Host auto-push — every 20s push current state to shared slot
@@ -65,16 +74,16 @@ export function SharedShiftPanel({ onClose }: { onClose: () => void }) {
     stopHostPush();
     hostPushRef.current = setInterval(async () => {
       try {
-        await updateSharedShift(code, toCloudState(state));
+        await updateSharedShift(code, toCloudState(stateRef.current));
         setLastSync(new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" }));
       } catch { /* silent */ }
     }, 20_000);
-  }, [state, stopHostPush]);
+  }, [stopHostPush]);
 
   // Restore session on mount
   useEffect(() => {
     if (role === "host" && shareCode) startHostPush(shareCode);
-    if (role === "guest" && guestCode) { setTab("join"); startGuestPoll(guestCode); }
+    if (role === "guest" && guestCode) { setTab("join"); startGuestSync(guestCode); }
     return () => { stopPoll(); stopHostPush(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -115,7 +124,7 @@ export function SharedShiftPanel({ onClose }: { onClose: () => void }) {
     setRole("guest");
     localStorage.setItem(GUEST_CODE_KEY, code);
     localStorage.setItem(SHARE_ROLE_KEY, "guest");
-    startGuestPoll(code);
+    startGuestSync(code);
     setLastSync(new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" }));
     setLoading(false);
   };
@@ -133,7 +142,6 @@ export function SharedShiftPanel({ onClose }: { onClose: () => void }) {
     setCopied(true); setTimeout(() => setCopied(false), 2000);
   };
 
-  // Host needs auth to create shares; guests can join without any account
   const isLoggedIn = !!supabase;
 
   return (
@@ -175,7 +183,7 @@ export function SharedShiftPanel({ onClose }: { onClose: () => void }) {
             {role !== "host" || !shareCode ? (
               <>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  צור קוד שיתוף לחברי הצוות — הם יוכלו לראות את רשימת החולים והמשימות שלך בזמן אמת.
+                  צור קוד שיתוף לחברי הצוות — הם יוכלו לראות ולערוך את רשימת החולים שלך בזמן אמת.
                 </p>
                 <button
                   onClick={handleShare}
@@ -227,7 +235,7 @@ export function SharedShiftPanel({ onClose }: { onClose: () => void }) {
             {role !== "guest" || !guestCode ? (
               <>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  הכנס קוד שיתוף שקיבלת מחבר הצוות כדי לראות את רשימת החולים שלו.
+                  הכנס קוד שיתוף שקיבלת מחבר הצוות כדי לראות ולערוך את רשימת החולים שלו.
                 </p>
                 <div className="flex gap-2">
                   <input
@@ -251,14 +259,14 @@ export function SharedShiftPanel({ onClose }: { onClose: () => void }) {
             ) : (
               <div className="space-y-3">
                 <div className="bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-700 rounded-xl px-4 py-3 text-center">
-                  <p className="text-xs text-green-600 font-medium">מחובר למשמרת</p>
+                  <p className="text-xs text-green-600 font-medium">✅ מחובר — עריכה דו-כיוונית פעילה</p>
                   <p className="font-mono text-xl font-bold tracking-widest text-green-700 dark:text-green-300 mt-1">{guestCode}</p>
                   <p className="text-xs text-gray-500 mt-1">
-                    מתרענן כל 30 שניות{lastSync ? ` — עודכן ${lastSync}` : ""}
+                    מסונכרן כל 20 שניות{lastSync ? ` — עודכן ${lastSync}` : ""}
                   </p>
                 </div>
-                <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                  ⚠️ מצב צפייה בלבד — שינויים שתעשה לא ישמרו בענן
+                <p className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-2">
+                  ✏️ שינויים שתעשה יסונכרנו חזרה למשמרת המשותפת כל 20 שניות
                 </p>
                 <button
                   onClick={handleLeave}
