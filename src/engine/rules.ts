@@ -30,6 +30,8 @@ interface Rule {
    * doctor explicitly wrote them (retention, bladder scan).
    */
   comfortRequiresExplicitTask?: boolean;
+  /** Skip generation if any explicit task already matches — prevents manual-task duplicates */
+  skipIfExplicitTaskMatches?: RegExp;
 }
 
 // ── Comfort care / palliative detection ──
@@ -192,6 +194,7 @@ const RULES: Rule[] = [
     source: "BS (Bladder Scan)",
     group: "bs",
     comfortRequiresExplicitTask: true, // only fires for comfort patients if doctor explicitly wrote it
+    skipIfExplicitTaskMatches: /\bBS\b|Bladder\s*Scan/i, // if doctor already wrote a BS task, skip generated duplicate
     tasks: [
       { text: "BS (Bladder Scan) — קטטר חד פעמי אם >400ml", urgency: "routine", category: "procedure" },
     ],
@@ -942,6 +945,12 @@ export function applyRules(patient: PatientEntry): Task[] {
 
     if (rule.trigger.test(textToMatch)) {
       if (rule.group) matchedGroups.add(rule.group);
+
+      // Skip if doctor already wrote an explicit task covering this — prevents duplicates
+      if (rule.skipIfExplicitTaskMatches) {
+        const explicitTaskText = patient.tasks.map((t) => t.text).join(" ");
+        if (rule.skipIfExplicitTaskMatches.test(explicitTaskText)) continue;
+      }
 
       for (const taskDef of rule.tasks) {
         generated.push({
