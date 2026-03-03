@@ -933,6 +933,24 @@ export function PatientsProvider({ children }: { children: ReactNode }) {
   // Cross-tab sync: if another tab writes to localStorage, pick up the changes.
   // The "storage" event only fires in OTHER tabs, never the one that wrote.
   // Uses e.newValue directly — no re-reading storage. Validates before dispatch.
+  // Handle SW notification actions (task done / snooze from notification)
+  useEffect(() => {
+    const handleTaskDone = (e: Event) => {
+      const { taskId, patientId } = (e as CustomEvent).detail ?? {};
+      if (taskId && patientId) dispatch({ type: "TOGGLE_TASK", patientId, taskId });
+    };
+    const handleTaskSnooze = (e: Event) => {
+      const { taskId, patientId, newDueAt } = (e as CustomEvent).detail ?? {};
+      if (taskId && patientId && newDueAt) dispatch({ type: "SET_TASK_DUE", patientId, taskId, dueAt: newDueAt });
+    };
+    window.addEventListener("toranot:task-done", handleTaskDone);
+    window.addEventListener("toranot:task-snooze", handleTaskSnooze);
+    return () => {
+      window.removeEventListener("toranot:task-done", handleTaskDone);
+      window.removeEventListener("toranot:task-snooze", handleTaskSnooze);
+    };
+  }, [dispatch]);
+
   useEffect(() => {
     const handler = (e: StorageEvent) => {
       try {
@@ -977,4 +995,5 @@ export function usePatientsDispatch() {
 export function useCloudSync() {
   return useContext(CloudSyncContext);
 }
+
 
