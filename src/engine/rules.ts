@@ -93,10 +93,8 @@ const COMFORT_SUPPRESSED_GROUPS = new Set([
   // retention: uses comfortRequiresExplicitTask instead of full suppression
   // bs: uses comfortRequiresExplicitTask instead of full suppression
   "cdiff",               // isolation + Vanco — hint advises
-  // Delirium: full workup + antipsychotic ladder suppressed.
-  // Terminal agitation managed on explicit written order. Hints remain.
-  "delirium",
-  "delirium_haloperidol",
+  // Delirium agitation = core comfort need (haloperidol PRN appropriate).
+  // Full antipsychotic ladder still suppressed.
   "delirium_quetiapine",
   "delirium_olanzapine",
   "delirium_risperidone",
@@ -193,7 +191,6 @@ const RULES: Rule[] = [
     source: "BS (Bladder Scan)",
     group: "bs",
     comfortRequiresExplicitTask: true, // only fires for comfort patients if doctor explicitly wrote it
-    skipIfExplicitTaskMatches: /\bBS\b|Bladder\s*Scan/i, // if doctor already wrote a BS task, skip generated duplicate
     tasks: [
       { text: "BS (Bladder Scan) — קטטר חד פעמי אם >400ml", urgency: "routine", category: "procedure" },
     ],
