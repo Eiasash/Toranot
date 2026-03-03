@@ -93,14 +93,7 @@ const COMFORT_SUPPRESSED_GROUPS = new Set([
   // retention: uses comfortRequiresExplicitTask instead of full suppression
   // bs: uses comfortRequiresExplicitTask instead of full suppression
   "cdiff",               // isolation + Vanco — hint advises
-  // Delirium agitation = core comfort need (haloperidol PRN appropriate).
-  // Full antipsychotic ladder still suppressed.
-  "delirium_quetiapine",
-  "delirium_olanzapine",
-  "delirium_risperidone",
-  "delirium_dexmedetomidine",
-  "delirium_trazodone",
-  "delirium_melatonin",
+  // Delirium: NOT suppressed. Terminal agitation is core comfort care — all antipsychotic tasks allowed.
   // Withdrawal: CIWA scoring + benzo ladder are curative, not comfort
   "withdrawal",
   // NOT suppressed (still appropriate in comfort care):
