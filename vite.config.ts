@@ -13,7 +13,8 @@ function swVersionPlugin(): Plugin {
       const swSrc = path.resolve(__dirname, "public/sw.js");
       const swDst = path.resolve(__dirname, "dist/sw.js");
       const version = Date.now();
-      const target = fs.existsSync(swDst) ? swDst : swSrc;
+      // Only stamp dist copy — never mutate source file (causes dirty git state in CI)
+        const target = swDst;
       if (fs.existsSync(target)) {
         let sw = fs.readFileSync(target, "utf-8");
         sw = sw.replace(/const CACHE_VERSION = \d+[^;]*;/, `const CACHE_VERSION = ${version};`);
