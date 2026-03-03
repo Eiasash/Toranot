@@ -283,8 +283,8 @@ function PatientCard({ p, isNew }: { p: PatientEntry; isNew: boolean }) {
 }
 
 function SectionBlock({ label, patients, newIds }: { label: string; patients: PatientEntry[]; newIds: Set<string> }) {
-  const pendingCount = patients.flatMap(p => [...p.tasks, ...p.generatedTasks.filter(t => !(t as any).dismissed)]).filter(t => !t.done).length;
-  const statCount = patients.flatMap(p => [...p.tasks, ...p.generatedTasks.filter(t => !(t as any).dismissed)]).filter(t => !t.done && t.urgency === "stat").length;
+  const pendingCount = patients.flatMap(p => [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)]).filter(t => !t.done).length;
+  const statCount = patients.flatMap(p => [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)]).filter(t => !t.done && t.urgency === "stat").length;
 
   return (
     <div className="mb-5">
