@@ -448,6 +448,21 @@ const HINT_RULES: HintRule[] = [
       ],
     },
   },
+  // ═══ URINARY RETENTION ═══
+  {
+    trigger: /עצירת שתן|אצירת שתן|urinary retention|גלובוס שתן|retention.*urine|bladder.*retention/i,
+    hint: {
+      emoji: "🚿",
+      title: "אצירת שתן — הנחיות רקע",
+      tips: [
+        "סיבות נפוצות: Anticholinergics, Opioids, BPH, עצירות סכית, Relaxants",
+        "אם מאוין / כאב בבטן → Bladder Scan. >300ml → קטטר",
+        ">1L: שחרור איטי (500ml כל 30 דק) — סכנת post-obstructive diuresis",
+        "בטיפול מנחם: קטטר PRN עפני אי נוחות בלבד — לא נדרש באופן שגרתי",
+      ],
+    },
+  },
+
 
   // ═══ C.DIFF ═══
   {
