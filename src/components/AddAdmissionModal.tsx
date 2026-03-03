@@ -81,7 +81,8 @@ function parseFreestyle(text: string): Partial<{
   // Remaining: Hebrew name first, then diagnosis
   remaining = remaining.replace(/\s+/g, " ").trim();
 
-  const hebrewNameMatch = remaining.match(/^([\u0590-\u05FF][\u0590-\u05FF\s'"\-]{1,40}[\u0590-\u05FF])/);
+  // Limit to 1-3 Hebrew words so diagnosis isn't swallowed into name
+  const hebrewNameMatch = remaining.match(/^([\u0590-\u05FF][\u0590-\u05FF'"\\-]*(?:\s+[\u0590-\u05FF][\u0590-\u05FF'"\\-]*){0,2})(?:\s|$)/);
   if (hebrewNameMatch) {
     result.name = hebrewNameMatch[1].trim();
     remaining = remaining.slice(hebrewNameMatch[0].length).trim();
@@ -647,6 +648,16 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
                 </div>
               </div>
 
+              {/* Quick-add free-text — tappable card when user types */}
+              {dxSearch.trim() && (
+                <button
+                  type="button"
+                  onMouseDown={e => { e.preventDefault(); toggleDx(dxSearch.trim()); setDxSearch(""); setShowDxPicker(false); }}
+                  className="mt-1.5 w-full text-right px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/40 border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 text-sm font-medium active:bg-blue-100"
+                >
+                  ＋ הוסף &ldquo;{dxSearch.trim()}&rdquo;
+                </button>
+              )}
               {/* Picker panel */}
               {showDxPicker && (
                 <div className="mt-1 border border-gray-200 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 shadow-lg overflow-hidden">
