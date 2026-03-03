@@ -32,6 +32,8 @@ interface Rule {
   comfortRequiresExplicitTask?: boolean;
   /** Skip generation if any explicit task already matches — prevents manual-task duplicates */
   skipIfExplicitTaskMatches?: RegExp;
+  /** If true, rule only fires for comfort/palliative patients. Skipped entirely for regular patients. */
+  comfortCareOnly?: boolean;
 }
 
 // ── Comfort care / palliative detection ──
