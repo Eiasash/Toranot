@@ -85,7 +85,7 @@ export default async (req: Request, _context: Context) => {
           },
           body: JSON.stringify(body),
         },
-        28_000, // OCR needs more time than regular calls — large image payloads
+        24_000, // Must fire before 26s Netlify function timeout (was 28s, caused silent 504)
       );
     } catch {
       return new Response("Upstream timeout", { status: 504 });
