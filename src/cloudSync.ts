@@ -336,15 +336,20 @@ export async function createHandoff(state: ToranotCloudState): Promise<{ code: s
   const code = generateHandoffCode();
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
+  // Re-validate live session before insert — prevents 400 from stale auth state
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user?.id) return null;
+  const verifiedUid = session.user.id;
+
   const { error } = await supabase.from("shared_shifts").insert({
     code,
-    creator_id: uid,
+    creator_id: verifiedUid,
     state,
     expires_at: expiresAt,
   });
 
   if (error) {
-    console.warn("[Toranot] handoff create failed", error);
+    console.warn("[Toranot] handoff create failed:", error.message, error.details);
     return null;
   }
 
@@ -382,8 +387,12 @@ function generateCode(): string {
 
 /** Create or refresh a shared snapshot of the current ward state. Returns the share code. */
 export async function createSharedShift(state: ToranotCloudState): Promise<string> {
-  const uid = await getUserId();
-  if (!supabase || !uid) throw new Error("Not logged in");
+  if (!supabase) throw new Error("Not logged in");
+
+  // Re-validate live session (not just cached uid) — prevents 400 from stale auth state
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user?.id) throw new Error("Session expired — please log in again");
+  const uid = session.user.id;
 
   const code = generateCode();
   const expires = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(); // 8h
@@ -395,7 +404,10 @@ export async function createSharedShift(state: ToranotCloudState): Promise<strin
     expires_at: expires,
     updated_at: new Date().toISOString(),
   });
-  if (error) throw error;
+  if (error) {
+    console.error("[Toranot] shared_shifts insert failed:", error.message, error.details);
+    throw error;
+  }
   return code;
 }
 
