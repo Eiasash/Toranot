@@ -146,3 +146,82 @@ describe("Comfort care / palliative hints", () => {
     expect(pallHint).toBeUndefined();
   });
 });
+
+// ── Regression: Hebrew Dormicum (dורמיקום) ──────────────────────────────────
+
+describe("COMFORT_SEDATION_PATTERN — Hebrew Dormicum regression", () => {
+  it("detects comfort from Hebrew dormicum + fentanyl (exact image text)", () => {
+    // Bug: pattern had 'dormicum' but not Hebrew spelling
+    // Image shows: "תחת דורמיקום 10 fentanyl"
+    const p = makePatient({
+      status: ["תחת דורמיקום 10 fentanyl"],
+      tasks: [{ text: "COPD EXCERBATION" }],
+    });
+    const tasks = applyRules(p);
+    expect(tasks.find(t => t.generatedFrom === "החמרת COPD")).toBeUndefined();
+  });
+
+  it("does NOT trigger from fentanyl alone", () => {
+    const p = makePatient({
+      status: ["fentanyl patch 25mcg"],
+      tasks: [{ text: "COPD EXCERBATION" }],
+    });
+    expect(applyRules(p).find(t => t.generatedFrom === "החמרת COPD")).toBeDefined();
+  });
+
+  it("does NOT trigger from dormicum alone", () => {
+    const p = makePatient({
+      status: ["דורמיקום 2.5mg PRN"],
+      tasks: [{ text: "COPD EXCERBATION" }],
+    });
+    expect(applyRules(p).find(t => t.generatedFrom === "החמרת COPD")).toBeDefined();
+  });
+
+  it("detects English dormicum + fentanyl", () => {
+    const p = makePatient({
+      status: ["dormicum + fentanyl drip"],
+      tasks: [{ text: "COPD EXCERBATION" }],
+    });
+    expect(applyRules(p).find(t => t.generatedFrom === "החמרת COPD")).toBeUndefined();
+  });
+
+  it("detects midazolam + fentanyl", () => {
+    const p = makePatient({
+      status: ["midazolam 5 + fentanyl infusion"],
+      tasks: [{ text: "COPD EXCERBATION" }],
+    });
+    expect(applyRules(p).find(t => t.generatedFrom === "החמרת COPD")).toBeUndefined();
+  });
+});
+
+// ── Regression: newly suppressed groups ─────────────────────────────────────
+
+describe("COMFORT_SUPPRESSED_GROUPS — extended group list regression", () => {
+  function pc(taskText: string) {
+    return makePatient({ flags: ["טיפול מנחם"], tasks: [{ text: taskText }] });
+  }
+
+  it("suppresses COPD",        () => expect(applyRules(pc("COPD EXCERBATION")).find(t => t.generatedFrom === "החמרת COPD")).toBeUndefined());
+  it("suppresses fever",       () => expect(applyRules(pc("חום 39")).find(t => t.generatedFrom === "חום")).toBeUndefined());
+  it("suppresses pneumonia",   () => expect(applyRules(pc("pneumonia active")).find(t => t.generatedFrom === "דלקת ריאות")).toBeUndefined());
+  it("suppresses CHF",         () => expect(applyRules(pc("CHF exacerbation congestion")).find(t => t.generatedFrom === "אי ספיקת לב")).toBeUndefined());
+  it("suppresses desat",       () => expect(applyRules(pc("SpO2 82% desaturation")).find(t => t.generatedFrom === "דסטורציה")).toBeUndefined());
+  it("suppresses hyperK",      () => expect(applyRules(pc("K 6.2 hyperkalemia")).find(t => t.generatedFrom === "היפרקלמיה")).toBeUndefined());
+  it("suppresses hypoNa",      () => expect(applyRules(pc("Na 122 hyponatremia")).find(t => t.generatedFrom === "היפונתרמיה")).toBeUndefined());
+  it("suppresses HTN emergency", () => expect(applyRules(pc("BP 210/120 hypertensive emergency")).find(t => t.generatedFrom === "משבר יתר לחץ דם")).toBeUndefined());
+  it("suppresses UTI",         () => expect(applyRules(pc("UTI dysuria")).find(t => t.generatedFrom === "זיהום בדרכי השתן")).toBeUndefined());
+
+  it("does NOT suppress delirium (agitation = comfort care)", () => {
+    expect(applyRules(pc("דליריום אגיטציה")).find(t => t.generatedFrom === "דליריום")).toBeDefined();
+  });
+
+  it("does NOT suppress midazolam monitoring (comfort sedation)", () => {
+    const p = makePatient({ flags: ["טיפול מנחם"], status: ["midazolam drip"] });
+    expect(applyRules(p).find(t => t.generatedFrom === "דורמיקום IV")).toBeDefined();
+  });
+
+  it("does NOT suppress opioid monitoring (pain management)", () => {
+    const p = makePatient({ flags: ["טיפול מנחם"], status: ["morphine drip running"] });
+    expect(applyRules(p).find(t => t.generatedFrom === "מורפין/פנטניל IV")).toBeDefined();
+  });
+});
