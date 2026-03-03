@@ -59,3 +59,26 @@ export function registerAndAutoUpdateSW() {
 }
 
 registerAndAutoUpdateSW();
+
+// ── Handle messages from the Service Worker ───────────────────────────────────
+// SW sends these when the user interacts with task notifications (done/snooze).
+// We dispatch directly to the reducer via the global store pattern.
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.addEventListener("message", (event) => {
+    const { type, taskId, patientId, newDueAt } = event.data ?? {};
+
+    if (type === "TASK_DONE_FROM_NOTIFICATION" && taskId && patientId) {
+      // Mark the task done — same as tapping the checkbox in the UI
+      // We need access to the dispatch function. Since this is outside React,
+      // we use a window-level event that PatientsContext listens for.
+      window.dispatchEvent(new CustomEvent("toranot:task-done", { detail: { taskId, patientId } }));
+    }
+
+    if (type === "SNOOZE_TASK" && taskId && patientId && newDueAt) {
+      // Update the task's dueAt to +15min — rescheduled reminder fires via syncReminders
+      window.dispatchEvent(new CustomEvent("toranot:task-snooze", { detail: { taskId, patientId, newDueAt } }));
+    }
+  });
+}
+
