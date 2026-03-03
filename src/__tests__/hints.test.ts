@@ -206,7 +206,7 @@ describe("generateHints", () => {
 
   it("generates pneumonia hint", () => {
     const p = makePatient({ diagnosis: "PNEUMONIA" });
-    expect(generateHints(p).some(h => h.title.includes("פנאומוניה"))).toBe(true);
+    expect(generateHints(p).some(h => h.title.includes("דלקת ריאות"))).toBe(true);
   });
 
   it("generates UTI hint", () => {
@@ -256,7 +256,7 @@ describe("generateHints", () => {
 
   it("generates neutropenic fever hint", () => {
     const p = makePatient({ diagnosis: "neutropenic fever" });
-    expect(generateHints(p).some(h => h.title.includes("נויטרופניה"))).toBe(true);
+    expect(generateHints(p).some(h => h.title.includes("חום נויטרופני"))).toBe(true);
   });
 
   it("generates NMS hint", () => {
@@ -291,7 +291,7 @@ describe("generateHints", () => {
 
   it("generates post-operative hint", () => {
     const p = makePatient({ status: ["post-op day 1"] });
-    expect(generateHints(p).some(h => h.title.includes("פוסט-אופרטיבי"))).toBe(true);
+    expect(generateHints(p).some(h => h.title.includes("פוסט-ניתוחי"))).toBe(true);
   });
 
   it("generates hyponatremia hint", () => {
@@ -331,7 +331,7 @@ describe("generateHints", () => {
 
   it("generates tracheostomy hint", () => {
     const p = makePatient({ status: ["tracheostomy in situ"] });
-    expect(generateHints(p).some(h => h.title.includes("טרכאוסטומיה"))).toBe(true);
+    expect(generateHints(p).some(h => h.title.includes("טרכיאוסטומיה"))).toBe(true);
   });
 
   it("generates osteoporosis hint", () => {
