@@ -975,3 +975,59 @@ describe("rules engine — cross-cutting behavior", () => {
     });
   });
 });
+
+// ── New geriatric safety rules (Gemini audit 2026-03-03) ─────────────────────
+
+describe("aspiration_risk rule", () => {
+  it("triggers for dysphagia", () => {
+    const p = makePatient({ diagnosis: "dysphagia aspiration pneumonia" });
+    expect(applyRules(p).map(t => t.ruleGroup)).toContain("aspiration_risk");
+  });
+  it("triggers for NPO", () => {
+    const p = makePatient({ diagnosis: "NPO post-op bowel obstruction" });
+    expect(applyRules(p).map(t => t.ruleGroup)).toContain("aspiration_risk");
+  });
+});
+
+describe("pressure_ulcer rule", () => {
+  it("triggers for pressure ulcer", () => {
+    const p = makePatient({ diagnosis: "pressure ulcer heel stage 2" });
+    expect(applyRules(p).map(t => t.ruleGroup)).toContain("pressure_ulcer");
+  });
+  it("triggers for decubitus", () => {
+    const p = makePatient({ diagnosis: "decubitus sacrum" });
+    expect(applyRules(p).map(t => t.ruleGroup)).toContain("pressure_ulcer");
+  });
+});
+
+describe("delirium_nonpharm_bundle rule", () => {
+  it("triggers for delirium", () => {
+    const p = makePatient({ diagnosis: "delirium acute confusion" });
+    expect(applyRules(p).map(t => t.ruleGroup)).toContain("delirium_nonpharm_bundle");
+  });
+  it("does NOT suppress bundle for comfort patients", () => {
+    const p = makePatient({ diagnosis: "delirium agitation", isComfortCareOnly: true });
+    expect(applyRules(p).map(t => t.ruleGroup)).toContain("delirium_nonpharm_bundle");
+  });
+});
+
+describe("comfort_sedation_symptom rule", () => {
+  it("fires qualitative check for comfort patient on morphine", () => {
+    const p = makePatient({ diagnosis: "מורפין IV palliative", isComfortCareOnly: true });
+    expect(applyRules(p).map(t => t.ruleGroup)).toContain("comfort_sedation_symptom");
+  });
+  it("does NOT fire for non-comfort patients — Q2H monitoring fires instead", () => {
+    const p = makePatient({ diagnosis: "morphine drip pain management", isComfortCareOnly: false });
+    const groups = applyRules(p).map(t => t.ruleGroup);
+    expect(groups).not.toContain("comfort_sedation_symptom");
+    expect(groups).toContain("iv_opioid");
+  });
+  it("iv_opioid Q2H monitoring IS suppressed for comfort patients", () => {
+    const p = makePatient({ diagnosis: "morphine drip palliative", isComfortCareOnly: true });
+    expect(applyRules(p).map(t => t.ruleGroup)).not.toContain("iv_opioid");
+  });
+  it("iv_midazolam Q2H monitoring IS suppressed for comfort patients", () => {
+    const p = makePatient({ diagnosis: "dormicum midazolam palliative sedation", isComfortCareOnly: true });
+    expect(applyRules(p).map(t => t.ruleGroup)).not.toContain("iv_midazolam");
+  });
+});
