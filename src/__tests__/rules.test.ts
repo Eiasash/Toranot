@@ -1006,28 +1006,29 @@ describe("delirium_nonpharm_bundle rule", () => {
     expect(generatedSources(applyRules(p))).toContain("חבילת דליריום — לא תרופתית");
   });
   it("does NOT suppress bundle for comfort patients — non-pharm bundle is always appropriate", () => {
-    const p = makePatient({ diagnosis: "delirium agitation", isComfortCareOnly: true });
+    const p = makePatient({ diagnosis: "delirium agitation palliative care EOL" });
     expect(generatedSources(applyRules(p))).toContain("חבילת דליריום — לא תרופתית");
   });
 });
 
 describe("comfort_sedation_symptom rule", () => {
+  // isComfortCareOnly is detected via COMFORT_CARE_PATTERN in diagnosis/status text
   it("fires qualitative check for comfort patient on morphine", () => {
-    const p = makePatient({ diagnosis: "מורפין IV palliative", isComfortCareOnly: true });
+    const p = makePatient({ diagnosis: "מורפין IV palliative comfort care", status: ["morphine drip 2mg/hr IV"] });
     expect(generatedSources(applyRules(p))).toContain("בדיקת סימפטומים — טיפול מנחם");
   });
   it("does NOT fire for non-comfort patients — Q2H monitoring fires instead", () => {
-    const p = makePatient({ diagnosis: "morphine drip pain management", isComfortCareOnly: false });
+    const p = makePatient({ status: ["morphine drip 2mg/hr IV"] });
     const sources = generatedSources(applyRules(p));
     expect(sources).not.toContain("בדיקת סימפטומים — טיפול מנחם");
     expect(sources).toContain("אופיואידים IV");
   });
-  it("iv_opioid Q2H monitoring IS suppressed for comfort patients", () => {
-    const p = makePatient({ diagnosis: "morphine drip palliative", isComfortCareOnly: true });
+  it("iv_opioid Q2H monitoring IS suppressed for comfort/palliative patients", () => {
+    const p = makePatient({ diagnosis: "palliative care EOL", status: ["morphine drip 2mg/hr IV"] });
     expect(generatedSources(applyRules(p))).not.toContain("אופיואידים IV");
   });
   it("iv_midazolam Q2H monitoring IS suppressed for comfort patients", () => {
-    const p = makePatient({ diagnosis: "dormicum midazolam palliative sedation", isComfortCareOnly: true });
+    const p = makePatient({ diagnosis: "palliative care end of life", status: ["dormicum midazolam drip IV"] });
     expect(generatedSources(applyRules(p))).not.toContain("דורמיקום IV");
   });
 });
