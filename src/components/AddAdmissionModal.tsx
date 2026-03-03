@@ -612,7 +612,7 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
                   type="text"
                   value={dxSearch}
                   onChange={e => { setDxSearch(e.target.value); setShowDxPicker(true); }}
-                  onFocus={() => setShowDxPicker(true)}
+                  onFocus={() => { if (!dxSearch) setShowDxPicker(true); }}
                   onKeyDown={e => {
                     if ((e.key === "Enter" || e.key === ",") && dxSearch.trim()) {
                       e.preventDefault();
@@ -622,7 +622,15 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
                       toggleDx(activeDxParts[activeDxParts.length - 1]);
                     }
                   }}
-                  placeholder={activeDxParts.length === 0 ? "חפש או הקלד חופשי (Enter לאישור)" : "+ הוסף (Enter לאישור)"}
+                  onBlur={() => {
+                    // Auto-commit free text when user taps away — don't lose what they typed
+                    if (dxSearch.trim()) {
+                      toggleDx(dxSearch.trim().replace(/,+$/, ""));
+                      setDxSearch("");
+                    }
+                    setTimeout(() => setShowDxPicker(false), 150);
+                  }}
+                  placeholder={activeDxParts.length === 0 ? "הקלד חופשי או חפש רשימה" : "+ הוסף אבחנה"}
                   className="flex-1 min-w-[80px] bg-transparent outline-none text-sm placeholder:text-gray-400"
                   dir="auto"
                 />
