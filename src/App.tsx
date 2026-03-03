@@ -21,6 +21,7 @@ import { formatScanDiffSummary } from "./engine/smartOCR";
 import { OverflowMenu } from "./components/OverflowMenu";
 import { ShiftHandoffModal } from "./components/ShiftHandoffModal";
 import { SharedShiftPanel } from "./components/SharedShiftPanel";
+import { SECTION_LABEL } from "./types";
 
 // ─── Scan Diff Banner ──────────────────────────────────────
 function ScanDiffBanner() {
