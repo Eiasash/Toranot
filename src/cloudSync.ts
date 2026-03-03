@@ -410,6 +410,20 @@ export async function updateSharedShift(code: string, state: ToranotCloudState):
     .eq("creator_id", uid);
 }
 
+/**
+ * Update a shared shift as a guest — no creator_id check.
+ * Requires the "Guests can update shared shifts by code" RLS policy.
+ */
+export async function updateSharedShiftAsGuest(code: string, state: ToranotCloudState): Promise<void> {
+  const uid = await getUserId();
+  if (!supabase || !uid) return;
+  await supabase
+    .from("shared_shifts")
+    .update({ state, updated_at: new Date().toISOString() })
+    .eq("code", code.toUpperCase().trim())
+    .gt("expires_at", new Date().toISOString()); // safety: never update expired rows
+}
+
 /** Pull a shared shift by code. Returns null if not found / expired. */
 export async function pullSharedShift(code: string): Promise<{ state: ToranotCloudState; updatedAt: string } | null> {
   if (!supabase) return null;
@@ -429,3 +443,4 @@ export async function deleteSharedShift(code: string): Promise<void> {
   if (!supabase || !uid) return;
   await supabase.from("shared_shifts").delete().eq("code", code).eq("creator_id", uid);
 }
+
