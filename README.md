@@ -1,3 +1,19 @@
+## Gemini Clinical Audit — Fixes Applied (03/03/2026)
+
+### Clinical Safety
+- **Comfort care suppression restored**: `iv_opioid` + `iv_midazolam` Q2H vital-sign tasks re-suppressed for palliative patients — waking a dying patient Q2H contradicts comfort goals. Replaced with qualitative `comfort_sedation_symptom` rule (dyspnea/secretions check + Buscopan PRN)
+- **New clinical rules**: `aspiration_risk` (HOB 30°, swallowing screen), `pressure_ulcer` (q2h turns, heel checks), `delirium_nonpharm_bundle` (re-orientation, glasses/hearing aids, un-tether)
+- **Cockcroft-Gault frailty fix**: Creatinine floor at 1.0 mg/dL for patients ≥75yo — prevents CrCl overestimation in sarcopenic elderly (low Cr ≠ normal renal function)
+
+### Drug Safety (Beers 2023)
+- **Triple Whammy** NSAID+ACEi/ARB+diuretic upgraded to **critical** severity with AKI warning
+- **Anticholinergic burden** combinations added: oxybutynin+amitriptyline, tolterodine+amitriptyline, diphenhydramine+benzo — all flagged as critical/major for delirium risk
+
+### Bug Fixes
+- **`shared_shifts` 400 error**: Fixed by re-validating live Supabase session (`getSession()`) before INSERT — stale cached uid was failing RLS `auth.uid() IS NOT NULL` check
+- **BiDi regex fix**: Strip Unicode RTL control characters (U+200F, U+200E, U+202A–202E) from all text before regex matching — prevents invisible WhatsApp/iOS markers breaking Hebrew patterns
+- **Comfort care detection**: Diagnosis field now included in `allFlags` scan — "palliative care EOL" in diagnosis was previously not detected
+
 # Toranot (תורנות)
 
 **[Live App — Netlify](https://toranot.netlify.app)** · **[Mirror — GitHub Pages](https://eiasash.github.io/Toranot)**
