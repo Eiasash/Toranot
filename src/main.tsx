@@ -2,7 +2,6 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import "./index.css";
-import { requestNotificationPermission } from "./components/TaskCountdown";
 
 const rootEl = document.getElementById("root");
 if (!rootEl) throw new Error("Root element #root not found");
@@ -15,8 +14,6 @@ createRoot(rootEl).render(
   </StrictMode>,
 );
 
-// Request notification permission for task timers
-requestNotificationPermission();
 
 // ── Service Worker: register, auto-update every 5 min, auto-reload on update ──
 const SW_URL = `${import.meta.env.BASE_URL}sw.js`;
@@ -76,8 +73,11 @@ if ("serviceWorker" in navigator) {
     }
 
     if (type === "SNOOZE_TASK" && taskId && patientId && newDueAt) {
-      // Update the task's dueAt to +15min — rescheduled reminder fires via syncReminders
       window.dispatchEvent(new CustomEvent("toranot:task-snooze", { detail: { taskId, patientId, newDueAt } }));
+    }
+
+    if (type === "FOCUS_PATIENT" && patientId) {
+      window.dispatchEvent(new CustomEvent("toranot:focus-patient", { detail: { patientId } }));
     }
   });
 }
