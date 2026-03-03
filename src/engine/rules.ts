@@ -73,15 +73,34 @@ const COMFORT_SUPPRESSED_GROUPS = new Set([
   "iv_dopamine",
   "iv_amiodarone",
   "iv_kphos",
-  // ── NOT suppressed — these ARE part of comfort care ──
-  // "iv_opioid"     — pain / dyspnoea management
-  // "iv_midazolam"  — comfort sedation
-  // "iv_propofol"   — comfort sedation
-  // "iv_magnesium"  — symptom management
-  // "retention"     — urinary retention = pain; catheter = comfort
-  // "delirium"      — agitation management (non-pharmacological + cautious meds)
-  // "delirium_*"    — specific antipsychotic monitoring for agitation
-  // "cdiff"         — symptomatic treatment still appropriate
+  // Suppressed — auto-tasks replaced by hints/tips for comfort patients.
+  // Hints in hints.ts still fire; only TASK auto-generation is blocked.
+  // Opioid / sedation drips: monitoring tasks not appropriate for comfort care
+  "iv_opioid",
+  "iv_midazolam",
+  "iv_propofol",
+  "iv_magnesium",
+  // Symptom-driven procedures: appropriate only on explicit order
+  "retention",           // catheter — hint advises; explicit task if distressed
+  "bs",                  // bladder scan — same as retention
+  "cdiff",               // isolation + Vanco — hint advises
+  // Delirium: full workup + antipsychotic ladder suppressed.
+  // Terminal agitation managed on explicit written order. Hints remain.
+  "delirium",
+  "delirium_haloperidol",
+  "delirium_quetiapine",
+  "delirium_olanzapine",
+  "delirium_risperidone",
+  "delirium_dexmedetomidine",
+  "delirium_trazodone",
+  "delirium_melatonin",
+  // Withdrawal: CIWA scoring + benzo ladder are curative, not comfort
+  "withdrawal",
+  // NOT suppressed (still appropriate in comfort care):
+  // hypoglycemia — treating low glucose is basic comfort (sugar/glucagon)
+  // anaphylaxis  — epinephrine is appropriate emergency care
+  // npo          — aspiration prevention relevant to comfort
+  // catheter, isolation — empty task lists; no impact
 ]);
 
 const RULES: Rule[] = [
