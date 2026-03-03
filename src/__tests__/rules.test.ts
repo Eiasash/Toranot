@@ -974,5 +974,4 @@ describe("rules engine — cross-cutting behavior", () => {
       expect(generatedSources(tasks)).toContain("טרזודון");
     });
   });
-);
 });
