@@ -54,7 +54,7 @@ function ShiftProgress() {
   const sectionPatients = activeSection === "ALL"
     ? patients
     : patients.filter((p) => p.section === activeSection);
-  const allTasks = sectionPatients.flatMap((p) => [...p.tasks, ...p.generatedTasks.filter(t => !(t as any).dismissed)]);
+  const allTasks = sectionPatients.flatMap((p) => [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)]);
   const total = allTasks.length;
   const done = allTasks.filter((t) => t.done).length;
   const stat = allTasks.filter((t) => !t.done && t.urgency === "stat").length;
@@ -479,7 +479,7 @@ function AppInner() {
   }, []);
 
   const pendingStat = patients
-    .flatMap((p) => [...p.tasks, ...p.generatedTasks.filter(t => !(t as any).dismissed)])
+    .flatMap((p) => [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)])
     .filter((t) => !t.done && t.urgency === "stat").length;
 
   const handleBottomNav = useCallback((action: Modal) => {
