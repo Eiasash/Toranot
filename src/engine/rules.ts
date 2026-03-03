@@ -881,7 +881,7 @@ const RULES: Rule[] = [
   // Fires ONLY for comfort/palliative patients on opioid/benzo drips.
   // Replaces the suppressed Q2H RR/SpO2 monitoring with humane qualitative checks.
   {
-    trigger: /מורפין|fentanyl|פנטניל|midazolam|dormicum|דורמיקום|מידזולם/i,
+    trigger: /מורפין|morphine|fentanyl|פנטניל|midazolam|dormicum|דורמיקום|מידזולם/i,
     source: "בדיקת סימפטומים — טיפול מנחם",
     group: "comfort_sedation_symptom",
     triggerField: "all",
