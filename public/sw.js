@@ -260,22 +260,26 @@ self.addEventListener("message", (event) => {
   // ── Schedule a timed notification (short delays only — SW may be killed) ──
   if (type === "SCHEDULE_NOTIFICATION") {
     if (delay && delay > 0) {
-      setTimeout(() => {
-        self.registration.showNotification(title, {
-          body,
-          icon: "./icon-192.png",
-          badge: "./icon-192.png",
-          tag: tag || "toranot-" + Date.now(),
-          renotify: true,
-          requireInteraction: urgency === "stat",
-          vibrate: urgency === "stat" ? [200, 100, 200, 100, 200] : [200, 100, 200],
-          data: { url: "./", patientId, taskId },
-          actions: [
-            { action: "done", title: "✓ בוצע" },
-            { action: "snooze", title: "⏰ +15 דק׳" },
-          ],
-        });
-      }, delay);
+      // Wrap in event.waitUntil so SW stays alive until notification fires.
+      event.waitUntil(
+        new Promise((resolve) => setTimeout(resolve, delay)).then(() =>
+          self.registration.showNotification(title, {
+            body,
+            icon: "./icon-192.png",
+            badge: "./icon-192.png",
+            tag: tag || "toranot-" + Date.now(),
+            renotify: true,
+            requireInteraction: urgency === "stat",
+            vibrate: urgency === "stat" ? [200, 100, 200, 100, 200] : [200, 100, 200],
+            data: { url: "./", patientId, taskId },
+            actions: [
+              { action: "done", title: "✓ בוצע" },
+              { action: "snooze", title: "⏰ +15 דק׳" },
+            ],
+          })
+        )
+      );
+    } else {
     } else {
       event.waitUntil(
         self.registration.showNotification(title, {
