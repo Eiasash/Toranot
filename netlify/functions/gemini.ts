@@ -20,16 +20,13 @@ const ALLOWED_MODELS = new Set([
   "gemini-2.5-flash",
   "gemini-2.5-flash-lite",
   "gemini-2.5-pro",
-  "gemini-3.1-pro-preview",
-  "gemini-3-pro-preview",
-  "gemini-3-flash-preview",
   "gemini-flash-latest",
   "gemini-pro-latest",
 ]);
 
 function normalizeGeminiModel(input: unknown): string | null {
   const raw = String(input ?? "").trim();
-  if (!raw) return "gemini-3.1-pro-preview";
+  if (!raw) return "gemini-2.5-flash";
 
   const s = raw.toLowerCase();
   const aliases: Record<string, string> = {
@@ -46,10 +43,7 @@ function normalizeGeminiModel(input: unknown): string | null {
     "gemini-2.5-flash-lite":  "gemini-2.5-flash-lite",
     "pro":                    "gemini-2.5-pro",
     "gemini-2.5-pro":         "gemini-2.5-pro",
-    "gemini-3.1-pro":         "gemini-3.1-pro-preview",
-    "gemini-3.1-pro-preview": "gemini-3.1-pro-preview",
-    "gemini-3-pro":           "gemini-3-pro-preview",
-    "gemini-3-flash":         "gemini-3-flash-preview",
+    "gemini-2.5-pro":         "gemini-2.5-pro",
     "latest":                 "gemini-flash-latest",
   };
 
@@ -157,3 +151,4 @@ export default async (req: Request, _context: Context) => {
 export const config: Config = {
   path: "/api/gemini",
 };
+
