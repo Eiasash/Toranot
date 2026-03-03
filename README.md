@@ -178,3 +178,15 @@ Last full audit: 2026-03-03.
 - `x-api-secret` header authenticates client → proxy (rate-limited via Upstash Redis: 30 req/min AI, 10 req/min OCR)
 - `VITE_API_SECRET` is intentionally baked into the client bundle as a proxy auth token; real secrets stay server-side
 - Users can optionally supply their own Anthropic key (stored in localStorage, used as fallback if proxy fails)
+
+## Lighthouse (2026-03-03)
+| Category | Score |
+|---|---|
+| Performance | 94 |
+| Accessibility | 91 |
+| Best Practices | 83 |
+| SEO | 90 |
+| PWA | 90 |
+
+**Fixed post-audit:** CSP inline script violation (sw-nuke.js extracted), `aria-controls` pointing to non-existent panel IDs (PatientList now renders `role="tabpanel" id="panel-{section}"`), missing meta description, Supabase preconnect hint added.
+
