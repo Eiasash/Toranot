@@ -455,7 +455,7 @@ function ConflictDialog() {
 // ─── Main App Inner ──────────────────────────────────────
 function AppInner() {
   const [modal, setModal] = useState<Modal>("none");
-  const { patients } = usePatientsState();
+  const { patients, activeSection } = usePatientsState();
   const dispatch = usePatientsDispatch();
 
   useEffect(() => { requestNotificationPermission(); }, []);
