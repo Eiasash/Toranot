@@ -1,4 +1,5 @@
-import React, { useCallback, useState, useMemo } from "react";
+import React, { useCallback, useState, useMemo, Component } from "react";
+import type { ErrorInfo } from "react";
 import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
 import { SECTION_LABEL, PATIENT_SECTIONS } from "../types";
 import { PatientCard, PatientRow } from "./PatientCard";
@@ -17,6 +18,40 @@ function isNewThisShift(p: import("../types").PatientEntry): boolean {
 const SECTION_ORDER: Record<string, number> = Object.fromEntries(
   PATIENT_SECTIONS.map((s, i) => [s, i])
 );
+
+// Per-card Error Boundary — isolates crashes to individual cards
+class PatientCardErrorBoundary extends Component<
+  { patientId: string; children: React.ReactNode },
+  { error: Error | null }
+> {
+  constructor(props: { patientId: string; children: React.ReactNode }) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("[Toranot] PatientCard crash:", this.props.patientId, error.message);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 text-sm text-red-700 dark:text-red-300 flex items-center gap-2">
+          <span>!</span>
+          <span>שגיאה בהצגת חולה זה</span>
+          <button
+            className="mr-auto text-xs underline"
+            onClick={() => this.setState({ error: null })}
+          >
+            נסה שוב
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export function PatientList() {
   const { patients, activeSection } = usePatientsState();
@@ -180,7 +215,9 @@ export function PatientList() {
                       <div className="flex-1 border-t border-blue-200 dark:border-blue-800" />
                     </div>
                   )}
-                  <PatientCard patient={patient} />
+                  <PatientCardErrorBoundary patientId={patient.id}>
+                    <PatientCard patient={patient} />
+                  </PatientCardErrorBoundary>
                 </div>
               );
             })}
@@ -213,7 +250,9 @@ export function PatientList() {
                       </td>
                     </tr>
                   )}
-                  <PatientRow patient={patient} />
+                  <PatientCardErrorBoundary patientId={patient.id}>
+                    <PatientRow patient={patient} />
+                  </PatientCardErrorBoundary>
                 </React.Fragment>
               );
             })}
