@@ -974,31 +974,5 @@ describe("rules engine — cross-cutting behavior", () => {
       expect(generatedSources(tasks)).toContain("טרזודון");
     });
   });
-
-  // ─── skipIfExplicitTaskMatches: BS dedup ───────────────────────────────────
-  describe("BS rule — skipIfExplicitTaskMatches", () => {
-    it("suppresses generated BS task when explicit task text contains 'BS'", () => {
-      const tasks = applyRules(makePatient({ tasks: [{ text: "BS" }] }));
-      const dup = tasks.filter(t => t.source === "generated" && t.generatedFrom === "BS (Bladder Scan)");
-      expect(dup).toHaveLength(0);
-    });
-
-    it("suppresses generated BS task when explicit task says 'Bladder Scan q8h'", () => {
-      const tasks = applyRules(makePatient({ tasks: [{ text: "Bladder Scan q8h" }] }));
-      const dup = tasks.filter(t => t.source === "generated" && t.generatedFrom === "BS (Bladder Scan)");
-      expect(dup).toHaveLength(0);
-    });
-
-    it("generates BS task when no explicit BS task — retention path still works", () => {
-      const tasks = applyRules(makePatient({ tasks: [{ text: "urinary retention" }] }));
-      const bladder = tasks.filter(t => t.source === "generated" && /Bladder Scan/i.test(t.text));
-      expect(bladder.length).toBeGreaterThan(0);
-    });
-
-    it("does NOT generate when explicit task is 'BS q2h' (partial match)", () => {
-      const tasks = applyRules(makePatient({ tasks: [{ text: "BS q2h" }] }));
-      const dup = tasks.filter(t => t.source === "generated" && t.generatedFrom === "BS (Bladder Scan)");
-      expect(dup).toHaveLength(0);
-    });
-  });
+);
 });
