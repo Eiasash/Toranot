@@ -85,9 +85,8 @@ const COMFORT_SUPPRESSED_GROUPS = new Set([
   "iv_kphos",
   // Suppressed — auto-tasks replaced by hints/tips for comfort patients.
   // Hints in hints.ts still fire; only TASK auto-generation is blocked.
-  // Opioid / sedation drips: monitoring tasks not appropriate for comfort care
-  "iv_opioid",
-  "iv_midazolam",
+  // iv_opioid and iv_midazolam NOT suppressed — monitoring essential in comfort sedation
+  // (respiratory depression risk requires RR/SpO2 checks even in palliative setting)
   "iv_propofol",
   "iv_magnesium",
   // Symptom-driven procedures: appropriate only on explicit order
