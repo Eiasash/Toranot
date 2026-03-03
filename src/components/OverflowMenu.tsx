@@ -22,14 +22,14 @@ export function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qr
 
     // Collect incomplete stat/urgent tasks
     const incompleteTasks = patients.flatMap((p) =>
-      [...p.tasks, ...p.generatedTasks.filter(t => !(t as any).dismissed)]
+      [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)]
         .filter((t) => !t.done && (t.urgency === "stat" || t.urgency === "urgent"))
         .map((t) => ({ name: p.name ?? "?", room: p.room ?? null, task: t.text })),
     );
 
     // Patients with zero tasks (possibly forgotten)
     const patientsNoTasks = patients
-      .filter((p) => [...p.tasks, ...p.generatedTasks.filter(t => !(t as any).dismissed)].length === 0)
+      .filter((p) => [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)].length === 0)
       .map((p) => ({ name: p.name ?? "?", room: p.room ?? null }));
 
     // Abnormal labs without a follow-up task mentioning that lab
@@ -50,7 +50,7 @@ export function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qr
           (lab.label === "Lac" && val > 4) ||
           (lab.label === "pH" && (val < 7.25 || val > 7.55));
         if (abnormal) {
-          const allTasks = [...p.tasks, ...p.generatedTasks.filter(t => !(t as any).dismissed)];
+          const allTasks = [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)];
           const hasFollowUp = allTasks.some((t) => !t.done && t.text.toLowerCase().includes(lab.label.toLowerCase()));
           if (!hasFollowUp) {
             abnormalLabs.push({ name: p.name ?? "?", room: p.room ?? null, lab: `${lab.label}: ${val}` });
@@ -61,7 +61,7 @@ export function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qr
 
     const openStatCount = incompleteTasks.filter((t) =>
       patients.some((p) =>
-        [...p.tasks, ...p.generatedTasks.filter(t => !(t as any).dismissed)].some((pt) => pt.text === t.task && pt.urgency === "stat" && !pt.done)
+        [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)].some((pt) => pt.text === t.task && pt.urgency === "stat" && !pt.done)
       )
     ).length;
 
