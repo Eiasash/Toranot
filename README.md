@@ -157,3 +157,24 @@ cloudSync.ts     Supabase sync, conflict resolution, shift sharing
 ## License
 
 ISC
+
+## Security
+
+Last full audit: 2026-03-03.
+
+### Secrets status
+| Variable | Status |
+|---|---|
+| `ANTHROPIC_API_KEY` | 🔒 Secret |
+| `API_SECRET` | 🔒 Secret |
+| `SUPABASE_SERVICE_ROLE_KEY` | 🔒 Secret |
+| `SUPABASE_JWT_SECRET` | 🔒 Secret |
+| `GEMINI_API_KEY` | 🔒 Secret |
+| `VITE_API_SECRET` | Client bundle (by design — proxy auth token, not a real secret) |
+| `NETLIFY_DATABASE_URL*` | ⚠️ Mark secret manually in Netlify dashboard (extension-managed) |
+
+### Architecture
+- All AI/OCR calls go through Netlify serverless functions — no API keys in the browser
+- `x-api-secret` header authenticates client → proxy (rate-limited via Upstash Redis: 30 req/min AI, 10 req/min OCR)
+- `VITE_API_SECRET` is intentionally baked into the client bundle as a proxy auth token; real secrets stay server-side
+- Users can optionally supply their own Anthropic key (stored in localStorage, used as fallback if proxy fails)
