@@ -101,7 +101,7 @@ export function PatientList() {
 
   if (filtered.length === 0) {
     return (
-      <div role="tabpanel" id={`panel-${activeSection}`} className="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 py-20 px-6 animate-card-in">
+      <div className="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 py-20 px-6 animate-card-in">
         <svg width="72" height="72" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1} className="mb-4 opacity-30">
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 5h6" />
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 14l2 2 4-4" />
@@ -119,7 +119,7 @@ export function PatientList() {
   }
 
   return (
-    <div role="tabpanel" id={`panel-${activeSection}`} aria-label={activeSection === "ALL" ? "כל החולים" : SECTION_LABEL[activeSection]}>
+    <>
       {/* Sort toggle + room chips — sticky so they stay visible while scrolling */}
       {filtered.length > 1 && (
         <div className="sticky top-0 z-10 px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 space-y-1.5">
@@ -259,6 +259,6 @@ export function PatientList() {
           </tbody>
         </table>
       </div>
-    </div>
+    </>
   );
 }
