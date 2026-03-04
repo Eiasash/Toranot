@@ -23,7 +23,7 @@ afterEach(() => {
 
 describe("scheduleTaskReminder", () => {
   it("fires after the correct delay", () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     const now = Date.now();
     // Due 10 minutes from now, reminder 5 mins before = fires in 5 mins
     const dueAt = new Date(now + 10 * 60 * 1000).toISOString();
@@ -44,7 +44,7 @@ describe("scheduleTaskReminder", () => {
   });
 
   it("fires immediately for past due times", () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     const pastDue = new Date(Date.now() - 60 * 1000).toISOString();
 
     scheduleTaskReminder("t1", "כהן", "task", pastDue, 5);
@@ -57,7 +57,7 @@ describe("scheduleTaskReminder", () => {
   });
 
   it("replaces existing reminder for the same task", () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     const now = Date.now();
 
     // Schedule first reminder: due in 10 min, fires in 5 min
@@ -81,7 +81,7 @@ describe("scheduleTaskReminder", () => {
   });
 
   it("uses default 5 minute reminderMinsBefore", () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     const now = Date.now();
     const dueAt = new Date(now + 6 * 60 * 1000).toISOString();
 
@@ -101,7 +101,7 @@ describe("scheduleTaskReminder", () => {
 
 describe("cancelTaskReminder", () => {
   it("cancels a scheduled reminder", () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     const dueAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
     scheduleTaskReminder("t1", "כהן", "task", dueAt, 5);
@@ -120,7 +120,7 @@ describe("cancelTaskReminder", () => {
 
 describe("cancelAllReminders", () => {
   it("cancels all active reminders", () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     const dueAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
     scheduleTaskReminder("t1", "כהן", "task 1", dueAt, 5);
@@ -136,7 +136,7 @@ describe("cancelAllReminders", () => {
 
 describe("syncReminders", () => {
   it("schedules reminders for undone tasks with dueAt", () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     const dueAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
     syncReminders([{
@@ -153,7 +153,7 @@ describe("syncReminders", () => {
   });
 
   it("does not schedule reminders for done tasks", () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     const dueAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
     syncReminders([{
@@ -170,7 +170,7 @@ describe("syncReminders", () => {
   });
 
   it("does not schedule reminders for tasks without dueAt", () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
 
     syncReminders([{
       id: "p1",
@@ -186,7 +186,7 @@ describe("syncReminders", () => {
   });
 
   it("cancels reminders for tasks no longer in the list", () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     const dueAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
     syncReminders([{
@@ -210,7 +210,7 @@ describe("syncReminders", () => {
   });
 
   it("cancels reminders when task becomes done", () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     const dueAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
     syncReminders([{
@@ -234,7 +234,7 @@ describe("syncReminders", () => {
   });
 
   it("reschedules when dueAt changes", () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     const now = Date.now();
     const dueAt1 = new Date(now + 10 * 60 * 1000).toISOString();
     const dueAt2 = new Date(now + 20 * 60 * 1000).toISOString();
@@ -265,7 +265,7 @@ describe("syncReminders", () => {
   });
 
   it("handles generatedTasks the same as regular tasks", () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     const dueAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
     syncReminders([{
@@ -282,7 +282,7 @@ describe("syncReminders", () => {
   });
 
   it("uses patient name in the reminder (falls back to חולה for null)", () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     const dueAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
     syncReminders([{
@@ -304,7 +304,7 @@ describe("syncReminders", () => {
   });
 
   it("handles multiple patients with multiple tasks", () => {
-    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     const dueAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
     syncReminders([
