@@ -1,3 +1,34 @@
+## Security + Architecture Overhaul (04/03/2026)
+
+### Security: VITE_API_SECRET removed from client bundle
+**Previously**: A 64-char hex secret was baked into the Vite bundle at build time
+(`VITE_API_SECRET`) and sent as `x-api-secret` header. Anyone could extract it from
+the minified JS and hit the Netlify proxy functions directly.
+
+**Now**: All proxy calls (`/api/claude`, `/api/gemini`, `/api/ocr`) use the user's live
+Supabase JWT (`Authorization: Bearer <token>`). No secret in the bundle. The JWT is
+per-session, scoped to the authenticated user, and verified server-side by calling
+`/auth/v1/user` on Supabase. Falls back to `API_SECRET` for local dev without Supabase.
+
+Changed files:
+- `netlify/functions/_utils.ts` — `checkAuth()` now async, verifies Supabase JWT
+- `netlify/functions/claude.ts`, `gemini.ts`, `ocr-proxy.ts` — `await checkAuth()`
+- `src/cloudSync.ts` — added `getProxyAuthHeaders()`, `isProxyAvailableAsync()`
+- `src/components/AIClinicalReasoning.tsx`, `Scanner.tsx`, `AddAdmissionModal.tsx` — JWT auth
+- `src/vite-env.d.ts` — `VITE_API_SECRET` no longer needed (can be removed from Netlify env)
+
+### Architecture: PatientsContext backed by Zustand store
+**Previously**: 1000-line monolithic Context with `useReducer`. Every dispatch triggered
+all 19 context consumers to re-render, even if their data was unchanged.
+
+**Now**: Zustand store (`src/store/patientsStore.ts`) is the source of truth. The existing
+`usePatientsState` / `usePatientsDispatch` / `useCloudSync` hooks are unchanged — zero
+consumer migration needed. New capabilities:
+- `usePatientById(id)` — re-renders only when that patient changes
+- `useSectionPatients()` — re-renders only when patients in the active section change
+- `useStoreDispatch()` — stable reference, never triggers re-render
+- localStorage persistence moved to store subscriptions (runs once, outside React tree)
+
 ## Gemini Audit Deep Fix — Round 2 (04/03/2026)
 
 ### Critical Bug Fixes
