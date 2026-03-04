@@ -118,28 +118,63 @@ describe("calculateAcuity", () => {
     expect(overdueComponent!.subtotal).toBe(4);
   });
 
-  it("scores recent labs at weight 2", () => {
-    const recentTime = new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(); // 1 hour ago
+  it("scores critical lab deltas at weight 4", () => {
+    const t0 = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+    const t1 = new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString();
     const patient = makePatient({
       labs: [
-        { id: "lab-1", label: "Cr", value: 2.5, time: recentTime },
-        { id: "lab-2", label: "K+", value: 6.1, time: recentTime },
+        // Cr rising from 1.0 to 2.5 = KDIGO AKI Stage 2 (critical)
+        { id: "lab-1", label: "Cr", value: 1.0, time: t0 },
+        { id: "lab-2", label: "Cr", value: 2.5, time: t1 },
       ],
     });
     const result = calculateAcuity(patient);
-    const labComponent = result.components.find((c) => c.label === "מעבדות אחרונות");
-    expect(labComponent).toBeDefined();
-    expect(labComponent!.count).toBe(2);
-    expect(labComponent!.subtotal).toBe(4);
+    const criticalLabComponent = result.components.find((c) => c.label === "מעבדות קריטיות");
+    expect(criticalLabComponent).toBeDefined();
+    expect(criticalLabComponent!.count).toBe(1);
+    expect(criticalLabComponent!.weight).toBe(4);
+    expect(criticalLabComponent!.subtotal).toBe(4);
   });
 
-  it("does not score labs older than 4 hours", () => {
-    const oldTime = new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(); // 5 hours ago
+  it("scores warning lab deltas at weight 2", () => {
+    const t0 = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+    const t1 = new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString();
     const patient = makePatient({
-      labs: [{ id: "lab-1", label: "Cr", value: 2.5, time: oldTime }],
+      labs: [
+        // K+ rising by 0.6 = warning threshold
+        { id: "lab-1", label: "K+", value: 4.0, time: t0 },
+        { id: "lab-2", label: "K+", value: 4.6, time: t1 },
+      ],
     });
     const result = calculateAcuity(patient);
-    const labComponent = result.components.find((c) => c.label === "מעבדות אחרונות");
+    const warningLabComponent = result.components.find((c) => c.label === "מעבדות חריגות");
+    expect(warningLabComponent).toBeDefined();
+    expect(warningLabComponent!.count).toBe(1);
+    expect(warningLabComponent!.weight).toBe(2);
+    expect(warningLabComponent!.subtotal).toBe(2);
+  });
+
+  it("does not score labs with normal deltas", () => {
+    const t0 = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+    const t1 = new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString();
+    const patient = makePatient({
+      labs: [
+        // K+ change of 0.1 = within normal, no alert
+        { id: "lab-1", label: "K+", value: 4.0, time: t0 },
+        { id: "lab-2", label: "K+", value: 4.1, time: t1 },
+      ],
+    });
+    const result = calculateAcuity(patient);
+    const labComponent = result.components.find((c) => c.label === "מעבדות קריטיות" || c.label === "מעבדות חריגות");
+    expect(labComponent).toBeUndefined();
+  });
+
+  it("does not score a single lab entry (no delta possible)", () => {
+    const patient = makePatient({
+      labs: [{ id: "lab-1", label: "Cr", value: 2.5, time: new Date().toISOString() }],
+    });
+    const result = calculateAcuity(patient);
+    const labComponent = result.components.find((c) => c.label === "מעבדות קריטיות" || c.label === "מעבדות חריגות");
     expect(labComponent).toBeUndefined();
   });
 

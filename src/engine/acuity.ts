@@ -9,7 +9,8 @@
  *   - Open STAT tasks          × 5
  *   - Open urgent tasks        × 3
  *   - Active drug interactions  × 4 (critical) / 2 (major)
- *   - Abnormal labs (recent)    × 2
+ *   - Critical lab deltas       × 4
+ *   - Warning lab deltas        × 2
  *   - DNR/DNI flags             × 0 (doesn't make them sicker, just changes goals)
  *   - Active scenarios          × 1
  *   - Tasks with approaching deadlines (<30min) × 3
@@ -17,6 +18,7 @@
 
 import type { PatientEntry } from "../types";
 import { checkDrugInteractions } from "./drugSafety";
+import { calculateLabDeltas } from "./labDelta";
 
 export interface AcuityBreakdown {
   score: number;
@@ -54,11 +56,10 @@ export function calculateAcuity(patient: PatientEntry): AcuityBreakdown {
     return new Date(t.dueAt).getTime() < now;
   }).length;
 
-  // Recent abnormal labs (simplified: any lab entry in last 4h counts)
-  const fourHoursAgo = now - 4 * 60 * 60 * 1000;
-  const recentLabs = (patient.labs ?? []).filter(
-    (l) => new Date(l.time).getTime() > fourHoursAgo,
-  ).length;
+  // Abnormal labs — use the lab delta engine to count only clinically significant changes
+  const labDeltas = calculateLabDeltas(patient);
+  const criticalLabs = labDeltas.filter((d) => d.severity === "critical").length;
+  const warningLabs = labDeltas.filter((d) => d.severity === "warning").length;
 
   // Active scenarios (status lines that triggered generated tasks)
   const activeScenarios = patient.generatedTasks.filter((t) => !t.done && !t.dismissed).length;
@@ -70,7 +71,8 @@ export function calculateAcuity(patient: PatientEntry): AcuityBreakdown {
     { label: "אינטראקציות משמעותיות", count: majorInteractions, weight: 2, subtotal: majorInteractions * 2 },
     { label: "משימות באיחור", count: overdueTasks, weight: 4, subtotal: overdueTasks * 4 },
     { label: "דדליין קרוב (<30 דק׳)", count: approachingDeadlines, weight: 3, subtotal: approachingDeadlines * 3 },
-    { label: "מעבדות אחרונות", count: recentLabs, weight: 2, subtotal: recentLabs * 2 },
+    { label: "מעבדות קריטיות", count: criticalLabs, weight: 4, subtotal: criticalLabs * 4 },
+    { label: "מעבדות חריגות", count: warningLabs, weight: 2, subtotal: warningLabs * 2 },
     { label: "תרחישים פעילים", count: activeScenarios, weight: 1, subtotal: activeScenarios * 1 },
   ].filter((c) => c.count > 0);
 
