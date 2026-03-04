@@ -22,7 +22,10 @@ export function CrClCalculator({ onCrClChange }: { onCrClChange?: (crcl: number 
     const w = parseFloat(weight);
     const c = parseFloat(creatinine);
     if (!a || !w || !c || c <= 0) return null;
-    let val = ((140 - a) * w) / (72 * c);
+    // AGS/ASHP frailty correction: floor Cr at 1.0 for patients ≥75yo.
+    // Low Cr in elderly = low muscle mass, NOT good renal function.
+    const crAdjusted = a >= 75 && c < 1.0 ? 1.0 : c;
+    let val = ((140 - a) * w) / (72 * crAdjusted);
     if (female) val *= 0.85;
     return Math.round(val);
   }, [age, weight, creatinine, female, isHD]);
