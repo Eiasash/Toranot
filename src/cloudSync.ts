@@ -77,6 +77,28 @@ async function getUserId(): Promise<string | null> {
   return data.session?.user?.id ?? null;
 }
 
+/**
+ * Returns Authorization headers carrying the current Supabase JWT.
+ * Use for all proxy calls instead of the old x-api-secret / VITE_API_SECRET.
+ * Returns null if user has no active session (not logged in).
+ */
+export async function getProxyAuthHeaders(): Promise<Record<string, string> | null> {
+  if (!supabase) return null;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) return null;
+  return { "Authorization": `Bearer ${session.access_token}` };
+}
+
+/**
+ * Async proxy availability check — replaces !!import.meta.env.VITE_API_SECRET.
+ * Returns true when user is logged in (has an active Supabase session).
+ */
+export async function isProxyAvailableAsync(): Promise<boolean> {
+  if (!supabase) return false;
+  const { data: { session } } = await supabase.auth.getSession();
+  return !!session?.access_token;
+}
+
 function stableJson(x: unknown): string {
   // Sort keys recursively so object field order doesn't cause false change detection.
   // Without sorting, two identical states with different key insertion order
