@@ -323,6 +323,12 @@ const RENAL_DRUGS: RenalDrug[] = [
 /**
  * Calculate CrCl using Cockcroft-Gault formula.
  * Returns null if insufficient data.
+ *
+ * FRAILTY CORRECTION (AGS/ASHP): For patients ≥75yo, serum Cr is floored at 1.0 mg/dL.
+ * Low muscle mass in sarcopenic elderly causes artificially low Cr (0.4–0.7 mg/dL),
+ * which mathematically overestimates CrCl by 30–60%, leading to toxic overdosing of
+ * renally cleared drugs (DOACs, aminoglycosides, vancomycin, meropenem, etc.).
+ * A Cr of 0.4 in a 90yo woman ≠ normal kidneys — it means low muscle mass.
  */
 export function calculateCrCl(
   age: number | null,
@@ -331,9 +337,11 @@ export function calculateCrCl(
   isFemale?: boolean,    // optional, default false
 ): number | null {
   if (!age || !creatinine || creatinine <= 0) return null;
+  // Apply creatinine floor for frail elderly (≥75yo) — prevents CrCl overestimation
+  const cr = age >= 75 && creatinine < 1.0 ? 1.0 : creatinine;
   const w = weight ?? 70;
   const genderFactor = isFemale ? 0.85 : 1.0;
-  return Math.round(((140 - age) * w * genderFactor) / (72 * creatinine));
+  return Math.round(((140 - age) * w * genderFactor) / (72 * cr));
 }
 
 /**
