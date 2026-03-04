@@ -24,7 +24,8 @@ export function ShiftHistory({ onClose }: { onClose: () => void }) {
         const data = JSON.parse(e.target?.result as string) as PatientEntry[];
         if (!Array.isArray(data)) throw new Error("Invalid format");
         setPendingAction({ type: "import", data, count: data.length });
-      } catch {
+      } catch (err) {
+        console.warn("[Toranot] shift import parse failed:", err);
         setImportError("קובץ לא תקין. ודא שזה קובץ JSON שיוצא מתורנות.");
       }
     };

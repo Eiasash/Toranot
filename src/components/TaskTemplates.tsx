@@ -17,7 +17,8 @@ function loadTemplates(): TaskTemplate[] {
   try {
     const parsed = JSON.parse(raw) as TaskTemplate[];
     return Array.isArray(parsed) ? parsed : defaultTemplates();
-  } catch {
+  } catch (err) {
+    console.warn("[Toranot] task templates parse failed:", err);
     return defaultTemplates();
   }
 }

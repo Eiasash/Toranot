@@ -60,7 +60,7 @@ export function normalizeTask(t: RawTask): Task {
     note: t.note ?? null,
     dueAt: t.dueAt ?? null,
     // Ensure required string fields always have safe values
-    id: typeof t.id === "string" && t.id ? t.id : Math.random().toString(36).slice(2),
+    id: typeof t.id === "string" && t.id ? t.id : generateId(),
     text: typeof t.text === "string" ? t.text : String(t.text ?? ""),
     urgency: (["stat","urgent","morning","extra","routine"].includes(t.urgency as string)
       ? t.urgency : "routine") as Task["urgency"],
@@ -715,6 +715,8 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
     case "ASSIGN_TASK_TO_PATIENT": {
       const task = state.unassignedTasks.find(t => t.id === action.taskId);
       if (!task) return state;
+      // Verify patient exists — avoid orphaning the task if patient was deleted
+      if (!state.patients.some(p => p.id === action.patientId)) return state;
       return {
         ...state,
         unassignedTasks: state.unassignedTasks.filter(t => t.id !== action.taskId),

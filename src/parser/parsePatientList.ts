@@ -263,7 +263,7 @@ function parsePatientLine(
     // Uses MACHAR_WORD for Unicode-safe Hebrew word boundary detection.
     // Note: \b doesn't work with Hebrew. MACHAR_WORD handles מחר correctly.
     // בבוקר/לבוקר use \b which is known-broken for Hebrew but left as-is
-    // to preserve existing routing semantics (they route to tasks, not tomorrowNotes).
+    // to preserve existing routing semantics (they route to planNotes, not tomorrowNotes).
     const implicitMachar = MACHAR_WORD.test(part) || /\bלבוקר\b|\bבבוקר\b/.test(part);
     if (implicitMachar) {
       tomorrowNotes.push(part.replace(/^מחר\s*[:\-]?\s*/, "").trim() || part);

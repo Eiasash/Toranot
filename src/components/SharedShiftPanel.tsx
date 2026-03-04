@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
+import { safeGetItem } from "../utils/storage";
 import {
   createSharedShift,
   updateSharedShift,
@@ -29,9 +30,9 @@ export function SharedShiftPanel({ onClose }: { onClose: () => void }) {
   const dispatch = usePatientsDispatch();
 
   const [tab, setTab] = useState<"host" | "join">("host");
-  const [shareCode, setShareCode] = useState<string>(() => localStorage.getItem(SHARE_CODE_KEY) ?? "");
-  const [guestCode, setGuestCode] = useState<string>(localStorage.getItem(GUEST_CODE_KEY) ?? "");
-  const [role, setRole] = useState<"host" | "guest" | null>(() => (localStorage.getItem(SHARE_ROLE_KEY) as "host" | "guest") ?? null);
+  const [shareCode, setShareCode] = useState<string>(() => safeGetItem(SHARE_CODE_KEY) ?? "");
+  const [guestCode, setGuestCode] = useState<string>(safeGetItem(GUEST_CODE_KEY) ?? "");
+  const [role, setRole] = useState<"host" | "guest" | null>(() => (safeGetItem(SHARE_ROLE_KEY) as "host" | "guest") ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastSync, setLastSync] = useState<string | null>(null);
@@ -47,21 +48,47 @@ export function SharedShiftPanel({ onClose }: { onClose: () => void }) {
     if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
   }, []);
 
-  // Guest polling — pull + push every 20s (bidirectional)
+  // Guest polling — pull then push every 20s (bidirectional).
+  // Pull and push are staggered: pull fires first, then push fires 10s later.
+  // This avoids a race where stateRef still holds the pre-pull state at push time
+  // (React hasn't re-rendered yet), which would overwrite the host's data.
+  const guestPushRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startGuestSync = useCallback((code: string) => {
     stopPoll();
-    const sync = async () => {
+    if (guestPushRef.current) { clearInterval(guestPushRef.current); guestPushRef.current = null; }
+    let failCount = 0;
+    const pull = async () => {
       try {
         const result = await pullSharedShift(code);
-        if (!result) return;
+        if (!result) {
+          stopPoll();
+          if (guestPushRef.current) { clearInterval(guestPushRef.current); guestPushRef.current = null; }
+          setError("השיתוף פג תוקף או נסגר — התנתק וחזור מחדש");
+          return;
+        }
+        failCount = 0;
         dispatch({ type: "IMPORT_CLOUD_STATE", state: result.state });
         setLastSync(new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" }));
-        // Push guest's own edits back to shared record
-        await updateSharedShiftAsGuest(code, toCloudState(stateRef.current));
-      } catch { /* silent */ }
+      } catch (e) {
+        failCount++;
+        console.warn("[Toranot] guest pull failed:", e);
+        if (failCount >= 3) {
+          setError("סנכרון נכשל — בדוק חיבור לרשת");
+        }
+      }
     };
-    sync();
-    pollRef.current = setInterval(sync, 20_000);
+    const push = async () => {
+      try {
+        await updateSharedShiftAsGuest(code, toCloudState(stateRef.current));
+      } catch (e) {
+        console.warn("[Toranot] guest push failed:", e);
+      }
+    };
+    pull();
+    pollRef.current = setInterval(pull, 20_000);
+    // Push 10s offset from pull — by then React has re-rendered with pulled state
+    guestPushRef.current = setInterval(push, 20_000);
+    setTimeout(() => { push(); }, 10_000);
   }, [dispatch, stopPoll]);
 
   // Host auto-push — every 20s push current state to shared slot
@@ -72,11 +99,19 @@ export function SharedShiftPanel({ onClose }: { onClose: () => void }) {
 
   const startHostPush = useCallback((code: string) => {
     stopHostPush();
+    let failCount = 0;
     hostPushRef.current = setInterval(async () => {
       try {
         await updateSharedShift(code, toCloudState(stateRef.current));
+        failCount = 0;
         setLastSync(new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" }));
-      } catch { /* silent */ }
+      } catch (e) {
+        failCount++;
+        console.warn("[Toranot] host push failed:", e);
+        if (failCount >= 3) {
+          setError("סנכרון נכשל — בדוק חיבור לרשת");
+        }
+      }
     }, 20_000);
   }, [stopHostPush]);
 
@@ -84,7 +119,7 @@ export function SharedShiftPanel({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     if (role === "host" && shareCode) startHostPush(shareCode);
     if (role === "guest" && guestCode) { setTab("join"); startGuestSync(guestCode); }
-    return () => { stopPoll(); stopHostPush(); };
+    return () => { stopPoll(); stopHostPush(); if (guestPushRef.current) clearInterval(guestPushRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -132,6 +167,7 @@ export function SharedShiftPanel({ onClose }: { onClose: () => void }) {
   // Guest: leave
   const handleLeave = () => {
     stopPoll();
+    if (guestPushRef.current) { clearInterval(guestPushRef.current); guestPushRef.current = null; }
     setGuestCode(""); setRole(null); setLastSync(null); setGuestInput("");
     localStorage.removeItem(GUEST_CODE_KEY);
     localStorage.removeItem(SHARE_ROLE_KEY);

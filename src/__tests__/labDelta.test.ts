@@ -312,4 +312,55 @@ describe("calculateLabDeltas", () => {
       expect(kDelta!.peak).toBe(5.5);
     });
   });
+
+  // ── Edge cases ──
+
+  describe("edge cases", () => {
+    it("handles zero baseline Cr without division by zero", () => {
+      const p = makePatient([
+        makeLab("Cr", 0, 48),
+        makeLab("Cr", 2.0, 1),
+      ]);
+      // Should not throw or produce Infinity-based false alerts
+      const deltas = calculateLabDeltas(p);
+      const crDelta = deltas.find((d) => d.label === "Cr");
+      // With baseline 0, AKI classification should be skipped (returns null)
+      // but the generic delta engine may still fire on absolute change
+      if (crDelta) {
+        expect(crDelta.severity).not.toBe("critical"); // shouldn't be AKI stage 3 from Infinity ratio
+        expect(Number.isFinite(crDelta.changePercent)).toBe(true);
+      }
+    });
+
+    it("handles negative lab values gracefully", () => {
+      const p = makePatient([
+        makeLab("Cr", -1, 48),
+        makeLab("Cr", 1.0, 1),
+      ]);
+      const deltas = calculateLabDeltas(p);
+      // Should not crash
+      expect(Array.isArray(deltas)).toBe(true);
+    });
+
+    it("handles identical baseline and latest values (no change)", () => {
+      const p = makePatient([
+        makeLab("Cr", 1.0, 48),
+        makeLab("Cr", 1.0, 1),
+      ]);
+      const deltas = calculateLabDeltas(p);
+      const crDelta = deltas.find((d) => d.label === "Cr");
+      expect(crDelta).toBeUndefined(); // no alert for stable
+    });
+
+    it("handles labs with same timestamp", () => {
+      const now = new Date().toISOString();
+      const p = makePatient([
+        { id: "l1", label: "K+", value: 4.0, time: now },
+        { id: "l2", label: "K+", value: 5.5, time: now },
+      ]);
+      // Should not crash on zero time difference
+      const deltas = calculateLabDeltas(p);
+      expect(Array.isArray(deltas)).toBe(true);
+    });
+  });
 });

@@ -136,16 +136,26 @@ const INTERACTIONS: DrugInteraction[] = [
 ];
 
 /**
- * Scan all task text for a patient and return detected interactions.
+ * Gather all text sources where drugs might be mentioned.
+ * Used by interaction checker, renal dose warnings, and Beers criteria.
  */
-export function checkDrugInteractions(patient: PatientEntry): DrugInteraction[] {
-  // Combine all text sources where drugs might be mentioned
-  const allText = [
+function gatherDrugText(patient: PatientEntry): string {
+  return [
     ...patient.tasks.map((t) => t.text),
     ...patient.generatedTasks.map((t) => t.text),
     ...patient.status,
     ...patient.flags,
+    ...(patient.notes ?? []),
+    ...(patient.planNotes ?? []),
+    patient.diagnosis ?? "",
   ].join(" ");
+}
+
+/**
+ * Scan all task text for a patient and return detected interactions.
+ */
+export function checkDrugInteractions(patient: PatientEntry): DrugInteraction[] {
+  const allText = gatherDrugText(patient);
 
   // Find all drugs mentioned
   const detectedDrugs: string[] = [];
@@ -389,11 +399,7 @@ export function checkRenalDoseWarnings(patient: PatientEntry): RenalWarning[] {
   // from being under-warned because the formula assumed a 70kg man.
   const conservativeCrCl = Math.min(crclFemale55, crclMale70);
 
-  const allText = [
-    ...patient.tasks.map((t) => t.text),
-    ...patient.generatedTasks.map((t) => t.text),
-    ...patient.status,
-  ].join(" ");
+  const allText = gatherDrugText(patient);
 
   const warnings: RenalWarning[] = [];
 
@@ -578,12 +584,7 @@ export function checkBeersCriteria(patient: PatientEntry): BeersCriteria[] {
   const age = patient.age;
   if (!age || age < 65) return [];
 
-  const allText = [
-    ...patient.tasks.map((t) => t.text),
-    ...patient.generatedTasks.map((t) => t.text),
-    ...patient.status,
-    ...(patient.notes ?? []),
-  ].join(" ");
+  const allText = gatherDrugText(patient);
 
   const results: BeersCriteria[] = [];
 

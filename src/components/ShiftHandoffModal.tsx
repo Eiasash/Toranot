@@ -105,7 +105,8 @@ export function ShiftHandoffModal({ onClose }: { onClose: () => void }) {
       } else {
         setError("יצירת קוד נכשלה — נסה שוב");
       }
-    } catch {
+    } catch (err) {
+      console.warn("[Toranot] handoff create failed:", err);
       setError("שגיאה ביצירת קוד מסירה");
     } finally {
       setLoading(false);
@@ -124,7 +125,8 @@ export function ShiftHandoffModal({ onClose }: { onClose: () => void }) {
       } else {
         setError("קוד לא נמצא או פג תוקף");
       }
-    } catch {
+    } catch (err) {
+      console.warn("[Toranot] handoff pull failed:", err);
       setError("שגיאה בטעינת נתונים");
     } finally {
       setLoading(false);
