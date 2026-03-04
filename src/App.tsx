@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, Component, type ErrorInfo, lazy, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, Component, type ErrorInfo, lazy, Suspense } from "react";
 import { PatientsProvider } from "./context/PatientsContext";
 import { createHandoff, pullHandoff, type ToranotCloudState } from "./cloudSync";
 import { SectionTabs } from "./components/SectionTabs";
@@ -456,16 +456,20 @@ function ConflictDialog() {
 // ─── Main App Inner ──────────────────────────────────────
 function AppInner() {
   const { toast: storageToast, showToast: showStorageToast } = useSimpleToast(4000);
+  // Store showStorageToast in a ref so the event handler never needs it as a dep.
+  // This prevents any risk of the effect re-running due to an unstable callback ref.
+  const showStorageToastRef = useRef(showStorageToast);
+  showStorageToastRef.current = showStorageToast;
 
   // Listen for storage-full event fired from patientsStore subscription (outside React)
   useEffect(() => {
     const handler = (e: Event) => {
       const msg = (e as CustomEvent<{ message: string }>).detail?.message;
-      if (msg) showStorageToast(msg, "error");
+      if (msg) showStorageToastRef.current(msg, "error");
     };
     window.addEventListener("toranot:storage-full", handler);
     return () => window.removeEventListener("toranot:storage-full", handler);
-  }, [showStorageToast]);
+  }, []); // stable: ref never changes identity
   const [modal, setModal] = useState<Modal>("none");
   const { patients, activeSection } = usePatientsState();
   const dispatch = usePatientsDispatch();
