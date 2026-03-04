@@ -584,7 +584,7 @@ function AppInner() {
 
 class AppErrorBoundary extends Component<
   { children: React.ReactNode },
-  { error: Error | null }
+  { error: Error | null; componentStack?: string }
 > {
   constructor(props: { children: React.ReactNode }) {
     super(props);
@@ -595,9 +595,13 @@ class AppErrorBoundary extends Component<
   }
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("[Toranot] Uncaught error:", error, info.componentStack);
+    this.setState({ componentStack: info.componentStack ?? "" });
   }
   render() {
     if (this.state.error) {
+      // Extract the first meaningful component from the stack (the looping one)
+      const stack = this.state.componentStack ?? "";
+      const firstComponent = stack.split("\n").find(l => l.trim().startsWith("at ") && !l.includes("ErrorBoundary"))?.trim() ?? "";
       return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-6">
           <div className="max-w-sm w-full text-center space-y-4">
@@ -606,6 +610,9 @@ class AppErrorBoundary extends Component<
             <p className="text-sm text-gray-600 dark:text-gray-400 font-mono break-all">
               {this.state.error.message}
             </p>
+            {firstComponent && (
+              <p className="text-xs text-red-500 font-mono break-all text-left dir-ltr">{firstComponent}</p>
+            )}
             <button
               onClick={() => window.location.reload()}
               className="w-full py-3 bg-violet-600 text-white rounded-xl font-bold"
