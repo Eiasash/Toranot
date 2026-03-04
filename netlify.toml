@@ -63,3 +63,9 @@
   for = "/*.png"
   [headers.values]
     Cache-Control = "public, max-age=604800, immutable"
+
+# SPA fallback — all routes serve index.html (React Router handles client-side routing)
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
