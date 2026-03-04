@@ -3,7 +3,7 @@
  * CrClCalculator, CURB65Calculator, NEWS2Calculator, ElectrolyteReference, InsulinReference
  */
 import { useState, useMemo, useEffect } from "react";
-import { crclToBucket } from "../utils/renal";
+import { crclToBucket, cockcroft } from "../utils/renal";
 
 // ─────────────────────────────────────────────────────────
 // CrCl CALCULATOR (Cockcroft-Gault)
@@ -22,12 +22,8 @@ export function CrClCalculator({ onCrClChange }: { onCrClChange?: (crcl: number 
     const w = parseFloat(weight);
     const c = parseFloat(creatinine);
     if (!a || !w || !c || c <= 0) return null;
-    // AGS/ASHP frailty correction: floor Cr at 1.0 for patients ≥75yo.
-    // Low Cr in elderly = low muscle mass, NOT good renal function.
-    const crAdjusted = a >= 75 && c < 1.0 ? 1.0 : c;
-    let val = ((140 - a) * w) / (72 * crAdjusted);
-    if (female) val *= 0.85;
-    return Math.round(val);
+    // cockcroft() applies AGS/ASHP creatinine floor (≥75yo, Cr<1.0 → 1.0)
+    return Math.round(cockcroft(a, w, female, c));
   }, [age, weight, creatinine, female, isHD]);
 
   // Report CrCl to parent
