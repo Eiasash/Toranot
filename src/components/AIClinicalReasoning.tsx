@@ -11,6 +11,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import type { PatientEntry } from "../types";
+import { getProxyAuthHeaders, isProxyAvailableAsync } from "../cloudSync";
 import { safeGetItem, safeSetItem } from "../utils/storage";
 import DOMPurify from "dompurify";
 
@@ -60,13 +61,8 @@ function renderMarkdown(text: string): string {
 }
 
 /**
- * Proxy is available when VITE_API_SECRET was baked in at build time.
- * This works correctly for Netlify deploys regardless of custom domains,
- * and correctly returns false for GitHub Pages where the secret is absent.
+ * isProxyAvailableAsync() from cloudSync replaces this — imported above.
  */
-const isProxyAvailable = () =>
-  typeof import.meta !== "undefined" &&
-  !!import.meta.env.VITE_API_SECRET;
 
 interface AIClinicalReasoningProps {
   patient: PatientEntry;
@@ -206,7 +202,7 @@ async function callAIAPI(
   userMessage: string,
   signal?: AbortSignal,
 ): Promise<string> {
-  const useProxy = isProxyAvailable();
+  const useProxy = await isProxyAvailableAsync();
 
   if (provider === "gemini") {
     // Always proxy Gemini (key lives on server)
@@ -215,7 +211,7 @@ async function callAIAPI(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-secret": import.meta.env.VITE_API_SECRET ?? "",
+        ...(await getProxyAuthHeaders() ?? {}),
       },
       body: JSON.stringify({
         model: GEMINI_MODEL,
@@ -241,7 +237,8 @@ async function callAIAPI(
   const url = useProxy ? PROXY_API_URL : DIRECT_API_URL;
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (useProxy) {
-    headers["x-api-secret"] = import.meta.env.VITE_API_SECRET ?? "";
+    const _jwt = await getProxyAuthHeaders();
+    if (_jwt) Object.assign(headers, _jwt);
   } else {
     headers["x-api-key"] = apiKey;
     headers["anthropic-version"] = "2023-06-01";
@@ -275,7 +272,7 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
     return (saved === "gemini" || saved === "claude") ? saved : "gemini";
   });
   const [apiKey, setApiKey] = useState(() => safeGetItem(API_KEY_STORAGE) ?? "");
-  const proxyMode = isProxyAvailable();
+  const proxyMode = await isProxyAvailableAsync();
   // Claude key setup is only needed when not proxied; Gemini always uses server proxy
   const [showKeySetup, setShowKeySetup] = useState(!proxyMode && !apiKey && provider === "claude");
   const [selectedMode, setSelectedMode] = useState<QueryMode | null>(null);
