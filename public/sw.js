@@ -61,11 +61,12 @@ self.addEventListener("fetch", (event) => {
     event.request.mode !== "same-origin"
   ) return;
 
-  // Skip caching for API calls (Anthropic, etc.)
+  // Skip caching for API calls and the emergency reset page
   if (
     event.request.url.includes("/api/") ||
     event.request.url.includes("/.netlify/") ||
-    event.request.url.includes("api.anthropic.com")
+    event.request.url.includes("api.anthropic.com") ||
+    event.request.url.includes("/reset.html")
   ) {
     return;
   }
