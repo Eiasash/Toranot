@@ -1,3 +1,21 @@
+## Gemini Audit Deep Fix — Round 2 (04/03/2026)
+
+### Critical Bug Fixes
+- **CrCl creatinine floor was dead code**: `cockcroft()` in renal.ts was never called. The ACTUAL function used by `checkRenalDoseWarnings()` is `calculateCrCl()` in drugSafety.ts — now fixed with ≥75yo creatinine floor at 1.0 mg/dL
+- **OCR extracted fields not validated client-side**: Prompt told Claude to validate bounds, but client didn't enforce them. Added: age 18-120, bed 1-3, meds ≤8 items and ≤80 chars each
+
+### Performance
+- **Main bundle 516KB → 192KB** (63% reduction): Split engine/context/utils into separate cacheable chunks (`app-engine`, `app-context`, `app-utils`)
+- **PatientCard + PatientRow wrapped in React.memo**: Prevents full ward-list re-render when single patient changes
+
+### Code Quality
+- Removed unnecessary `(rule as any).comfortCareOnly` cast — property is in the `Rule` interface
+
+### Verified Clean
+- ARIA `aria-controls` → `panel-${section}` matches `id` in App.tsx tabpanel div ✓
+- All `addEventListener` calls have corresponding `removeEventListener` cleanup ✓
+- SharedShiftPanel `setInterval` polls properly cleared on unmount ✓
+
 ## Gemini Clinical Audit — Fixes Applied (03/03/2026)
 
 ### Clinical Safety
