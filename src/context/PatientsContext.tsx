@@ -859,6 +859,18 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
 // -----------------------------
 // Context
 // -----------------------------
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Provider & Hooks — backed by Zustand store (src/store/patientsStore.ts)
+//
+// The Zustand store is the single source of truth. Context just bridges it
+// for backward-compatible hook access across the component tree.
+// All existing consumers of usePatientsState/usePatientsDispatch/useCloudSync
+// continue to work with zero changes.
+// ─────────────────────────────────────────────────────────────────────────────
+
+import { usePatientsStore } from "../store/patientsStore";
+
 const PatientsStateContext = createContext<PatientsState>({
   patients: [],
   activeSection: "ALL",
@@ -886,54 +898,24 @@ const CloudSyncContext = createContext<CloudSyncState>({
 });
 
 export function PatientsProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, undefined as unknown as PatientsState, initializer);
+  // Read state + dispatch directly from Zustand store.
+  // No useReducer here — the store owns the state.
+  const state = usePatientsStore((s) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { dispatch: _dispatch, ...rest } = s;
+    return rest as PatientsState;
+  });
+  const dispatch = usePatientsStore((s) => s.dispatch);
 
-  // ─── Cloud sync (one line, everything lives in the hook) ────
+  // Cloud sync unchanged — depends on state + dispatch
   const syncState = useToranotCloudSync(state, dispatch);
 
-  // Persist patients to localStorage so data survives Android tab kills
+  // Dark mode DOM side-effect (persistence handled by store subscriptions)
   useEffect(() => {
-    safeSetItem(STORAGE_KEY_PATIENTS, JSON.stringify(state.patients));
-  }, [state.patients]);
-
-  // Persist shift history
-  useEffect(() => {
-    const ok = safeSetItem(STORAGE_KEY_SHIFT_HISTORY, JSON.stringify(state.shiftHistory));
-    if (!ok && state.shiftHistory.length > 0) {
-      alert("⚠️ לא ניתן לשמור היסטוריית משמרות — נפח האחסון מלא. נסה למחוק משמרות ישנות.");
-    }
-  }, [state.shiftHistory]);
-
-  // Persist dark mode + apply class
-  useEffect(() => {
-    safeSetItem(STORAGE_KEY_DARK_MODE, state.darkMode ? "true" : "false");
     document.documentElement.classList.toggle("dark", state.darkMode);
   }, [state.darkMode]);
 
-  // Persist scan mode
-  useEffect(() => {
-    safeSetItem(STORAGE_KEY_SCAN_MODE, state.scanMode ? "true" : "false");
-  }, [state.scanMode]);
-
-  // Persist show-tomorrow toggle
-  useEffect(() => {
-    safeSetItem(STORAGE_KEY_SHOW_TOMORROW, state.showTomorrow ? "true" : "false");
-  }, [state.showTomorrow]);
-
-  // Persist events log
-  useEffect(() => {
-    safeSetItem(STORAGE_KEY_EVENTS, JSON.stringify(state.events));
-  }, [state.events]);
-
-  // Persist unassigned tasks
-  useEffect(() => {
-    safeSetItem(STORAGE_KEY_UNASSIGNED, JSON.stringify(state.unassignedTasks));
-  }, [state.unassignedTasks]);
-
-  // Cross-tab sync: if another tab writes to localStorage, pick up the changes.
-  // The "storage" event only fires in OTHER tabs, never the one that wrote.
-  // Uses e.newValue directly — no re-reading storage. Validates before dispatch.
-  // Handle SW notification actions (task done / snooze from notification)
+  // Service worker message handlers
   useEffect(() => {
     const handleTaskDone = (e: Event) => {
       const { taskId, patientId } = (e as CustomEvent).detail ?? {};
@@ -941,15 +923,14 @@ export function PatientsProvider({ children }: { children: ReactNode }) {
     };
     const handleTaskSnooze = (e: Event) => {
       const { taskId, patientId, newDueAt } = (e as CustomEvent).detail ?? {};
-      if (taskId && patientId && newDueAt) dispatch({ type: "SET_TASK_DUE", patientId, taskId, dueAt: newDueAt });
+      if (taskId && patientId && newDueAt)
+        dispatch({ type: "SET_TASK_DUE", patientId, taskId, dueAt: newDueAt });
     };
     const handleFocusPatient = (e: Event) => {
       const { patientId } = (e as CustomEvent).detail ?? {};
       if (!patientId) return;
-      // Scroll the patient card into view — the card renders with data-patient-id attribute
       requestAnimationFrame(() => {
-        const el = document.getElementById(`patient-${patientId}`);
-        el?.scrollIntoView({ behavior: "smooth", block: "center" });
+        document.getElementById(`patient-${patientId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
       });
     };
     window.addEventListener("toranot:task-done", handleTaskDone);
@@ -962,19 +943,20 @@ export function PatientsProvider({ children }: { children: ReactNode }) {
     };
   }, [dispatch]);
 
+  // Cross-tab storage sync
   useEffect(() => {
+    const SK_SHIFT  = "toranot-shift-history";
+    const SK_PAT    = "toranot-patients";
+    const MAX_HIST  = 30;
     const handler = (e: StorageEvent) => {
       try {
-        if (e.key === STORAGE_KEY_SHIFT_HISTORY) {
+        if (e.key === SK_SHIFT) {
           const parsed = e.newValue ? JSON.parse(e.newValue) : [];
-          const safe = (Array.isArray(parsed) ? parsed : []).slice(0, MAX_SHIFT_HISTORY);
+          const safe = (Array.isArray(parsed) ? parsed : []).slice(0, MAX_HIST);
           dispatch({ type: "SYNC_SHIFT_HISTORY", shiftHistory: safe });
-          console.info("[Toranot] storage sync: shiftHistory", safe.length, "items");
-        } else if (e.key === STORAGE_KEY_PATIENTS) {
+        } else if (e.key === SK_PAT) {
           const parsed = e.newValue ? JSON.parse(e.newValue) : [];
-          const safe = Array.isArray(parsed) ? parsed : [];
-          dispatch({ type: "SYNC_PATIENTS", patients: safe });
-          console.info("[Toranot] storage sync: patients", safe.length, "items");
+          dispatch({ type: "SYNC_PATIENTS", patients: Array.isArray(parsed) ? parsed : [] });
         }
       } catch {
         console.warn("[Toranot] storage sync parse failed for key:", e.key);
@@ -995,17 +977,6 @@ export function PatientsProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function usePatientsState() {
-  return useContext(PatientsStateContext);
-}
-
-export function usePatientsDispatch() {
-  return useContext(PatientsDispatchContext);
-}
-
-export function useCloudSync() {
-  return useContext(CloudSyncContext);
-}
-
-
-
+export function usePatientsState()  { return useContext(PatientsStateContext); }
+export function usePatientsDispatch() { return useContext(PatientsDispatchContext); }
+export function useCloudSync()      { return useContext(CloudSyncContext); }
