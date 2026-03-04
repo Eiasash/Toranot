@@ -4,11 +4,11 @@ import type { PatientEntry, Task } from "../types";
 
 function makePatient(overrides: Partial<PatientEntry> = {}): PatientEntry {
   return {
-    id: "p-1", name: "כהן דוד", room: "12", age: 78,
-    section: "GENERAL", diagnosis: "", flags: [], status: [], notes: [],
+    id: "p-1", name: "כהן דוד", room: "12", age: 78, date: "",
+    section: "SIDE_A", diagnosis: "", flags: [], status: [], notes: [],
     tasks: [], generatedTasks: [], labs: [], photos: [],
     handoverNote: "", isAdmission: false, discharged: false,
-    scannedAt: null, tomorrowNotes: [],
+    scannedAt: "", confidence: 1.0, tomorrowNotes: [],
     ...overrides,
   };
 }
@@ -17,6 +17,7 @@ function makeTask(text: string, category: Task["category"] = "labs"): Task {
   return {
     id: "t-1", text, urgency: "routine", source: "manual",
     done: false, doneTime: null, time: null, category,
+    confidence: 1.0,
   };
 }
 
