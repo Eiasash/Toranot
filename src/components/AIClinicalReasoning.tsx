@@ -275,7 +275,7 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
   // isProxyAvailableAsync is async; use a lazy-init state seeded from sync Supabase check.
   // The session object is already in memory (no network) so getSession() resolves instantly.
   const [proxyMode, setProxyMode] = useState(false);
-  useEffect(() => { isProxyAvailableAsync().then(setProxyMode); }, []);
+  useEffect(() => { isProxyAvailableAsync().then(setProxyMode).catch(() => setProxyMode(false)); }, []);
   // Claude key setup is only needed when not proxied; Gemini always uses server proxy
   const [showKeySetup, setShowKeySetup] = useState(!proxyMode && !apiKey && provider === "claude");
   const [selectedMode, setSelectedMode] = useState<QueryMode | null>(null);
@@ -420,7 +420,7 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
         <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 px-4 py-1.5 text-[10px] text-amber-800 dark:text-amber-300 flex-shrink-0 flex items-center justify-between gap-2">
           <span>⚠️ כלי תמיכה בהחלטה בלבד — לא מחליף שיקול דעת קליני. אמת כל המלצה באופן עצמאי.</span>
           <span className="shrink-0 font-mono bg-amber-100 dark:bg-amber-800/40 px-1.5 py-0.5 rounded text-[9px]">
-            {provider === "gemini" ? "gemini-2.5-flash" : "claude-sonnet-4"}
+            {provider === "gemini" ? GEMINI_MODEL : CLAUDE_MODEL}
           </span>
         </div>
 
