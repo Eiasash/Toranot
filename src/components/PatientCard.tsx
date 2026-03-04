@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useEffect, memo } from "react";
+import React, { useMemo, useState, useCallback, useEffect, memo, lazy, Suspense } from "react";
 import type { PatientEntry, Task } from "../types";
 import { SECTIONS, SECTION_LABEL } from "../types";
 import { TaskItem } from "./TaskItem";
@@ -14,8 +14,9 @@ import { generateHints } from "../engine/hints";
 import { showUndoToast } from "./UndoToast";
 import { TaskTemplates } from "./TaskTemplates";
 import { NurseTemplates } from "./NurseTemplates";
-import { AIClinicalReasoning } from "./AIClinicalReasoning";
-import { VoiceButton } from "./VoiceInput";
+// Lazy-loaded — pulled in only when the AI panel or mic button is first rendered
+const AIClinicalReasoning = lazy(() => import("./AIClinicalReasoning").then(m => ({ default: m.AIClinicalReasoning })));
+const VoiceButton = lazy(() => import("./VoiceInput").then(m => ({ default: m.VoiceButton })));
 import { hapticSuccess } from "../utils/haptics";
 
 import { isNewThisShift as _isNewThisShift, getShiftStart } from "../utils/shiftTime";
@@ -899,7 +900,7 @@ function PatientCardBase({ patient }: { patient: PatientEntry }) {
                 className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-400 outline-none"
               />
               {addType === "task" && (
-                <VoiceButton onResult={(text) => { setDraft(text); }} />
+                <Suspense fallback={null}><VoiceButton onResult={(text) => { setDraft(text); }} /></Suspense>
               )}
               <button
                 type="button"
@@ -927,7 +928,9 @@ function PatientCardBase({ patient }: { patient: PatientEntry }) {
         <NurseTemplates patient={patient} onClose={() => setShowNurseTemplates(false)} />
       )}
       {showAI && (
-        <AIClinicalReasoning patient={patient} onClose={() => setShowAI(false)} />
+        <Suspense fallback={<div className="p-4 text-center text-sm text-gray-500">טוען...</div>}>
+          <AIClinicalReasoning patient={patient} onClose={() => setShowAI(false)} />
+        </Suspense>
       )}
     </div>
   );
