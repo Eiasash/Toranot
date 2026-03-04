@@ -548,6 +548,15 @@ const BEERS_RULES: BeersRule[] = [
     recommendation: "מינון מקסימלי 0.125mg/d בגרייטריה. נטר רמות ו-CrCl בכל שינוי",
     severity: "caution",
   },
+  // ── Metoclopramide long-term (Beers 2023: tardive dyskinesia) ──
+  {
+    name: "Metoclopramide (Pramin)",
+    pattern: /metoclopramide|מטוקלופרמיד|pramin|פרמין/i,
+    category: "גסטרואנטרולוגי",
+    concern: "שימוש ≥12 שבועות — סיכון לדיסקינזיה טרדיבית בלתי הפיכה (Beers 2023)",
+    recommendation: "הימנע מטיפול ממושך. לגסטרופרזיס: הגבל ל-12 שבועות. לבחילות פוסט-אופ: מקובל קצר-טווח",
+    severity: "caution",
+  },
 ];
 
 /**
