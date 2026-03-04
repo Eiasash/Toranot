@@ -11,16 +11,63 @@ export const UPSTREAM_TIMEOUT_LONG_MS = 25_000; // for file/vision requests (PDF
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
-/**
- * Validates the x-api-secret header against the API_SECRET env var.
- * Returns a 401 Response if invalid, null if valid.
- *
- * Callers: if (authError) return authError;
- */
-export function checkAuth(req: Request): Response | null {
+// ─── Auth — Supabase JWT verification ────────────────────────────────────────
+//
+// Replaces the shared VITE_API_SECRET / x-api-secret approach.
+// The client sends the Supabase session JWT as "Authorization: Bearer <token>".
+// We verify it by calling Supabase's /auth/v1/user endpoint — no external
+// package needed, no shared secret baked into the client bundle.
+//
+// Requirements (already in Netlify env vars):
+//   VITE_SUPABASE_URL     — project URL  e.g. https://xxxx.supabase.co
+//   VITE_SUPABASE_ANON_KEY — anon key (public, required for apikey header)
+//
+// Falls back to legacy x-api-secret if VITE_SUPABASE_URL is not set,
+// so local dev without Supabase continues to work.
+
+export async function checkAuth(req: Request): Promise<Response | null> {
+  const supabaseUrl  = Netlify.env.get("VITE_SUPABASE_URL");
+  const supabaseAnon = Netlify.env.get("VITE_SUPABASE_ANON_KEY");
+
+  // ── Path 1: Supabase JWT (production) ──────────────────────────────────
+  if (supabaseUrl && supabaseAnon) {
+    const authHeader = req.headers.get("authorization") ?? "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+
+    if (!token) {
+      return new Response("Unauthorized — Supabase session required", { status: 401 });
+    }
+
+    try {
+      const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "apikey": supabaseAnon,
+        },
+        signal: AbortSignal.timeout(3000),
+      });
+
+      if (res.ok) return null; // authenticated
+
+      if (res.status === 401 || res.status === 403) {
+        return new Response("Unauthorized — invalid or expired session", { status: 401 });
+      }
+
+      // Supabase returned unexpected error — fail open with a warning
+      console.warn("[auth] Supabase /auth/v1/user returned", res.status, "— failing open");
+      return null;
+
+    } catch (err) {
+      // Network timeout reaching Supabase — fail open to avoid blocking ward use
+      console.warn("[auth] Supabase JWT verification timed out — failing open:", err);
+      return null;
+    }
+  }
+
+  // ── Path 2: Legacy shared secret fallback (local dev / non-Supabase) ──
   const secret = Netlify.env.get("API_SECRET");
   if (!secret) {
-    console.error("[auth] API_SECRET env var is not set — all requests blocked");
+    console.error("[auth] Neither VITE_SUPABASE_URL nor API_SECRET configured");
     return new Response("Service misconfigured", { status: 503 });
   }
   if (req.headers.get("x-api-secret") !== secret) {
@@ -28,6 +75,7 @@ export function checkAuth(req: Request): Response | null {
   }
   return null;
 }
+
 
 // ─── Request validation ───────────────────────────────────────────────────────
 
