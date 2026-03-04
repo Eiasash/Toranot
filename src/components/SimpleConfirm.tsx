@@ -1,18 +1,18 @@
 /**
- * Lightweight inline confirm / toast components — replaces window.confirm()
- * and window.alert() which silently fail in Android PWA standalone mode.
+ * Lightweight inline confirm / toast — replaces window.confirm() and
+ * window.alert() which silently fail in Android PWA standalone mode.
  *
  * Usage (confirm):
- *   const { confirmState, requestConfirm } = useSimpleConfirm();
+ *   const { confirmState, requestConfirm, dismiss } = useSimpleConfirm();
  *   <button onClick={() => requestConfirm("למחוק?", handleDelete)}>מחק</button>
- *   <SimpleConfirmModal state={confirmState} />
+ *   <SimpleConfirmModal state={confirmState} onCancel={dismiss} />
  *
  * Usage (toast):
  *   const { toast, showToast } = useSimpleToast();
  *   showToast("הועתק!");
  *   <SimpleToast state={toast} />
  */
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 
 // ─── Confirm ──────────────────────────────────────────────────────────────────
 
@@ -49,10 +49,14 @@ export function SimpleConfirmModal({
 }) {
   if (!state.open) return null;
   return (
-    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center px-4 pb-8 sm:pb-0 bg-black/40"
-         onClick={onCancel}>
-      <div className="w-full max-w-xs bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden"
-           onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center px-4 pb-8 sm:pb-0 bg-black/40"
+      onClick={onCancel}
+    >
+      <div
+        className="w-full max-w-xs bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="px-5 pt-5 pb-4">
           <p className="text-sm text-gray-800 dark:text-gray-100 font-medium">{state.message}</p>
         </div>
@@ -84,26 +88,39 @@ export interface ToastState {
 }
 
 export function useSimpleToast(durationMs = 2200) {
-  const [toast, setToast] = useState<ToastState>({ open: false, message: "", variant: "success" });
-  let timer: ReturnType<typeof setTimeout>;
+  const [toast, setToast] = useState<ToastState>({
+    open: false,
+    message: "",
+    variant: "success",
+  });
+  // useRef so the timer ID persists across renders without being a dep
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  const showToast = useCallback((message: string, variant: "success" | "error" = "success") => {
-    clearTimeout(timer);
-    setToast({ open: true, message, variant });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    timer = setTimeout(() => setToast((s) => ({ ...s, open: false })), durationMs);
-  }, [durationMs]);
+  const showToast = useCallback(
+    (message: string, variant: "success" | "error" = "success") => {
+      clearTimeout(timerRef.current);
+      setToast({ open: true, message, variant });
+      timerRef.current = setTimeout(
+        () => setToast((s) => ({ ...s, open: false })),
+        durationMs
+      );
+    },
+    [durationMs]
+  );
 
   return { toast, showToast };
 }
 
 export function SimpleToast({ state }: { state: ToastState }) {
   if (!state.open) return null;
-  const bg = state.variant === "success"
-    ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900"
-    : "bg-red-600 text-white";
+  const bg =
+    state.variant === "success"
+      ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900"
+      : "bg-red-600 text-white";
   return (
-    <div className={`fixed bottom-20 left-1/2 -translate-x-1/2 z-[70] px-4 py-2 rounded-xl text-sm font-medium shadow-lg pointer-events-none ${bg}`}>
+    <div
+      className={`fixed bottom-20 left-1/2 -translate-x-1/2 z-[70] px-4 py-2 rounded-xl text-sm font-medium shadow-lg pointer-events-none ${bg}`}
+    >
       {state.message}
     </div>
   );
