@@ -1,257 +1,122 @@
-## Security + Architecture Overhaul (04/03/2026)
+# תורנות — Toranot
 
-### Security: VITE_API_SECRET removed from client bundle
-**Previously**: A 64-char hex secret was baked into the Vite bundle at build time
-(`VITE_API_SECRET`) and sent as `x-api-secret` header. Anyone could extract it from
-the minified JS and hit the Netlify proxy functions directly.
+Hebrew-language PWA for on-call geriatric ward shift management at Shaare Zedek Medical Center.
 
-**Now**: All proxy calls (`/api/claude`, `/api/gemini`, `/api/ocr`) use the user's live
-Supabase JWT (`Authorization: Bearer <token>`). No secret in the bundle. The JWT is
-per-session, scoped to the authenticated user, and verified server-side by calling
-`/auth/v1/user` on Supabase. Falls back to `API_SECRET` for local dev without Supabase.
-
-Changed files:
-- `netlify/functions/_utils.ts` — `checkAuth()` now async, verifies Supabase JWT
-- `netlify/functions/claude.ts`, `gemini.ts`, `ocr-proxy.ts` — `await checkAuth()`
-- `src/cloudSync.ts` — added `getProxyAuthHeaders()`, `isProxyAvailableAsync()`
-- `src/components/AIClinicalReasoning.tsx`, `Scanner.tsx`, `AddAdmissionModal.tsx` — JWT auth
-- `src/vite-env.d.ts` — `VITE_API_SECRET` no longer needed (can be removed from Netlify env)
-
-### Architecture: PatientsContext backed by Zustand store
-**Previously**: 1000-line monolithic Context with `useReducer`. Every dispatch triggered
-all 19 context consumers to re-render, even if their data was unchanged.
-
-**Now**: Zustand store (`src/store/patientsStore.ts`) is the source of truth. The existing
-`usePatientsState` / `usePatientsDispatch` / `useCloudSync` hooks are unchanged — zero
-consumer migration needed. New capabilities:
-- `usePatientById(id)` — re-renders only when that patient changes
-- `useSectionPatients()` — re-renders only when patients in the active section change
-- `useStoreDispatch()` — stable reference, never triggers re-render
-- localStorage persistence moved to store subscriptions (runs once, outside React tree)
-
-## Gemini Audit Deep Fix — Round 2 (04/03/2026)
-
-### Critical Bug Fixes
-- **CrCl creatinine floor was dead code**: `cockcroft()` in renal.ts was never called. The ACTUAL function used by `checkRenalDoseWarnings()` is `calculateCrCl()` in drugSafety.ts — now fixed with ≥75yo creatinine floor at 1.0 mg/dL
-- **OCR extracted fields not validated client-side**: Prompt told Claude to validate bounds, but client didn't enforce them. Added: age 18-120, bed 1-3, meds ≤8 items and ≤80 chars each
-
-### Performance
-- **Main bundle 516KB → 192KB** (63% reduction): Split engine/context/utils into separate cacheable chunks (`app-engine`, `app-context`, `app-utils`)
-- **PatientCard + PatientRow wrapped in React.memo**: Prevents full ward-list re-render when single patient changes
-
-### Code Quality
-- Removed unnecessary `(rule as any).comfortCareOnly` cast — property is in the `Rule` interface
-
-### Verified Clean
-- ARIA `aria-controls` → `panel-${section}` matches `id` in App.tsx tabpanel div ✓
-- All `addEventListener` calls have corresponding `removeEventListener` cleanup ✓
-- SharedShiftPanel `setInterval` polls properly cleared on unmount ✓
-
-## Gemini Clinical Audit — Fixes Applied (03/03/2026)
-
-### Clinical Safety
-- **Comfort care suppression restored**: `iv_opioid` + `iv_midazolam` Q2H vital-sign tasks re-suppressed for palliative patients — waking a dying patient Q2H contradicts comfort goals. Replaced with qualitative `comfort_sedation_symptom` rule (dyspnea/secretions check + Buscopan PRN)
-- **New clinical rules**: `aspiration_risk` (HOB 30°, swallowing screen), `pressure_ulcer` (q2h turns, heel checks), `delirium_nonpharm_bundle` (re-orientation, glasses/hearing aids, un-tether)
-- **Cockcroft-Gault frailty fix**: Creatinine floor at 1.0 mg/dL for patients ≥75yo — prevents CrCl overestimation in sarcopenic elderly (low Cr ≠ normal renal function)
-
-### Drug Safety (Beers 2023)
-- **Triple Whammy** NSAID+ACEi/ARB+diuretic upgraded to **critical** severity with AKI warning
-- **Anticholinergic burden** combinations added: oxybutynin+amitriptyline, tolterodine+amitriptyline, diphenhydramine+benzo — all flagged as critical/major for delirium risk
-
-### Bug Fixes
-- **`shared_shifts` 400 error**: Fixed by re-validating live Supabase session (`getSession()`) before INSERT — stale cached uid was failing RLS `auth.uid() IS NOT NULL` check
-- **BiDi regex fix**: Strip Unicode RTL control characters (U+200F, U+200E, U+202A–202E) from all text before regex matching — prevents invisible WhatsApp/iOS markers breaking Hebrew patterns
-- **Comfort care detection**: Diagnosis field now included in `allFlags` scan — "palliative care EOL" in diagnosis was previously not detected
-
-# Toranot (תורנות)
-
-**[Live App — Netlify](https://toranot.netlify.app)** · **[Mirror — GitHub Pages](https://eiasash.github.io/Toranot)**
-
-Hospital ward shift management PWA for on-call doctors at Shaare Zedek Medical Center. Import patient lists via camera OCR or text, track tasks per patient, and let the clinical rule engine generate on-call follow-up tasks automatically.
-
-Built as a mobile-first PWA with Hebrew RTL support — works directly from a phone on the ward floor, installable, offline-capable.
+Live: **[toranot.netlify.app](https://toranot.netlify.app)**
 
 ---
 
-## Features
-
-### Patient Import
-- **Camera OCR** — Point at a printed ward sheet and capture. Claude Vision reads Hebrew + English text from the image.
-- **Gallery** — Select an existing photo.
-- **Text paste** — Paste or type a patient list directly.
-- Parse preview screen for verification before committing.
-
-### Clinical Rule Engine (54 rules)
-Generates on-call tasks automatically based on detected conditions:
-- Discharge / pre-discharge prep
-- Pre-surgery (NPO, consent, blood type)
-- Blood transfusion protocol
-- IV drip monitoring: insulin, heparin, noradrenaline, dopamine, amiodarone, propofol, opioids, midazolam, magnesium, K-phosphate
-- Fall risk, isolation, catheter care
-- Sepsis → cultures + antibiotics
-- AKI (KDIGO staging), PE/DVT
-- Delirium pharmacotherapy ladder: workup → non-pharm → Quetiapine → Haloperidol IM → Olanzapine → Lorazepam IV rescue
-- Comfort care awareness: suppresses aggressive workup for palliative patients while keeping comfort medications active
-
-> **Golden rule:** planNotes and tomorrowNotes (morning team context) never trigger on-call tasks. Only explicit action text fires the engine.
-
-### Clinical Decision Support
-- **Drug safety alerts** — Dangerous interactions (QT prolongation, bleeding, hyperkalemia, serotonin syndrome), renal dose adjustments (Cockcroft-Gault CrCl), Beers 2023 criteria for geriatric patients
-- **Lab trend monitoring** — KDIGO AKI creatinine staging, Hb drop %, K+/Na/WBC/PLT/CRP/Lactate/INR/Glucose threshold alerts
-- **Clinical hints (36 conditions)** — Background awareness for PE, DVT, CHF, COPD, CKD, diabetes, dementia, Parkinson's, sepsis, falls, C.diff, alcohol withdrawal, and more
-- **AI clinical reasoning** — Claude-powered differential diagnosis and workup recommendations per patient
-
-### Ward Operations
-- **New admission modal** — Add on-call admissions manually with freestyle text parsing (`49/2 כהן יוסף 82 pneumonia DNR`). Clinical rules fire immediately on admission. Diagnosis picker with category tabs (infection/cardiac/pulm/neuro/renal/surgical), 12 common geriatric combo presets, live search, and removable chip selection.
-- **Admission letter AI extraction** — Attach a PDF, image (JPG/PNG/WEBP), or DOCX admission letter. Claude Sonnet extracts name, age, diagnosis, room/bed, DNR status, home medications, and generates a concise morning presentation paragraph. Fields auto-fill the admission form; morning presentation is editable and copyable for ward rounds.
-- **Bed collision prevention** — Prevents two patients sharing the same room+section across all entry points
-- **Smart rescan** — Re-importing preserves manual tasks, completion state, notes. Detects patient transfers between sections.
-- **Patient movement tracking** — Log bed moves with timestamps
-- **Event log** — Timestamped record of admissions, task completions, moves, and nurse calls
-
-### On-Call Handoff Sheet
-- Visual card view + plain text for WhatsApp/copy
-- **On-call filter** — Shows only patients with explicit manual tasks, done tasks, or new admissions. Ignores OCR-extracted background text.
-- **New admission banner** — Highlights all on-call admissions (both OCR-scanned during shift and manually added via modal), regardless of time of day
-- Aggregate drug safety alert count in shift summary
-- IPASS-style text export
-
-### Cloud Sync & Collaboration
-- **Supabase cloud sync** — Debounced push (2.5s), pull on boot, echo suppression
-- **Conflict detection** — Only prompts when both devices have exclusive patients the other doesn't. One-sided differences (device is simply behind) apply silently.
-- **Shift sharing** — Generate a 6-character code to share the current ward state with a colleague. Codes expire after 8 hours.
-- **Cross-tab sync** — localStorage events propagate state to other open browser tabs
-
-### UX
-- Section tabs: Side A / Side B / Side C / Rehab / Monitor / All
-- Urgency color coding: stat 🔴, urgent 🟡, extra 🟣, routine
-- Dark mode
-- Task due-time timers with notifications
-- Shift history: save, restore, export snapshots
-- WhatsApp share
-
----
-
-## Getting Started
-
-### Prerequisites
-- Node.js v18+
-- npm
-
-### Install
-```bash
-npm install
-```
-
-### Run locally
-```bash
-npm run dev
-```
-Open `http://localhost:5173/`.
-
-### Build for production
-```bash
-npm run build
-```
-Output → `dist/`.
-
-### Run tests
-```bash
-npm test
-```
-636 tests across 20 test files.
-
-### Type check
-```bash
-npm run typecheck
-```
-
----
-
-## Input Format
-
-Section headers and patient lines:
-
-```
-צד א
-101 כהן יוסף 72 דלקת ריאות DNR NPO | תורן: עירוי דם | בדיקת דם בבוקר
-102 לוי שרה 65 אי ספיקת לב | מוניטור רציף
-
-צד ב
-201 דוד מרים 80 סוכרת | מדידת סוכר בבוקר
-```
-
-- Room formats: `101`, `49-3`, `55/1`, `ניטור 1`, `חדר-5`
-- Flags: `DNR`, `DNI`, `NPO`, `ISO`, `FALL` — parsed automatically
-- Tasks prefixed with `תורן:` are assigned to the on-call doctor
-- Tasks without prefix are informational context (planNotes) and do not generate on-call alerts
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-| UI | React 19, Tailwind CSS 4 |
-| Language | TypeScript (strict) |
-| OCR / AI | Claude Vision + Claude Sonnet |
-| Cloud | Supabase (auth + sync + sharing) |
-| Build | Vite 7 |
-| Tests | Vitest (636 tests) |
-| Deploy | Netlify + GitHub Pages |
-
----
-
-## Project Structure
+## Architecture
 
 ```
 src/
-  components/    UI (PatientCard, Scanner, HandoffSheet, AddAdmissionModal, ...)
-  context/       React context + useReducer state + cloud sync wiring
-  engine/        Rule engine (54 rules), clinical hints (36 conditions),
-                 drug safety, lab deltas, rescan merge, smart OCR diff
-  parser/        Hebrew patient list text parser
-  types/         TypeScript type definitions
-  utils/         ID generation, patient key, shift time, sort, storage
-  __tests__/     Unit tests (636 across 20 files)
-cloudSync.ts     Supabase sync, conflict resolution, shift sharing
+  context/
+    reducer.ts          — state reducer + all Action types (extracted to break circular dep)
+    PatientsContext.tsx  — thin React context shim over Zustand store
+  store/
+    patientsStore.ts    — Zustand store (source of truth, subscribeWithSelector middleware)
+  engine/
+    rules.ts            — geriatric task generation rules engine
+    drugSafety.ts       — Beers Criteria 2023 + drug interaction alerts
+    labDelta.ts         — KDIGO AKI / Hb delta alerting
+    acuity.ts           — patient acuity scoring
+    antibiotic/         — empiric antibiotic engine with SZMC DAG guidelines
+  data/
+    dosing.ts           — renal dosing table (19 antibiotics, CrCl bucket-based)
+  parser/
+    parsePatientList.ts — WhatsApp/nurse-call text → PatientEntry[]
+  utils/
+    renal.ts            — Cockcroft-Gault with frailty creatinine floor (≥75yo)
+  components/
+    SimpleConfirm.tsx   — useSimpleConfirm + useSimpleToast (PWA-safe, replaces window.confirm/alert)
+  cloudSync.ts          — Supabase cloud sync, handoff codes, shared shifts, JWT auth helpers
+netlify/functions/
+  _utils.ts             — Supabase JWT verification (async checkAuth), rate limiting
+  claude.ts             — Claude proxy
+  gemini.ts             — Gemini OCR proxy
+  ocr-proxy.ts          — PDF OCR pipeline
 ```
+
+### Key architectural decisions
+
+- **Zustand + React Context coexist**: `patientsStore` is the source of truth. `PatientsContext` wraps it for backward compatibility with 19 existing consumers. New code can use `usePatientsStore(selector)` for fine-grained subscriptions.
+- **reducer.ts extracted**: Breaking `PatientsContext ↔ patientsStore` circular import. Both import from `reducer.ts`; neither imports the other.
+- **No VITE_API_SECRET in bundle**: All Netlify function calls authenticated via Supabase JWT (`Authorization: Bearer <token>`). Legacy `API_SECRET` fallback for local dev only.
+- **SPA redirect**: `netlify.toml` has `[[redirects]] /* → /index.html 200` for direct URL navigation.
+- **Android PWA confirm/alert**: `window.confirm()` and `window.alert()` silently fail in standalone mode. All confirm dialogs use `useSimpleConfirm()` (inline React modal); all toasts use `useSimpleToast()`.
 
 ---
 
-## License
+## Clinical Safety Features
 
-ISC
+### Beers Criteria 2023 (age ≥65)
+- Z-drugs (zolpidem, zopiclone)
+- Benzodiazepines
+- Tramadol
+- TCAs (amitriptyline, nortriptyline, doxepin)
+- 1st-gen antihistamines (diphenhydramine, hydroxyzine, promethazine)
+- 1st-gen antipsychotics (haloperidol, chlorpromazine)
+- Sulfonylureas (glibenclamide, gliclazide, glipizide)
+- NSAIDs
+- Muscle relaxants (baclofen, cyclobenzaprine, tizanidine)
+- Digoxin >0.125mg/d
+- PPIs long-term >8 weeks (C.diff, fracture, hypomagnesaemia risk)
+- Metoclopramide long-term (tardive dyskinesia)
+
+### Drug interactions
+- Benzo + Opioid (respiratory depression — critical)
+- SSRI + Tramadol (serotonin syndrome)
+- Triple Whammy: NSAID + ACEi/ARB + Furosemide (AKI — critical)
+- Anticholinergic burden combos (delirium — per Beers 2023)
+- QTc-prolonging drug combinations
+
+### Renal dosing (CrCl buckets: normal / 10–50 / <10 / HD)
+pip-tazo, ceftriaxone, cefazolin, cephalexin, cefepime, meropenem, aztreonam,
+amox-clav, ciprofloxacin, levofloxacin, gentamicin, amikacin, vancomycin,
+metronidazole, clindamycin, azithromycin, nitrofurantoin, fidaxomicin,
+vancomycin PO, **TMP-SMX, ertapenem, linezolid, doxycycline**
+
+**Frailty correction**: CrCl floored at 1.0 mg/dL for patients ≥75yo (AGS/ASHP — prevents overdosing from sarcopenic low creatinine).
+
+### Rules engine (58 rule groups)
+Auto-generates on-call tasks from patient diagnosis/flags/meds/status. Key groups:
+`sepsis`, `aki`, `chf`, `delirium` (+ non-pharm bundle), `aspiration_risk`, `pressure_ulcer`,
+`dvtpe`, `uti`, `pneumonia`, `comfort_sedation_symptom` (comfortCareOnly — qualitative checks only),
+`fall`, `isolation`, `warfarin`, `iv_heparin`, `iv_insulin`, `iv_opioid/midazolam` (suppressed for comfort patients), and more.
+
+---
 
 ## Security
 
-Last full audit: 2026-03-03.
+- **JWT auth**: Netlify functions verify Supabase JWT via `/auth/v1/user` endpoint (3s timeout, fail-open on network error).
+- **Rate limiting**: Upstash Redis sliding window — 30 req/min/IP for AI, 10 req/min/IP for OCR.
+- **Content-Security-Policy**: set in `netlify.toml` headers.
+- **Source maps**: `hidden` — deployed but no `sourceMappingURL` in JS bundles.
+- **npm audit**: 0 vulnerabilities.
 
-### Secrets status
-| Variable | Status |
-|---|---|
-| `ANTHROPIC_API_KEY` | 🔒 Secret |
-| `API_SECRET` | 🔒 Secret |
-| `SUPABASE_SERVICE_ROLE_KEY` | 🔒 Secret |
-| `SUPABASE_JWT_SECRET` | 🔒 Secret |
-| `GEMINI_API_KEY` | 🔒 Secret |
-| `VITE_API_SECRET` | Client bundle (by design — proxy auth token, not a real secret) |
-| `NETLIFY_DATABASE_URL*` | ⚠️ Mark secret manually in Netlify dashboard (extension-managed) |
+---
 
-### Architecture
-- All AI/OCR calls go through Netlify serverless functions — no API keys in the browser
-- `x-api-secret` header authenticates client → proxy (rate-limited via Upstash Redis: 30 req/min AI, 10 req/min OCR)
-- `VITE_API_SECRET` is intentionally baked into the client bundle as a proxy auth token; real secrets stay server-side
-- Users can optionally supply their own Anthropic key (stored in localStorage, used as fallback if proxy fails)
+## Bundle sizes (gzipped)
 
-## Lighthouse (2026-03-03)
-| Category | Score |
-|---|---|
-| Performance | 94 |
-| Accessibility | 91 |
-| Best Practices | 83 |
-| SEO | 90 |
-| PWA | 90 |
+| Chunk | Size |
+|-------|------|
+| vendor-react | 60 KB |
+| index (main UI) | ~53 KB |
+| app-engine (rules + drug safety) | ~41 KB |
+| QuickReference | ~38 KB |
+| app-context (Zustand store) | ~5 KB |
+| app-utils (parser/utils) | ~4 KB |
+| 11 lazy modals | 3–15 KB each |
 
-**Fixed post-audit:** CSP inline script violation (sw-nuke.js extracted), `aria-controls` pointing to non-existent panel IDs (PatientList now renders `role="tabpanel" id="panel-{section}"`), missing meta description, Supabase preconnect hint added.
+---
 
+## Development
+
+```bash
+npm install
+npm run dev       # Vite dev server
+npm test          # vitest run (706 tests)
+npm run build     # tsc --noEmit + vite build
+```
+
+Requires Node ≥22. See `netlify.toml` for function configuration and CSP headers.
