@@ -10,6 +10,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { Action } from "./context/reducer";
 
 export type ToranotCloudState = {
   patients: unknown[];
@@ -20,7 +21,6 @@ export type ToranotCloudState = {
   scanMode?: boolean;
 };
 
-import type { Action } from "./context/reducer";
 type CloudDispatch = (action: Action) => void;
 
 const STORAGE_KEY_LAST_PULL = "toranot-cloud-last-pull";
