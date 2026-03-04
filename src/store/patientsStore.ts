@@ -22,8 +22,7 @@ import {
   normalizeTask,
   type Action,
   type ShiftSnapshot,
-  type PatientsState,
-} from "../context/reducer";
+} from "../context/PatientsContext";
 import type { PatientEntry, Section, Task, WardEvent, LabEntry } from "../types";
 import { safeGetItem, safeSetItem } from "../utils/storage";
 import type { ScanDiff } from "../engine/smartOCR";
@@ -124,7 +123,7 @@ export const usePatientsStore = create<PatientsStoreState>()(
       set((state) => {
         // Pull dispatch out so reducer doesn't see it
         const { dispatch: _d, ...reducerState } = state;
-        return reducer(reducerState as PatientsState, action);
+        return reducer(reducerState as Parameters<typeof reducer>[0], action);
       }),
   })),
 );
@@ -144,7 +143,10 @@ usePatientsStore.subscribe(
   (shiftHistory) => {
     const ok = safeSetItem(SK_SHIFT_HISTORY, JSON.stringify(shiftHistory));
     if (!ok && shiftHistory.length > 0) {
-      alert("⚠️ לא ניתן לשמור היסטוריית משמרות — נפח האחסון מלא. נסה למחוק משמרות ישנות.");
+      // Fire a DOM event — App.tsx listens and shows an inline toast (no window.alert needed)
+      window.dispatchEvent(new CustomEvent("toranot:storage-full", {
+        detail: { message: "⚠️ אחסון מקומי מלא — לא ניתן לשמור היסטוריית משמרות. מחק משמרות ישנות." }
+      }));
     }
   },
 );
