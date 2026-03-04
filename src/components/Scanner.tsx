@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { safeGetItem, safeSetItem } from "../utils/storage";
+import { getProxyAuthHeaders } from "../cloudSync";
 
 // -----------------------------
 // Constants
