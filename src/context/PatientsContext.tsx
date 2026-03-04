@@ -1,7 +1,6 @@
 import {
   createContext,
   useContext,
-  useReducer,
   useEffect,
   type ReactNode,
   type Dispatch,
@@ -18,13 +17,6 @@ import type { ScanDiff } from "../engine/smartOCR";
 // -----------------------------
 // Constants
 // -----------------------------
-const STORAGE_KEY_PATIENTS = "toranot-patients";
-const STORAGE_KEY_SHIFT_HISTORY = "toranot-shift-history";
-const STORAGE_KEY_DARK_MODE = "toranot-dark";
-const STORAGE_KEY_SCAN_MODE = "toranot-scan-mode";
-const STORAGE_KEY_EVENTS = "toranot-events";
-const STORAGE_KEY_UNASSIGNED = "toranot-unassigned-tasks";
-const STORAGE_KEY_SHOW_TOMORROW = "toranot-show-tomorrow";
 const MAX_EVENTS = 300;
 const MAX_SHIFT_HISTORY = 30;
 
@@ -104,93 +96,6 @@ function stripPatientForArchive(p: PatientEntry): PatientEntry {
     generatedTasks: [],
   };
 }
-
-function loadSavedPatients(): PatientEntry[] {
-  try {
-    const raw = safeGetItem(STORAGE_KEY_PATIENTS);
-    const parsed: unknown[] = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed.map((p) => normalizePatient(p as RawPatient)) : [];
-  } catch (err) {
-    console.warn("Failed to load saved patients:", err);
-    return [];
-  }
-}
-
-function loadShiftHistory(): ShiftSnapshot[] {
-  try {
-    const raw = safeGetItem(STORAGE_KEY_SHIFT_HISTORY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed)
-      ? parsed.map((s: ShiftSnapshot) => ({
-          ...s,
-          patients: Array.isArray(s.patients)
-            ? s.patients.map(normalizePatient)
-            : [],
-        }))
-      : [];
-  } catch {
-    return [];
-  }
-}
-
-function loadDarkMode(): boolean {
-  try {
-    return safeGetItem(STORAGE_KEY_DARK_MODE) === "true";
-  } catch (err) {
-    console.warn("Failed to load dark mode preference:", err);
-    return false;
-  }
-}
-
-function loadScanMode(): boolean {
-  try {
-    return safeGetItem(STORAGE_KEY_SCAN_MODE) === "true";
-  } catch {
-    return false;
-  }
-}
-
-function loadShowTomorrow(): boolean {
-  try {
-    return safeGetItem(STORAGE_KEY_SHOW_TOMORROW) === "true";
-  } catch {
-    return false;
-  }
-}
-
-function loadEvents(): WardEvent[] {
-  try {
-    const raw = safeGetItem(STORAGE_KEY_EVENTS);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function loadUnassignedTasks(): Task[] {
-  try {
-    const raw = safeGetItem(STORAGE_KEY_UNASSIGNED);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.map(normalizeTask) : [];
-  } catch {
-    return [];
-  }
-}
-
-const initializer = (): PatientsState => ({
-  patients: loadSavedPatients(),
-  activeSection: "ALL",
-  showTomorrow: loadShowTomorrow(),
-  darkMode: loadDarkMode(),
-  shiftHistory: loadShiftHistory(),
-  scanMode: loadScanMode(),
-  events: loadEvents(),
-  unassignedTasks: loadUnassignedTasks(),
-  lastScanDiff: null,
-});
 
 // -----------------------------
 export type Action =
