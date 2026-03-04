@@ -259,8 +259,9 @@ async function extractFromLetter(
   }
 
   const endpoint = "/api/claude";
-  const authHeaders = await getProxyAuthHeaders();
-  if (!authHeaders) throw new Error("נדרשת התחברות לחשבון כדי לנתח מכתבי קבלה");
+  // JWT from Supabase session. Fallback to empty headers — proxy returns 401 which
+  // is caught below and surfaced as a user-friendly message, not a silent crash.
+  const authHeaders = await getProxyAuthHeaders() ?? {};
   const headers: Record<string, string> = { "content-type": "application/json", ...authHeaders };
 
   const body = { model: "claude-sonnet-4-6", max_tokens: 1500, system: EXTRACTION_SYSTEM, messages: [{ role: "user", content: messageContent }] };
