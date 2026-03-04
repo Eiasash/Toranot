@@ -20,8 +20,8 @@ export type ToranotCloudState = {
   scanMode?: boolean;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type CloudDispatch = (action: any) => void;
+import type { Action } from "./context/reducer";
+type CloudDispatch = (action: Action) => void;
 
 const STORAGE_KEY_LAST_PULL = "toranot-cloud-last-pull";
 
