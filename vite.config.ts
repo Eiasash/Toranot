@@ -37,11 +37,16 @@ export default defineConfig({
       output: {
         // Manual chunk splitting — vendor libs cached separately from app code.
         // Modals are already split via React.lazy; this handles the remaining vendors.
-        manualChunks: {
-          "vendor-react":    ["react", "react-dom"],
-          "vendor-supabase": ["@supabase/supabase-js"],
-          "vendor-qr":       ["qrcode.react"],
-          "vendor-dompurify":["dompurify"],
+        manualChunks(id) {
+          // Vendor chunks — long-cache TTL (content-hashed)
+          if (id.includes("node_modules/react") || id.includes("node_modules/react-dom")) return "vendor-react";
+          if (id.includes("node_modules/@supabase")) return "vendor-supabase";
+          if (id.includes("node_modules/qrcode.react")) return "vendor-qr";
+          if (id.includes("node_modules/dompurify")) return "vendor-dompurify";
+          // App engine chunks — separate from UI components
+          if (id.includes("/src/engine/")) return "app-engine";
+          if (id.includes("/src/context/")) return "app-context";
+          if (id.includes("/src/parser/") || id.includes("/src/utils/")) return "app-utils";
         },
       },
     },
