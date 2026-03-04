@@ -272,7 +272,10 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
     return (saved === "gemini" || saved === "claude") ? saved : "gemini";
   });
   const [apiKey, setApiKey] = useState(() => safeGetItem(API_KEY_STORAGE) ?? "");
-  const proxyMode = await isProxyAvailableAsync();
+  // isProxyAvailableAsync is async; use a lazy-init state seeded from sync Supabase check.
+  // The session object is already in memory (no network) so getSession() resolves instantly.
+  const [proxyMode, setProxyMode] = useState(false);
+  useEffect(() => { isProxyAvailableAsync().then(setProxyMode); }, []);
   // Claude key setup is only needed when not proxied; Gemini always uses server proxy
   const [showKeySetup, setShowKeySetup] = useState(!proxyMode && !apiKey && provider === "claude");
   const [selectedMode, setSelectedMode] = useState<QueryMode | null>(null);
