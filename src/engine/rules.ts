@@ -971,7 +971,7 @@ export function applyRules(patient: PatientEntry): Task[] {
     // ONLY explicit patient tasks (not status/flags), so they only fire when
     // the on-call doctor explicitly wrote the procedure.
     // Skip rules marked comfortCareOnly for non-comfort patients
-    if (!isComfortCareOnly && (rule as any).comfortCareOnly) continue;
+    if (!isComfortCareOnly && rule.comfortCareOnly) continue;
     // Suppress aggressive workup groups for comfort patients
     if (isComfortCareOnly && rule.group && COMFORT_SUPPRESSED_GROUPS.has(rule.group)) {
       if (!rule.comfortRequiresExplicitTask) continue;
