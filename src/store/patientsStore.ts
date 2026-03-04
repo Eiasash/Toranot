@@ -22,7 +22,8 @@ import {
   normalizeTask,
   type Action,
   type ShiftSnapshot,
-} from "../context/PatientsContext";
+  type PatientsState,
+} from "../context/reducer";
 import type { PatientEntry, Section, Task, WardEvent, LabEntry } from "../types";
 import { safeGetItem, safeSetItem } from "../utils/storage";
 import type { ScanDiff } from "../engine/smartOCR";
@@ -123,7 +124,7 @@ export const usePatientsStore = create<PatientsStoreState>()(
       set((state) => {
         // Pull dispatch out so reducer doesn't see it
         const { dispatch: _d, ...reducerState } = state;
-        return reducer(reducerState as Parameters<typeof reducer>[0], action);
+        return reducer(reducerState as PatientsState, action);
       }),
   })),
 );
