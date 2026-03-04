@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { usePatientsDispatch } from "../context/PatientsContext";
-import { Scanner } from "./Scanner";
 import { ParsePreview } from "./ParsePreview";
 import { parsePatientList } from "../parser/parsePatientList";
-import { AddAdmissionModal } from "./AddAdmissionModal";
+// Lazy — Scanner pulls in camera API code; AddAdmissionModal pulls in AI extraction
+const Scanner = lazy(() => import("./Scanner").then(m => ({ default: m.Scanner })));
+const AddAdmissionModal = lazy(() => import("./AddAdmissionModal").then(m => ({ default: m.AddAdmissionModal })));
 import type { PatientEntry } from "../types";
 
 type InputMode = "closed" | "choose" | "scan" | "text" | "admission";
@@ -78,10 +79,12 @@ export function InputArea() {
   // ── Admission modal ──
   if (mode === "admission") {
     return (
+      <Suspense fallback={null}>
       <AddAdmissionModal
         onClose={() => setMode("choose")}
         onSuccess={() => setMode("closed")}
       />
+    </Suspense>
     );
   }
 
@@ -132,10 +135,12 @@ export function InputArea() {
   if (mode === "scan") {
     return (
       <div className="p-4">
+        <Suspense fallback={<div className="p-4 text-center text-sm text-gray-500 animate-pulse">טוען מצלמה...</div>}>
         <Scanner
           onTextExtracted={(t) => triggerPreview(t)}
           onCancel={() => setMode("choose")}
         />
+      </Suspense>
       </div>
     );
   }
