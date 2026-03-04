@@ -274,7 +274,17 @@ async function extractFromLetter(
 
   if (!res.ok) {
     const err = await res.text().catch(() => "");
-    throw new Error(`API error ${res.status}: ${err.slice(0, 100)}`);
+    console.warn("[Toranot] /api/claude error:", res.status, err.slice(0, 200));
+    if (res.status === 401) {
+      throw new Error("שגיאת הרשאה — מפתח API לא תקין. פנה למנהל המערכת.");
+    }
+    if (res.status === 429) {
+      throw new Error("יותר מדי בקשות — נסה שוב בעוד דקה");
+    }
+    if (res.status === 504) {
+      throw new Error("השרת לא הגיב בזמן — נסה שוב");
+    }
+    throw new Error(`שגיאת שרת (${res.status}) — נסה שוב מאוחר יותר`);
   }
 
   const data = await res.json();
