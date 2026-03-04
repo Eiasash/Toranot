@@ -275,7 +275,17 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
   // isProxyAvailableAsync is async; use a lazy-init state seeded from sync Supabase check.
   // The session object is already in memory (no network) so getSession() resolves instantly.
   const [proxyMode, setProxyMode] = useState(false);
-  useEffect(() => { isProxyAvailableAsync().then(setProxyMode).catch(() => setProxyMode(false)); }, []);
+  useEffect(() => {
+    // Seed initial value
+    isProxyAvailableAsync().then(setProxyMode).catch(() => setProxyMode(false));
+    // Keep in sync when user logs in/out during the session
+    const { supabase } = require("../cloudSync") as { supabase: import("@supabase/supabase-js").SupabaseClient | null };
+    if (!supabase) return;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setProxyMode(!!session?.access_token);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
   // Claude key setup is only needed when not proxied; Gemini always uses server proxy
   const [showKeySetup, setShowKeySetup] = useState(!proxyMode && !apiKey && provider === "claude");
   const [selectedMode, setSelectedMode] = useState<QueryMode | null>(null);
