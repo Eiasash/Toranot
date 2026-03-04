@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>איפוס טורנות</title>
+  <style>
+    body { font-family: system-ui, sans-serif; display: flex; flex-direction: column;
+           align-items: center; justify-content: center; min-height: 100vh;
+           margin: 0; background: #0f172a; color: #f1f5f9; text-align: center; padding: 20px; }
+    h1 { font-size: 1.4rem; margin-bottom: 8px; }
+    p  { color: #94a3b8; font-size: 0.95rem; margin-bottom: 24px; }
+    #status { font-size: 0.9rem; color: #38bdf8; min-height: 1.5em; margin-bottom: 20px; }
+    button { background: #6d28d9; color: white; border: none; padding: 14px 32px;
+             border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+    button:disabled { opacity: 0.5; }
+    .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid #6d28d9;
+               border-top-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite;
+               vertical-align: middle; margin-left: 8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <h1>🔄 איפוס מטמון</h1>
+  <p>מנקה Service Worker ומטמון — הכרחי לאחר עדכון דחוף</p>
+  <div id="status">לוחץ כדי להתחיל…</div>
+  <button id="btn" onclick="doReset()">נקה ופתח מחדש</button>
+
+  <script>
+    async function doReset() {
+      const btn = document.getElementById('btn');
+      const status = document.getElementById('status');
+      btn.disabled = true;
+      btn.innerHTML = 'מנקה… <span class="spinner"></span>';
+
+      const steps = [];
+
+      // 1. Unregister all service workers
+      try {
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map(r => r.unregister()));
+          steps.push(`✓ בוטל SW (${regs.length})`);
+        }
+      } catch(e) { steps.push('⚠ SW: ' + e.message); }
+
+      status.textContent = steps.join(' | ');
+
+      // 2. Delete all caches
+      try {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+        steps.push(`✓ נוקו ${keys.length} מטמונים`);
+      } catch(e) { steps.push('⚠ Cache: ' + e.message); }
+
+      status.textContent = steps.join(' | ');
+
+      // 3. Clear localStorage (optional — preserves patient data actually so skip)
+      // We don't clear localStorage — that has the patient data
+
+      // 4. Redirect to app
+      status.textContent = steps.join(' | ') + ' ← מופנה…';
+      setTimeout(() => { window.location.replace('/'); }, 800);
+    }
+
+    // Auto-run after 1s if arrived here from the app
+    if (document.referrer.includes('toranot.netlify.app')) {
+      setTimeout(doReset, 800);
+    }
+  </script>
+</body>
+</html>
