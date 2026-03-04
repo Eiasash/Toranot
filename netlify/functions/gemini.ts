@@ -69,7 +69,7 @@ export default async (req: Request, _context: Context) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204 });
   if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
 
-  const authError = checkAuth(req);
+  const authError = await checkAuth(req);
   if (authError) return authError;
 
   const sizeError = checkBodySize(req);
