@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSimpleToast, SimpleToast } from "./SimpleConfirm";
 import { usePatientsState } from "../context/PatientsContext";
 import { SECTION_LABEL, type PatientEntry, type Task } from "../types";
 import { formatLabsForHandoff } from "./LabChart";
@@ -306,6 +307,7 @@ function SectionBlock({ label, patients, newIds }: { label: string; patients: Pa
 // ─── Main component ──────────────────────────────────────────────────────────
 
 export function HandoffSheet({ onClose }: { onClose: () => void }) {
+  const { toast, showToast } = useSimpleToast();
   const { patients } = usePatientsState();
   const [oncallOnly, setOncallOnly] = useState(false);
   const [view, setView] = useState<"visual" | "text">("visual");
@@ -354,8 +356,8 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
   const newCount = newAdmissionIds.size;
 
   const handleCopy = async () => {
-    try { await navigator.clipboard.writeText(text); alert("הועתק!"); }
-    catch { alert("לא ניתן להעתיק אוטומטית."); }
+    try { await navigator.clipboard.writeText(text); showToast("✓ הועתק ללוח"); }
+    catch { showToast("לא ניתן להעתיק אוטומטית", "error"); }
   };
   const handleWhatsApp = () => window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   const handleNativeShare = async () => {
@@ -498,6 +500,7 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
           </button>
         </div>
       </div>
+      <SimpleToast state={toast} />
     </div>
   );
 }
