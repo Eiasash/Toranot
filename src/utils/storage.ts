@@ -101,7 +101,18 @@ export function validatePatientsShape(data: unknown): {
     }
     if (typeof p.id !== "string") problems.push(`Patient[${i}].id is not a string`);
     if (typeof p.section !== "string") problems.push(`Patient[${i}].section missing`);
-    if (!Array.isArray(p.tasks)) problems.push(`Patient[${i}].tasks is not an array`);
+    if (!Array.isArray(p.tasks)) {
+      problems.push(`Patient[${i}].tasks is not an array`);
+    } else {
+      for (let j = 0; j < p.tasks.length; j++) {
+        const t = (p.tasks as unknown[])[j] as Record<string, unknown>;
+        if (typeof t !== "object" || t === null) {
+          problems.push(`Patient[${i}].tasks[${j}] is not an object`);
+        } else if (typeof t.id !== "string" || typeof t.text !== "string") {
+          problems.push(`Patient[${i}].tasks[${j}] missing id or text`);
+        }
+      }
+    }
     if (!Array.isArray(p.generatedTasks)) problems.push(`Patient[${i}].generatedTasks is not an array`);
   }
 

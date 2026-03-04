@@ -185,7 +185,8 @@ export function QRSync({ onClose }: QRSyncProps) {
       dispatch({ type: "IMPORT_BACKUP", patients: parsed });
       setImported(true);
       setTimeout(onClose, 1500);
-    } catch {
+    } catch (err) {
+      console.warn("[Toranot] QR import decode failed:", err);
       setImportError("שגיאה בפענוח הנתונים. ודא שהעתקת את כל הטקסט.");
     }
   };
@@ -193,8 +194,8 @@ export function QRSync({ onClose }: QRSyncProps) {
   const handleCopyExport = async () => {
     try {
       await navigator.clipboard.writeText(compressed);
-    } catch {
-      // fallback
+    } catch (err) {
+      console.warn("[Toranot] clipboard write failed:", err);
     }
   };
 

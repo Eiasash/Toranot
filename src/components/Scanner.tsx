@@ -112,7 +112,7 @@ async function fetchWithRetry(
     const delay = RETRY_DELAYS_MS[attempt];
     if (delay === undefined) break; // exhausted retries
 
-    const jitter = Math.random() * 1000;
+    const jitter = (crypto.getRandomValues(new Uint16Array(1))[0] / 65535) * 1000;
     console.warn(
       `Claude overloaded (${res.status}). Retry ${attempt + 1}/${RETRY_DELAYS_MS.length} in ${Math.round((delay + jitter) / 1000)}s…`,
     );
@@ -208,7 +208,12 @@ async function runClaudeOCR(file: File, apiKey: string): Promise<string> {
     );
   }
 
-  const data = (await response.json()) as ClaudeAPIResponse;
+  let data: ClaudeAPIResponse;
+  try {
+    data = (await response.json()) as ClaudeAPIResponse;
+  } catch {
+    throw new Error("שגיאה בפענוח תשובת API — נסה שוב");
+  }
   return data.content
     .filter((b) => b.type === "text")
     .map((b) => b.text ?? "")

@@ -103,8 +103,8 @@ export function NurseTemplates({ patient, onClose }: NurseTemplatesProps) {
       await navigator.clipboard.writeText(messageText);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Fallback
+    } catch (err) {
+      console.warn("[Toranot] clipboard write failed, using fallback:", err);
       const ta = document.createElement("textarea");
       ta.value = messageText;
       document.body.appendChild(ta);
