@@ -147,13 +147,16 @@ async function runClaudeOCR(file: File, apiKey: string): Promise<string> {
   // Try serverless proxy first (no API key exposure), fallback to direct
   let response: Response;
   const proxyUrl = `${window.location.origin}/api/ocr`;
-  
+
+  // JWT replaces the old x-api-secret bundle injection
+  const proxyAuthHeaders = await getProxyAuthHeaders();
+
   try {
     const proxyRes = await fetchWithRetry(proxyUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-secret": import.meta.env.VITE_API_SECRET ?? "",
+        ...(proxyAuthHeaders ?? {}),
       },
       body,
     });
