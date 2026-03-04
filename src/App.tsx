@@ -612,6 +612,12 @@ class AppErrorBoundary extends Component<
             >
               טען מחדש
             </button>
+            <a
+              href="/reset.html"
+              className="block w-full py-2 text-sm text-gray-500 dark:text-gray-400 underline"
+            >
+              נקיון מטמון מלא (אם הטעינה חוזרת)
+            </a>
           </div>
         </div>
       );
