@@ -352,13 +352,23 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
       
       // Auto-fill fields from extraction
       if (extracted.name) setName(extracted.name);
-      if (extracted.age) setAge(String(extracted.age));
+      // ── Validate extracted fields against physiological bounds before applying ──
+      // Protects against hallucinated values: Claude may misread digits (e.g., 150 → 1.50)
+      const safeAge = extracted.age != null && extracted.age >= 18 && extracted.age <= 120
+        ? extracted.age : null;
+      const safeBed = extracted.bed != null && [1, 2, 3].includes(extracted.bed)
+        ? extracted.bed : null;
+      const safeMeds = (extracted.meds ?? []).filter(
+        (m): m is string => typeof m === "string" && m.trim().length > 1 && m.trim().length < 80,
+      ).slice(0, 8);  // max 8 per prompt spec
+
+      if (safeAge) setAge(String(safeAge));
       if (extracted.diagnosis) setDiagnosis(extracted.diagnosis);
       if (extracted.room) setRoom(extracted.room);
-      if (extracted.bed) setBed(extracted.bed as 1 | 2 | 3);
+      if (safeBed) setBed(safeBed as 1 | 2 | 3);
       if (extracted.status) setStatus(extracted.status);
-      if (extracted.meds && extracted.meds.length > 0) {
-        setMeds(prev => Array.from(new Set([...prev, ...extracted.meds!])));
+      if (safeMeds.length > 0) {
+        setMeds(prev => Array.from(new Set([...prev, ...safeMeds])));
       }
       if (extracted.remarks) {
         setRemarks(prev => prev ? `${prev}\n${extracted.remarks}` : extracted.remarks!);
@@ -367,7 +377,7 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
         setMorningPresentation(extracted.morningPresentation);
         setShowMorning(true);
       }
-      
+
       setShowStructured(true);
       setParsed(true);
     } catch (e) {
