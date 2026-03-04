@@ -23,6 +23,7 @@ import { OverflowMenu } from "./components/OverflowMenu";
 const ShiftHandoffModal = lazy(() => import("./components/ShiftHandoffModal").then(m => ({ default: m.ShiftHandoffModal })));
 const SharedShiftPanel  = lazy(() => import("./components/SharedShiftPanel").then(m => ({ default: m.SharedShiftPanel })));
 import { SECTION_LABEL } from "./types";
+import { useSimpleToast, SimpleToast } from "./components/SimpleConfirm";
 
 // ─── Scan Diff Banner ──────────────────────────────────────
 function ScanDiffBanner() {
@@ -454,6 +455,17 @@ function ConflictDialog() {
 
 // ─── Main App Inner ──────────────────────────────────────
 function AppInner() {
+  const { toast: storageToast, showToast: showStorageToast } = useSimpleToast(4000);
+
+  // Listen for storage-full event fired from patientsStore subscription (outside React)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const msg = (e as CustomEvent<{ message: string }>).detail?.message;
+      if (msg) showStorageToast(msg, "error");
+    };
+    window.addEventListener("toranot:storage-full", handler);
+    return () => window.removeEventListener("toranot:storage-full", handler);
+  }, [showStorageToast]);
   const [modal, setModal] = useState<Modal>("none");
   const { patients, activeSection } = usePatientsState();
   const dispatch = usePatientsDispatch();
@@ -543,7 +555,7 @@ function AppInner() {
       <BottomNav onAction={handleBottomNav} pendingStat={pendingStat} />
 
       {/* ── Modals (lazy-loaded — only fetched when first opened) ── */}
-      <Suspense fallback={<div className="fixed inset-0 flex items-center justify-center text-3xl" aria-label="טוען...">⏳</div>}>
+      <Suspense fallback={null}>
         {modal === "reference"  && <QuickReference onClose={() => setModal("none")} />}
         {modal === "handoff"    && <HandoffSheet    onClose={() => setModal("none")} />}
         {modal === "dashboard"  && <TaskDashboard   onClose={() => setModal("none")} />}
@@ -559,6 +571,7 @@ function AppInner() {
 
       {/* Conflict resolution overlay — highest z-index */}
       <ConflictDialog />
+      <SimpleToast state={storageToast} />
     </div>
   );
 }
