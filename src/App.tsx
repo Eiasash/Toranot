@@ -543,7 +543,7 @@ function AppInner() {
       <BottomNav onAction={handleBottomNav} pendingStat={pendingStat} />
 
       {/* ── Modals (lazy-loaded — only fetched when first opened) ── */}
-      <Suspense fallback={null}>
+      <Suspense fallback={<div className="fixed inset-0 flex items-center justify-center text-3xl" aria-label="טוען...">⏳</div>}>
         {modal === "reference"  && <QuickReference onClose={() => setModal("none")} />}
         {modal === "handoff"    && <HandoffSheet    onClose={() => setModal("none")} />}
         {modal === "dashboard"  && <TaskDashboard   onClose={() => setModal("none")} />}
