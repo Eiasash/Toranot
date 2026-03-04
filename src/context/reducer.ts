@@ -8,14 +8,12 @@
  *   No file imports both patientsStore AND PatientsContext — cycle broken.
  */
 
-import type { Dispatch } from "react";
 import type { PatientEntry, Section, PatientSection, Task, Urgency, LabEntry, WardEvent } from "../types";
 import { parsePatientList } from "../parser/parsePatientList";
 import { mergeScan } from "../engine/mergeScan";
 import { applyRules } from "../engine/rules";
 import { generateId } from "../utils/id";
-import { safeGetItem, safeSetItem } from "../utils/storage";
-import { useToranotCloudSync, type ToranotCloudState, type SyncStatus, type ConflictData } from "../cloudSync";
+import type { ToranotCloudState } from "../cloudSync";
 import type { ScanDiff } from "../engine/smartOCR";
 
 // -----------------------------
@@ -778,4 +776,3 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
 // continue to work with zero changes.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { usePatientsStore } from "../store/patientsStore";
