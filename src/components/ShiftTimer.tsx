@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { safeGetItem, safeSetItem } from "../utils/storage";
+import { useSimpleConfirm, SimpleConfirmModal } from "./SimpleConfirm";
 
 const SHIFT_START_KEY = "toranot_shift_start";
 
@@ -28,9 +29,10 @@ function formatElapsed(ms: number): string {
 export function ShiftTimer() {
   const [start] = useState(getShiftStart);
   const [now, setNow] = useState(Date.now());
+  const { confirmState, requestConfirm, dismiss } = useSimpleConfirm();
 
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 60000); // update every minute
+    const id = setInterval(() => setNow(Date.now()), 60000);
     return () => clearInterval(id);
   }, []);
 
@@ -47,17 +49,15 @@ export function ShiftTimer() {
   }
 
   return (
-    <button
-      onClick={() => {
-        if (confirm("לאפס טיימר משמרת?")) {
-          resetShiftTimer();
-          setNow(Date.now());
-        }
-      }}
-      className={`text-xs font-mono tabular-nums px-2 py-1 rounded-lg border border-slate-600 ${colorClass} ${flash ? "animate-pulse" : ""}`}
-      title={`זמן משמרת: ${formatElapsed(elapsed)}\nלחץ לאיפוס`}
-    >
-      ⏱ {formatElapsed(elapsed)}
-    </button>
+    <>
+      <button
+        onClick={() => requestConfirm("לאפס טיימר משמרת?", () => { resetShiftTimer(); setNow(Date.now()); })}
+        className={`text-xs font-mono tabular-nums px-2 py-1 rounded-lg border border-slate-600 ${colorClass} ${flash ? "animate-pulse" : ""}`}
+        title={`זמן משמרת: ${formatElapsed(elapsed)}\nלחץ לאיפוס`}
+      >
+        ⏱ {formatElapsed(elapsed)}
+      </button>
+      <SimpleConfirmModal state={confirmState} onCancel={dismiss} />
+    </>
   );
 }
