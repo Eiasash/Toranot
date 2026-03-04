@@ -66,6 +66,7 @@ const DRUG_PATTERNS: Record<string, RegExp> = {
   carbamazepine: /carbamazepine|קרבמזפין|tegretol|טגרטול/i,
   phenytoin: /phenytoin|פניטואין|dilantin/i,
   furosemide: /furosemide|פורוסמיד|lasix|לאסיקס|torsemide|torasemide/i,
+  ppi: /omeprazole|אומפרזול|losec|לוסק|pantoprazole|פנטופרזול|controloc|קונטרולוק|esomeprazole|אזומפרזול|nexium|rabeprazole|לנסופרזול|lansoprazole/i,
   // Anticholinergic burden — Beers Criteria 2023 high-risk drugs
   anticholinergic_oxybutynin: /oxybutynin|אוקסיבוטינין|ditropan/i,
   anticholinergic_tolterodine: /tolterodine|טולטרודין|detrol/i,
@@ -547,6 +548,16 @@ const BEERS_RULES: BeersRule[] = [
     concern: "חלון תרפויטי צר עם ירידה ב-CrCl — רעילות Digoxin ≥70",
     recommendation: "מינון מקסימלי 0.125mg/d בגרייטריה. נטר רמות ו-CrCl בכל שינוי",
     severity: "caution",
+  },
+  // ── PPI long-term use (Beers 2023: use with caution >8 weeks) ──
+  {
+    name: "PPI (Omeprazole / Pantoprazole / Esomeprazole)",
+    pattern: /omeprazole|אומפרזול|losec|לוסק|pantoprazole|פנטופרזול|controloc|קונטרולוק|esomeprazole|אזומפרזול|nexium|rabeprazole|lansoprazole|לנסופרזול/i,
+    category: "גסטרואנטרולוגי",
+    concern: "שימוש ממושך (>8 שבועות) — סיכון C.diff, שברי ירך/עמוד שדרה, היפומגנזמיה, B12 ↓ (Beers 2023)",
+    recommendation: "הגבל ל-8 שבועות אלא אם כן הנחיה ברורה (ריפלוקס קשה, שימוש כרוני ב-NSAID/קורטיזון). ניסיון להפחית מינון / step-down",
+    severity: "caution",
+    minAge: 65,
   },
   // ── Metoclopramide long-term (Beers 2023: tardive dyskinesia) ──
   {
