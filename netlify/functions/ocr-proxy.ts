@@ -1,6 +1,6 @@
 /**
  * OCR proxy — forwards image payloads to Anthropic API.
- * Key stays server-side. Auth via x-api-secret header.
+ * Key stays server-side. Auth via Supabase JWT (Authorization: Bearer <token>).
  * Migrated from legacy exports.handler to modern ES module format.
  */
 import type { Context, Config } from "@netlify/functions";
