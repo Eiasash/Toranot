@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
 import { CloudAuthPanel } from "./CloudAuthPanel";
 import { supabase } from "../cloudSync";
@@ -248,6 +248,8 @@ export function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qr
                 <span className="text-base">💉</span>
                 פרוטוקולי IV — שערי צדק
               </button>
+              {/* Anthropic API key */}
+              <ApiKeyPanel />
               {/* Cloud sync auth */}
               <CloudAuthPanel />
               {/* Build stamp */}
@@ -269,3 +271,99 @@ export function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qr
   );
 }
 
+
+// ─── API Key Panel ─────────────────────────────────────────
+const API_KEY_STORAGE = "toranot-anthropic-key";
+
+function ApiKeyPanel() {
+  const stored = localStorage.getItem(API_KEY_STORAGE) ?? "";
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [saved, setSaved] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const hasKey = stored.startsWith("sk-ant-");
+  const masked = hasKey ? "sk-ant-•••" + stored.slice(-6) : "";
+
+  const handleEdit = () => {
+    setDraft("");
+    setEditing(true);
+    setSaved(false);
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  const handleSave = () => {
+    const key = draft.trim();
+    if (key.startsWith("sk-ant-") || key === "") {
+      if (key) localStorage.setItem(API_KEY_STORAGE, key);
+      else localStorage.removeItem(API_KEY_STORAGE);
+      setEditing(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    }
+  };
+
+  const handleClear = () => {
+    localStorage.removeItem(API_KEY_STORAGE);
+    setEditing(false);
+    setSaved(false);
+  };
+
+  return (
+    <div className="px-4 py-3 border-t border-slate-700 text-right">
+      <div className="text-[11px] text-slate-400 mb-1.5 flex items-center justify-between">
+        <span>🤖 מפתח Claude API</span>
+        {hasKey && !editing && (
+          <span className="text-slate-500 font-mono">{masked}</span>
+        )}
+      </div>
+
+      {editing ? (
+        <div className="space-y-1.5">
+          <input
+            ref={inputRef}
+            type="text"
+            dir="ltr"
+            placeholder="sk-ant-api03-..."
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full bg-slate-900 border border-slate-600 text-slate-200 text-xs px-2.5 py-2 rounded-lg placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={(e) => { e.stopPropagation(); handleSave(); }}
+              disabled={!draft.trim().startsWith("sk-ant-")}
+              className="flex-1 bg-blue-600 disabled:bg-slate-600 text-white text-xs py-1.5 rounded-lg active:bg-blue-700"
+            >
+              שמור
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); setEditing(false); }}
+              className="text-slate-400 text-xs px-3 py-1.5 rounded-lg active:bg-slate-700"
+            >
+              ביטול
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex gap-2">
+          <button
+            onClick={(e) => { e.stopPropagation(); handleEdit(); }}
+            className="flex-1 bg-slate-700 text-slate-200 text-xs py-1.5 rounded-lg active:bg-slate-600"
+          >
+            {hasKey ? (saved ? "✓ נשמר" : "החלף מפתח") : "הזן מפתח"}
+          </button>
+          {hasKey && (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleClear(); }}
+              className="text-red-400 text-xs px-3 py-1.5 rounded-lg active:bg-slate-700"
+            >
+              מחק
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
