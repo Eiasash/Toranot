@@ -900,6 +900,16 @@ export function PatientsProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function usePatientsState()  { return useContext(PatientsStateContext); }
-export function usePatientsDispatch() { return useContext(PatientsDispatchContext); }
-export function useCloudSync()      { return useContext(CloudSyncContext); }
+// Bypass Context for state/dispatch — go directly to Zustand to avoid
+// context propagation loops caused by PatientsProvider re-renders.
+export function usePatientsState() {
+  return usePatientsStore(
+    useShallow((s) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { dispatch: _d, ...rest } = s;
+      return rest as PatientsState;
+    })
+  );
+}
+export function usePatientsDispatch() { return usePatientsStore((s) => s.dispatch); }
+export function useCloudSync()        { return useContext(CloudSyncContext); }
