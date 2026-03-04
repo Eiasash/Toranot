@@ -99,7 +99,8 @@ export async function isProxyAvailableAsync(): Promise<boolean> {
   return !!session?.access_token;
 }
 
-function stableJson(x: unknown): string {
+/** @internal — exported for testing */
+export function stableJson(x: unknown): string {
   // Sort keys recursively so object field order doesn't cause false change detection.
   // Without sorting, two identical states with different key insertion order
   // produce different JSON strings → unnecessary cloud pushes every render.
@@ -282,8 +283,15 @@ export function useToranotCloudSync(
 
     doPull();
 
-    const { data: sub } = supabase.auth.onAuthStateChange(() => {
-      doPull();
+    let lastUid: string | null = null;
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      const uid = session?.user?.id ?? null;
+      // Only pull when the user identity actually changes (sign-in/sign-out),
+      // not on routine token refreshes which fire the same event.
+      if (uid !== lastUid) {
+        lastUid = uid;
+        doPull();
+      }
     });
 
     return () => {
@@ -413,7 +421,10 @@ export async function pullHandoff(code: string): Promise<ToranotCloudState | nul
 
 function generateCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  let code = "";
+  const arr = crypto.getRandomValues(new Uint8Array(6));
+  for (const byte of arr) code += chars[byte % chars.length];
+  return code;
 }
 
 /** Create or refresh a shared snapshot of the current ward state. Returns the share code. */
@@ -446,11 +457,15 @@ export async function createSharedShift(state: ToranotCloudState): Promise<strin
 export async function updateSharedShift(code: string, state: ToranotCloudState): Promise<void> {
   const uid = await getUserId();
   if (!supabase || !uid) return;
-  await supabase
+  const { error } = await supabase
     .from("shared_shifts")
     .update({ state, updated_at: new Date().toISOString() })
     .eq("code", code)
     .eq("creator_id", uid);
+  if (error) {
+    console.warn("[Toranot] updateSharedShift failed:", error.message);
+    throw error;
+  }
 }
 
 /**
@@ -460,11 +475,15 @@ export async function updateSharedShift(code: string, state: ToranotCloudState):
 export async function updateSharedShiftAsGuest(code: string, state: ToranotCloudState): Promise<void> {
   const uid = await getUserId();
   if (!supabase || !uid) return;
-  await supabase
+  const { error } = await supabase
     .from("shared_shifts")
     .update({ state, updated_at: new Date().toISOString() })
     .eq("code", code.toUpperCase().trim())
     .gt("expires_at", new Date().toISOString()); // safety: never update expired rows
+  if (error) {
+    console.warn("[Toranot] updateSharedShiftAsGuest failed:", error.message);
+    throw error;
+  }
 }
 
 /** Pull a shared shift by code. Returns null if not found / expired. */

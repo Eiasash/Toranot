@@ -528,6 +528,60 @@ describe("checkBeersCriteria", () => {
 // ═════════════════════════════════════════════════════════════
 
 describe("extractAntibioticsFromPlan", () => {
+  it("returns empty array for text with no antibiotics", () => {
+    expect(extractAntibioticsFromPlan("paracetamol 1g q6h")).toEqual([]);
+  });
+
+  it("extracts single antibiotic", () => {
+    expect(extractAntibioticsFromPlan("Ceftriaxone 2g IV q24h")).toEqual(["ceftriaxone"]);
+  });
+
+  it("extracts multiple antibiotics from complex plan", () => {
+    const plan = "Ceftriaxone 2g IV + Vancomycin 15mg/kg IV + Metronidazole 500mg IV q8h";
+    const result = extractAntibioticsFromPlan(plan);
+    expect(result).toContain("ceftriaxone");
+    expect(result).toContain("vancomycin");
+    expect(result).toContain("metronidazole");
+  });
+
+  it("recognises combination drugs (pip/tazo)", () => {
+    expect(extractAntibioticsFromPlan("Tazocin 4.5g IV q6h")).toEqual(["piperacillin/tazobactam"]);
+  });
+
+  it("recognises augmentin as amoxicillin/clavulanate", () => {
+    expect(extractAntibioticsFromPlan("Augmentin 1g PO q8h")).toEqual(["amoxicillin/clavulanate"]);
+  });
+
+  it("recognises brand names (Rocephin, Flagyl, Tavanic)", () => {
+    const result = extractAntibioticsFromPlan("Rocephin + Flagyl + Tavanic");
+    expect(result).toContain("ceftriaxone");
+    expect(result).toContain("metronidazole");
+    expect(result).toContain("levofloxacin");
+  });
+
+  it("deduplicates when same drug mentioned multiple ways", () => {
+    const result = extractAntibioticsFromPlan("ciprofloxacin 500mg PO then cipro 400mg IV");
+    expect(result).toEqual(["ciprofloxacin"]);
+  });
+
+  it("handles TMP-SMX / Bactrim", () => {
+    expect(extractAntibioticsFromPlan("Bactrim DS PO q12h")).toEqual(["trimethoprim/sulfamethoxazole"]);
+  });
+
+  it("handles meropenem (Meronem)", () => {
+    expect(extractAntibioticsFromPlan("Meronem 1g IV q8h")).toEqual(["meropenem"]);
+  });
+
+  it("returns empty array for empty string", () => {
+    expect(extractAntibioticsFromPlan("")).toEqual([]);
+  });
+});
+
+// ═════════════════════════════════════════════════════════════
+// 5. extractAntibioticsFromPlan
+// ═════════════════════════════════════════════════════════════
+
+describe("extractAntibioticsFromPlan", () => {
   it("returns empty array for empty string", () => {
     expect(extractAntibioticsFromPlan("")).toEqual([]);
   });

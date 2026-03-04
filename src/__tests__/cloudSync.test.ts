@@ -317,6 +317,18 @@ describe("updateSharedShift", () => {
     await expect(mod.updateSharedShift("CODE", state)).resolves.toBeUndefined();
     expect(mockFrom).not.toHaveBeenCalled();
   });
+
+  it("throws on DB error", async () => {
+    sessionOk();
+    const c: Record<string, unknown> = {};
+    const ms = ["select", "insert", "upsert", "delete", "gt", "maybeSingle", "single"];
+    for (const m of ms) c[m] = vi.fn().mockReturnValue(c);
+    // Terminal eq returns error
+    c["eq"]     = vi.fn().mockReturnValue({ error: { message: "RLS denied" } });
+    c["update"] = vi.fn().mockReturnValue(c);
+    mockFrom.mockReturnValue(c);
+    await expect(mod.updateSharedShift("CODE", state)).rejects.toBeDefined();
+  });
 });
 
 describe("updateSharedShiftAsGuest", () => {
@@ -369,5 +381,39 @@ describe("signOut", () => {
     mockAuth.signOut.mockResolvedValue({ error: null });
     await mod.signOut();
     expect(mockAuth.signOut).toHaveBeenCalledOnce();
+  });
+});
+
+// ─── 10. stableJson ──────────────────────────────────────────────────────────
+
+describe("stableJson", () => {
+  it("produces identical output regardless of key insertion order", () => {
+    const a = { b: 1, a: 2 };
+    const b = { a: 2, b: 1 };
+    expect(mod.stableJson(a)).toBe(mod.stableJson(b));
+  });
+
+  it("sorts nested object keys recursively", () => {
+    const obj = { z: { b: 1, a: 2 }, a: 1 };
+    const parsed = JSON.parse(mod.stableJson(obj));
+    expect(Object.keys(parsed)).toEqual(["a", "z"]);
+    expect(Object.keys(parsed.z)).toEqual(["a", "b"]);
+  });
+
+  it("preserves arrays (not sorted)", () => {
+    const obj = { arr: [3, 1, 2] };
+    const parsed = JSON.parse(mod.stableJson(obj));
+    expect(parsed.arr).toEqual([3, 1, 2]);
+  });
+
+  it("handles null, numbers, and strings", () => {
+    expect(mod.stableJson(null)).toBe("null");
+    expect(mod.stableJson(42)).toBe("42");
+    expect(mod.stableJson("hello")).toBe('"hello"');
+  });
+
+  it("handles empty objects and arrays", () => {
+    expect(mod.stableJson({})).toBe("{}");
+    expect(mod.stableJson([])).toBe("[]");
   });
 });

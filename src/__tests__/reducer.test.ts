@@ -972,4 +972,95 @@ describe("reducer", () => {
       expect(p.diagnosis).toBe("pneumonia");
     });
   });
+
+  describe("IMPORT_CLOUD_STATE", () => {
+    it("imports patients from cloud state", () => {
+      const state = makeState([makePatient({ id: "local-1" })]);
+      const cloudPatient = { id: "cloud-1", section: "SIDE_A", name: "Cloud Patient", room: "201", tasks: [], generatedTasks: [], flags: [], status: [], tomorrowNotes: [], notes: [] };
+      const next = reducer(state, {
+        type: "IMPORT_CLOUD_STATE",
+        state: { patients: [cloudPatient], shiftHistory: [], events: [], unassignedTasks: [] },
+      });
+      expect(next.patients).toHaveLength(1);
+      expect(next.patients[0].name).toBe("Cloud Patient");
+    });
+
+    it("imports darkMode and scanMode settings", () => {
+      const state = makeState([], { darkMode: false, scanMode: false });
+      const next = reducer(state, {
+        type: "IMPORT_CLOUD_STATE",
+        state: { patients: [], shiftHistory: [], events: [], unassignedTasks: [], darkMode: true, scanMode: true },
+      });
+      expect(next.darkMode).toBe(true);
+      expect(next.scanMode).toBe(true);
+    });
+
+    it("preserves local state when cloud field is not an array", () => {
+      const localPatient = makePatient({ id: "p1" });
+      const state = makeState([localPatient]);
+      const next = reducer(state, {
+        type: "IMPORT_CLOUD_STATE",
+        state: { patients: "corrupt" as unknown as unknown[], shiftHistory: [], events: [], unassignedTasks: [] },
+      });
+      // Patients preserved since cloud value was not an array
+      expect(next.patients).toHaveLength(1);
+      expect(next.patients[0].id).toBe("p1");
+    });
+
+    it("imports events from cloud", () => {
+      const event = { id: "e1", type: "ADMISSION" as const, at: "2025-01-01T00:00:00Z", patientId: "p1", patientName: "Test", room: "101" };
+      const state = makeState();
+      const next = reducer(state, {
+        type: "IMPORT_CLOUD_STATE",
+        state: { patients: [], shiftHistory: [], events: [event], unassignedTasks: [] },
+      });
+      expect(next.events).toHaveLength(1);
+      expect(next.events[0].id).toBe("e1");
+    });
+  });
+
+  describe("MERGE_PATIENTS", () => {
+    it("merges incoming patients with existing (preserves manual tasks)", () => {
+      const manualTask = makeTask({ id: "mt1", text: "manual task", source: "manual" });
+      const existing = makePatient({ id: "p1", section: "SIDE_A", room: "101", name: "כהן", tasks: [manualTask] });
+      const state = makeState([existing]);
+
+      const incoming = { ...existing, tasks: [] };
+      const next = reducer(state, { type: "MERGE_PATIENTS", patients: [incoming] });
+      // Manual task should be preserved across merge
+      expect(next.patients[0].tasks.some(t => t.text === "manual task")).toBe(true);
+    });
+
+    it("adds new patients from incoming list", () => {
+      const existing = makePatient({ id: "p1" });
+      const state = makeState([existing]);
+
+      const newPatient = makePatient({ id: "p2", name: "לוי שרה", room: "202" });
+      const next = reducer(state, { type: "MERGE_PATIENTS", patients: [newPatient] });
+      expect(next.patients.length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  describe("LOG_EVENT", () => {
+    it("adds event to the front of the events array", () => {
+      const state = makeState([], {
+        events: [{ id: "old", type: "ADMISSION", at: "2025-01-01T00:00:00Z", patientId: "p1", patientName: "Old", room: "101" }],
+      });
+      const newEvent = { id: "new", type: "ADMISSION" as const, at: "2025-01-02T00:00:00Z", patientId: "p2", patientName: "New", room: "102" };
+      const next = reducer(state, { type: "LOG_EVENT", event: newEvent });
+      expect(next.events[0].id).toBe("new");
+      expect(next.events[1].id).toBe("old");
+    });
+
+    it("trims events to max limit (300)", () => {
+      const events = Array.from({ length: 350 }, (_, i) => ({
+        id: `e${i}`, type: "ADMISSION" as const, at: "2025-01-01", patientId: "p", patientName: "P", room: "1",
+      }));
+      const state = makeState([], { events });
+      const newEvent = { id: "overflow", type: "ADMISSION" as const, at: "2025-01-02", patientId: "p", patientName: "P", room: "1" };
+      const next = reducer(state, { type: "LOG_EVENT", event: newEvent });
+      expect(next.events.length).toBeLessThanOrEqual(300);
+      expect(next.events[0].id).toBe("overflow");
+    });
+  });
 });
