@@ -22,6 +22,7 @@ function makePatient(overrides: Partial<PatientEntry> = {}): PatientEntry {
     tasks: overrides.tasks ?? [],
     generatedTasks: overrides.generatedTasks ?? [],
     notes: overrides.notes ?? [],
+    planNotes: overrides.planNotes ?? [],
     scannedAt: new Date().toISOString(),
     confidence: 1,
     labs: overrides.labs ?? [],
@@ -208,6 +209,35 @@ describe("checkDrugInteractions", () => {
     );
     expect(nephro).toBeDefined();
     expect(nephro!.severity).toBe("major");
+  });
+
+  it("detects drugs in diagnosis field", () => {
+    const p = makePatient({
+      diagnosis: "AF on warfarin",
+      tasks: [{ id: "t1", text: "ibuprofen 400mg", urgency: "routine", source: "extracted", done: false, doneTime: null, time: null, confidence: 1 }],
+    });
+    const result = checkDrugInteractions(p);
+    const bleed = result.find((i) => i.drugA === "warfarin" && i.drugB === "nsaid");
+    expect(bleed).toBeDefined();
+  });
+
+  it("detects drugs in planNotes field", () => {
+    const p = makePatient({
+      planNotes: ["continue amiodarone 200mg"],
+      tasks: [{ id: "t1", text: "ciprofloxacin 500mg", urgency: "routine", source: "extracted", done: false, doneTime: null, time: null, confidence: 1 }],
+    });
+    const result = checkDrugInteractions(p);
+    const qt = result.find((i) => i.drugA === "amiodarone" && i.drugB === "ciprofloxacin");
+    expect(qt).toBeDefined();
+  });
+
+  it("detects drugs in notes field", () => {
+    const p = makePatient({
+      notes: ["רקע: warfarin for DVT"],
+      tasks: [{ id: "t1", text: "diclofenac gel topical", urgency: "routine", source: "extracted", done: false, doneTime: null, time: null, confidence: 1 }],
+    });
+    const result = checkDrugInteractions(p);
+    expect(result.some((i) => i.drugA === "warfarin" && i.drugB === "nsaid")).toBe(true);
   });
 });
 

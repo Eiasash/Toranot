@@ -86,9 +86,14 @@ export function calculateAcuity(patient: PatientEntry): AcuityBreakdown {
  * Falls back to manual order for equal scores.
  */
 export function sortByAcuity(patients: PatientEntry[]): PatientEntry[] {
+  // Pre-compute scores once to avoid O(n log n) recalculations in the comparator
+  const scores = new Map<string, number>();
+  for (const p of patients) {
+    scores.set(p.id, calculateAcuity(p).score);
+  }
   return [...patients].sort((a, b) => {
-    const scoreA = calculateAcuity(a).score;
-    const scoreB = calculateAcuity(b).score;
+    const scoreA = scores.get(a.id)!;
+    const scoreB = scores.get(b.id)!;
     if (scoreA !== scoreB) return scoreB - scoreA; // Higher = sicker = first
     return (a.order ?? 0) - (b.order ?? 0); // Fallback to manual order
   });

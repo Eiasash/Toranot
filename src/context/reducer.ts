@@ -60,7 +60,7 @@ export function normalizeTask(t: RawTask): Task {
     note: t.note ?? null,
     dueAt: t.dueAt ?? null,
     // Ensure required string fields always have safe values
-    id: typeof t.id === "string" && t.id ? t.id : Math.random().toString(36).slice(2),
+    id: typeof t.id === "string" && t.id ? t.id : generateId(),
     text: typeof t.text === "string" ? t.text : String(t.text ?? ""),
     urgency: (["stat","urgent","morning","extra","routine"].includes(t.urgency as string)
       ? t.urgency : "routine") as Task["urgency"],

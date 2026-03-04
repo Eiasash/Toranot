@@ -49,7 +49,7 @@ function loadSavedPatients(): PatientEntry[] {
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
     return (parsed as RawPatient[]).map(normalizePatient);
-  } catch { return []; }
+  } catch (err) { console.warn("[Toranot] loadSavedPatients failed:", err); return []; }
 }
 
 function loadShiftHistory(): ShiftSnapshot[] {
@@ -58,7 +58,7 @@ function loadShiftHistory(): ShiftSnapshot[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed.slice(0, MAX_SHIFT_HISTORY) : [];
-  } catch { return []; }
+  } catch (err) { console.warn("[Toranot] loadShiftHistory failed:", err); return []; }
 }
 
 function loadDarkMode(): boolean {
@@ -79,7 +79,7 @@ function loadEvents(): WardEvent[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed.slice(0, MAX_EVENTS) : [];
-  } catch { return []; }
+  } catch (err) { console.warn("[Toranot] loadEvents failed:", err); return []; }
 }
 
 function loadUnassignedTasks(): Task[] {
@@ -88,7 +88,7 @@ function loadUnassignedTasks(): Task[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? (parsed as RawTask[]).map(normalizeTask) : [];
-  } catch { return []; }
+  } catch (err) { console.warn("[Toranot] loadUnassignedTasks failed:", err); return []; }
 }
 
 // ─── Store shape ─────────────────────────────────────────────────────────────
