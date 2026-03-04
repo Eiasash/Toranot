@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useSimpleConfirm, SimpleConfirmModal } from "./SimpleConfirm";
 import { usePatientsDispatch } from "../context/PatientsContext";
 import { generateId } from "../utils/id";
 import type { PatientEntry, PatientPhoto } from "../types";
@@ -42,7 +43,7 @@ export function PhotoAttachments({ patient }: { patient: PatientEntry }) {
     if (!file) return;
 
     if (photos.length >= MAX_PHOTOS) {
-      alert(`ניתן לצרף עד ${MAX_PHOTOS} תמונות לחולה. מחק תמונה קיימת לפני הוספת חדשה.`);
+      requestConfirm(`הגעת למגבלת ${MAX_PHOTOS} תמונות — מחק תמונה קיימת תחילה`, () => {});
       e.target.value = "";
       return;
     }
@@ -64,10 +65,12 @@ export function PhotoAttachments({ patient }: { patient: PatientEntry }) {
     e.target.value = "";
   };
 
+  const { confirmState, requestConfirm, dismiss: dismissConfirm } = useSimpleConfirm();
+
   const handleRemove = (photoId: string) => {
-    if (confirm("למחוק תמונה?")) {
+    requestConfirm("למחוק תמונה?", () => {
       dispatch({ type: "REMOVE_PHOTO", patientId: patient.id, photoId });
-    }
+    });
   };
 
   return (
@@ -145,6 +148,7 @@ export function PhotoAttachments({ patient }: { patient: PatientEntry }) {
           </div>
         </div>
       )}
+      <SimpleConfirmModal state={confirmState} onCancel={dismissConfirm} />
     </div>
   );
 }
