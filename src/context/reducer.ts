@@ -715,6 +715,8 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
     case "ASSIGN_TASK_TO_PATIENT": {
       const task = state.unassignedTasks.find(t => t.id === action.taskId);
       if (!task) return state;
+      // Verify patient exists — avoid orphaning the task if patient was deleted
+      if (!state.patients.some(p => p.id === action.patientId)) return state;
       return {
         ...state,
         unassignedTasks: state.unassignedTasks.filter(t => t.id !== action.taskId),

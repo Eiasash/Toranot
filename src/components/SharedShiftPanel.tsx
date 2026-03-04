@@ -50,15 +50,28 @@ export function SharedShiftPanel({ onClose }: { onClose: () => void }) {
   // Guest polling — pull + push every 20s (bidirectional)
   const startGuestSync = useCallback((code: string) => {
     stopPoll();
+    let failCount = 0;
     const sync = async () => {
       try {
         const result = await pullSharedShift(code);
-        if (!result) return;
+        if (!result) {
+          // Share expired or deleted — stop polling and notify
+          stopPoll();
+          setError("השיתוף פג תוקף או נסגר — התנתק וחזור מחדש");
+          return;
+        }
+        failCount = 0;
         dispatch({ type: "IMPORT_CLOUD_STATE", state: result.state });
         setLastSync(new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" }));
         // Push guest's own edits back to shared record
         await updateSharedShiftAsGuest(code, toCloudState(stateRef.current));
-      } catch { /* silent */ }
+      } catch (e) {
+        failCount++;
+        console.warn("[Toranot] guest sync failed:", e);
+        if (failCount >= 3) {
+          setError("סנכרון נכשל — בדוק חיבור לרשת");
+        }
+      }
     };
     sync();
     pollRef.current = setInterval(sync, 20_000);
@@ -72,11 +85,19 @@ export function SharedShiftPanel({ onClose }: { onClose: () => void }) {
 
   const startHostPush = useCallback((code: string) => {
     stopHostPush();
+    let failCount = 0;
     hostPushRef.current = setInterval(async () => {
       try {
         await updateSharedShift(code, toCloudState(stateRef.current));
+        failCount = 0;
         setLastSync(new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" }));
-      } catch { /* silent */ }
+      } catch (e) {
+        failCount++;
+        console.warn("[Toranot] host push failed:", e);
+        if (failCount >= 3) {
+          setError("סנכרון נכשל — בדוק חיבור לרשת");
+        }
+      }
     }, 20_000);
   }, [stopHostPush]);
 

@@ -309,15 +309,24 @@ export function useToranotCloudSync(
 
       if (pushTimer.current) window.clearTimeout(pushTimer.current);
       pushTimer.current = window.setTimeout(async () => {
-        try {
-          setStatus("syncing");
-          await pushCloud(cloudState);
-          lastPushedJson.current = json;
-          setStatus("synced");
-          setLastSync(new Date());
-        } catch (e) {
-          console.warn("[Toranot] cloud push failed", e);
-          setStatus("error");
+        // Retry with exponential backoff (2.5s, 5s, 10s) on transient failures
+        const MAX_RETRIES = 3;
+        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+          try {
+            setStatus("syncing");
+            await pushCloud(cloudState);
+            lastPushedJson.current = json;
+            setStatus("synced");
+            setLastSync(new Date());
+            return; // success — exit retry loop
+          } catch (e) {
+            console.warn(`[Toranot] cloud push failed (attempt ${attempt + 1}/${MAX_RETRIES})`, e);
+            if (attempt < MAX_RETRIES - 1) {
+              await new Promise(r => setTimeout(r, 2500 * Math.pow(2, attempt)));
+            } else {
+              setStatus("error");
+            }
+          }
         }
       }, 2500);
     });

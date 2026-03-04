@@ -912,4 +912,64 @@ describe("reducer", () => {
       expect(bed491[0].name).toBe("לוי שרה"); // last one wins
     });
   });
+
+  describe("ASSIGN_TASK_TO_PATIENT", () => {
+    it("assigns unassigned task to existing patient", () => {
+      const task = makeTask({ id: "ut-1", text: "blood cultures", source: "manual" });
+      const patient = makePatient({ id: "pt-1" });
+      const state = makeState([patient]);
+      state.unassignedTasks = [task];
+      const next = reducer(state, { type: "ASSIGN_TASK_TO_PATIENT", taskId: "ut-1", patientId: "pt-1" });
+      expect(next.unassignedTasks).toHaveLength(0);
+      expect(next.patients[0].tasks).toHaveLength(1);
+      expect(next.patients[0].tasks[0].text).toBe("blood cultures");
+    });
+
+    it("does nothing if task not found in unassigned list", () => {
+      const state = makeState([makePatient()]);
+      state.unassignedTasks = [];
+      const next = reducer(state, { type: "ASSIGN_TASK_TO_PATIENT", taskId: "missing", patientId: "pt-1" });
+      expect(next).toBe(state);
+    });
+
+    it("does nothing if target patient does not exist", () => {
+      const task = makeTask({ id: "ut-1", text: "blood cultures", source: "manual" });
+      const state = makeState([makePatient({ id: "pt-1" })]);
+      state.unassignedTasks = [task];
+      const next = reducer(state, { type: "ASSIGN_TASK_TO_PATIENT", taskId: "ut-1", patientId: "nonexistent" });
+      // Task should stay in unassigned — not orphaned
+      expect(next).toBe(state);
+    });
+  });
+
+  describe("normalizePatient", () => {
+    it("normalizes missing arrays to empty arrays", () => {
+      const raw = { id: "test", section: "SIDE_A", name: "כהן", room: "101", date: "01/01/2025" };
+      const p = normalizePatient(raw as Record<string, unknown>);
+      expect(Array.isArray(p.flags)).toBe(true);
+      expect(Array.isArray(p.status)).toBe(true);
+      expect(Array.isArray(p.tasks)).toBe(true);
+      expect(Array.isArray(p.generatedTasks)).toBe(true);
+      expect(Array.isArray(p.notes)).toBe(true);
+      expect(Array.isArray(p.tomorrowNotes)).toBe(true);
+    });
+
+    it("preserves valid fields from raw input", () => {
+      const raw = {
+        id: "test-id",
+        section: "SIDE_B",
+        name: "לוי שרה",
+        room: "42/1",
+        date: "15/03/2025",
+        age: 85,
+        diagnosis: "pneumonia",
+      };
+      const p = normalizePatient(raw as Record<string, unknown>);
+      expect(p.id).toBe("test-id");
+      expect(p.section).toBe("SIDE_B");
+      expect(p.name).toBe("לוי שרה");
+      expect(p.age).toBe(85);
+      expect(p.diagnosis).toBe("pneumonia");
+    });
+  });
 });

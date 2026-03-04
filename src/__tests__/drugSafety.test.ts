@@ -4,6 +4,7 @@ import {
   calculateCrCl,
   checkRenalDoseWarnings,
   checkBeersCriteria,
+  extractAntibioticsFromPlan,
 } from "../engine/drugSafety";
 import type { PatientEntry } from "../types";
 
@@ -519,5 +520,52 @@ describe("checkBeersCriteria", () => {
     });
     const result = checkBeersCriteria(p);
     expect(result.find((r) => r.drug.includes("Zolpidem"))).toBeDefined();
+  });
+});
+
+// ═════════════════════════════════════════════════════════════
+// 5. extractAntibioticsFromPlan
+// ═════════════════════════════════════════════════════════════
+
+describe("extractAntibioticsFromPlan", () => {
+  it("returns empty array for empty string", () => {
+    expect(extractAntibioticsFromPlan("")).toEqual([]);
+  });
+
+  it("returns empty for text with no antibiotics", () => {
+    expect(extractAntibioticsFromPlan("paracetamol 1g q6h")).toEqual([]);
+  });
+
+  it("extracts single antibiotic", () => {
+    expect(extractAntibioticsFromPlan("Ceftriaxone 2g IV q24h")).toEqual(["ceftriaxone"]);
+  });
+
+  it("extracts multiple antibiotics from empiric plan", () => {
+    const result = extractAntibioticsFromPlan("Ceftriaxone 2g IV q12h + Vancomycin 15mg/kg IV q8h");
+    expect(result).toContain("ceftriaxone");
+    expect(result).toContain("vancomycin");
+    expect(result).toHaveLength(2);
+  });
+
+  it("recognizes brand names", () => {
+    expect(extractAntibioticsFromPlan("Tazocin 4.5g IV q6h")).toContain("piperacillin/tazobactam");
+    expect(extractAntibioticsFromPlan("Augmentin 1.2g IV q8h")).toContain("amoxicillin/clavulanate");
+    expect(extractAntibioticsFromPlan("Flagyl 500mg IV q8h")).toContain("metronidazole");
+    expect(extractAntibioticsFromPlan("Rocephin 2g IV")).toContain("ceftriaxone");
+  });
+
+  it("deduplicates results (brand + generic same drug)", () => {
+    const result = extractAntibioticsFromPlan("Rocephin 2g + ceftriaxone maintenance");
+    expect(result).toEqual(["ceftriaxone"]);
+  });
+
+  it("handles case insensitivity", () => {
+    expect(extractAntibioticsFromPlan("MEROPENEM 1g IV")).toContain("meropenem");
+    expect(extractAntibioticsFromPlan("vancomycin trough")).toContain("vancomycin");
+  });
+
+  it("distinguishes ciprofloxacin from cipralex", () => {
+    expect(extractAntibioticsFromPlan("cipralex 10mg")).toEqual([]);
+    expect(extractAntibioticsFromPlan("cipro 500mg PO")).toContain("ciprofloxacin");
   });
 });
