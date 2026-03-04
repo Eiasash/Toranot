@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect } from "react";
+import React, { useMemo, useState, useCallback, useEffect, memo } from "react";
 import type { PatientEntry, Task } from "../types";
 import { SECTIONS, SECTION_LABEL } from "../types";
 import { TaskItem } from "./TaskItem";
@@ -212,7 +212,7 @@ function HandoverNoteInline({ patient }: { patient: PatientEntry }) {
   );
 }
 
-export function PatientCard({ patient }: { patient: PatientEntry }) {
+function PatientCardBase({ patient }: { patient: PatientEntry }) {
   const dispatch = usePatientsDispatch();
   const { showTomorrow, scanMode } = usePatientsState();
 
@@ -933,7 +933,7 @@ export function PatientCard({ patient }: { patient: PatientEntry }) {
   );
 }
 
-export function PatientRow({ patient }: { patient: PatientEntry }) {
+function PatientRowBase({ patient }: { patient: PatientEntry }) {
   const dispatch = usePatientsDispatch();
   const { showTomorrow } = usePatientsState();
 
@@ -1217,3 +1217,6 @@ export function PatientRow({ patient }: { patient: PatientEntry }) {
     </>
   );
 }
+
+export const PatientCard = memo(PatientCardBase);
+export const PatientRow = memo(PatientRowBase);
