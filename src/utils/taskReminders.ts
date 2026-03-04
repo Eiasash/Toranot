@@ -127,7 +127,7 @@ function fireReminder(
 
   // Last resort: alert (not ideal but works)
   // The UndoToast system could be used here in a future iteration
-  console.log(`[Reminder] ${title}: ${body}`);
+  console.info(`[Reminder] ${title}: ${body}`);
 }
 
 /**
