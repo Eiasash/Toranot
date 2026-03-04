@@ -44,9 +44,9 @@ export default defineConfig({
           if (id.includes("node_modules/qrcode.react")) return "vendor-qr";
           if (id.includes("node_modules/dompurify")) return "vendor-dompurify";
           // App engine chunks — separate from UI components
-          if (id.includes("/src/engine/")) return "app-engine";
-          if (id.includes("/src/context/")) return "app-context";
-          if (id.includes("/src/parser/") || id.includes("/src/utils/")) return "app-utils";
+          if (id.includes("/src/engine/") || id.includes("/src/parser/")) return "app-engine";
+          if (id.includes("/src/context/") || id.includes("/src/store/")) return "app-context";
+          if (id.includes("/src/utils/")) return "app-utils";
         },
       },
     },
