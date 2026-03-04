@@ -99,7 +99,7 @@ export function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qr
   const handleConfirm = () => {
     if (dialog.type === "archive") {
       dispatch({ type: "ARCHIVE_SHIFT", label: dialog.label });
-      console.log("[Toranot] Shift archived:", dialog.label);
+      console.info("[Toranot] Shift archived:", dialog.label);
       if (dialog.mode === "end") {
         dispatch({ type: "CLEAR_ALL" });
       }
