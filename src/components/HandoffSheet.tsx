@@ -119,6 +119,111 @@ function buildTextHandoff(patients: PatientEntry[], filteredPatients: PatientEnt
   return lines.join("\n");
 }
 
+
+// ─── ISBAR text generation ──────────────────────────────────────────────────
+
+function buildISBAR(patients: PatientEntry[], filteredPatients: PatientEntry[], shiftStart: Date): string {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("he-IL");
+  const timeStr = now.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
+  const lines: string[] = [];
+
+  lines.push(`🩺 מסירת תורן ISBAR — ${dateStr} ${timeStr}`);
+  lines.push("═".repeat(38));
+
+  // ── I: Identification ──────────────────────────────────────────
+  lines.push("");
+  lines.push("📋 I — זיהוי (Identification)");
+  lines.push(`  מחלקה: גריאטריה | ${filteredPatients.length} חולים במסירה`);
+  const newAdm = filteredPatients.filter(p =>
+    p.isAdmission ||
+    (p.scannedAt && isOnCallTime(new Date(p.scannedAt)) && new Date(p.scannedAt) >= shiftStart)
+  );
+  if (newAdm.length > 0) {
+    lines.push(`  🆕 קבלות תורן: ${newAdm.map(p => `${p.room ?? "?"} ${p.name ?? "?"}`).join(" | ")}`);
+  }
+
+  // ── S: Situation ───────────────────────────────────────────────
+  const statTasks = filteredPatients.flatMap(p =>
+    [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)]
+      .filter(t => !t.done && t.urgency === "stat")
+      .map(t => ({ p, t }))
+  );
+  const urgentTasks = filteredPatients.flatMap(p =>
+    [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)]
+      .filter(t => !t.done && t.urgency === "urgent")
+      .map(t => ({ p, t }))
+  );
+  lines.push("");
+  lines.push("🚨 S — מצב נוכחי (Situation)");
+  if (statTasks.length === 0 && urgentTasks.length === 0) {
+    lines.push("  ✅ אין משימות STAT/דחוף פתוחות — משמרת יציבה");
+  } else {
+    if (statTasks.length > 0) {
+      lines.push(`  🔴 STAT (${statTasks.length}):`);
+      statTasks.forEach(({ p, t }) => lines.push(`    • חד׳ ${p.room ?? "?"} ${p.name ?? "?"} — ${t.text}`));
+    }
+    if (urgentTasks.length > 0) {
+      lines.push(`  🟡 דחוף (${urgentTasks.length}):`);
+      urgentTasks.slice(0, 6).forEach(({ p, t }) => lines.push(`    • חד׳ ${p.room ?? "?"} ${p.name ?? "?"} — ${t.text}`));
+      if (urgentTasks.length > 6) lines.push(`    ... ועוד ${urgentTasks.length - 6}`);
+    }
+  }
+
+  // ── B: Background ──────────────────────────────────────────────
+  lines.push("");
+  lines.push("📂 B — רקע (Background)");
+  // Show patients with active flags/status worth knowing
+  const flaggedPatients = filteredPatients.filter(p =>
+    p.status.length > 0 || p.flags.length > 0
+  );
+  if (flaggedPatients.length > 0) {
+    flaggedPatients.slice(0, 8).forEach(p => {
+      const info = [p.room, p.name, p.age ? `(${p.age})` : null].filter(Boolean).join(" ");
+      const details = [p.diagnosis, ...(p.status.length > 0 ? [p.status.join("/")] : []), ...(p.flags.length > 0 ? [p.flags.join(", ")] : [])].filter(Boolean).join(" | ");
+      lines.push(`  • ${info} — ${details}`);
+    });
+    if (flaggedPatients.length > 8) lines.push(`  ... ועוד ${flaggedPatients.length - 8} חולים`);
+  } else {
+    lines.push("  אין דגלים פעילים");
+  }
+
+  // ── A: Assessment ──────────────────────────────────────────────
+  lines.push("");
+  lines.push("🔍 A — הערכה (Assessment)");
+  const comfortPatients = filteredPatients.filter(p =>
+    [...p.status, ...p.flags, p.diagnosis ?? ""].some(s => /comfort|palliative|DNR|נוחות|פליאטיב/i.test(s))
+  );
+  const allTasks = filteredPatients.flatMap(p => [...p.tasks, ...p.generatedTasks]);
+  const donePct = allTasks.length > 0 ? Math.round((allTasks.filter(t => t.done).length / allTasks.length) * 100) : 100;
+  lines.push(`  ✅ ביצוע משימות: ${donePct}% (${allTasks.filter(t => t.done).length}/${allTasks.length})`);
+  if (comfortPatients.length > 0) lines.push(`  🕊️ Comfort care: ${comfortPatients.map(p => `${p.room ?? "?"} ${p.name ?? "?"}`).join(", ")}`);
+  const patientsWithHandoverNote = filteredPatients.filter(p => p.handoverNote);
+  if (patientsWithHandoverNote.length > 0) {
+    lines.push(`  📝 הערות מסירה:`);
+    patientsWithHandoverNote.slice(0, 5).forEach(p => {
+      lines.push(`    חד׳ ${p.room ?? "?"} ${p.name ?? "?"}: ${p.handoverNote}`);
+    });
+  }
+
+  // ── R: Recommendation ─────────────────────────────────────────
+  lines.push("");
+  lines.push("💡 R — המלצות (Recommendation)");
+  const pendingRoutine = allTasks.filter(t => !t.done && t.urgency === "routine");
+  if (statTasks.length > 0) lines.push(`  ⚡ ${statTasks.length} משימות STAT — טפל מיידית`);
+  if (urgentTasks.length > 0) lines.push(`  🎯 ${urgentTasks.length} משימות דחופות — תוך שעה`);
+  if (pendingRoutine.length > 0) lines.push(`  📋 ${pendingRoutine.length} משימות שגרה — לפי סדר עדיפויות`);
+  if (comfortPatients.length > 0) lines.push(`  🕊️ ${comfortPatients.length} חולי comfort — הערכת נוחות בלבד, לא החייאה`);
+  if (newAdm.length > 0) lines.push(`  🆕 ${newAdm.length} קבלות — ודא הרשמה + מעבדות`);
+  if (statTasks.length === 0 && urgentTasks.length === 0 && pendingRoutine.length === 0) {
+    lines.push("  ✅ משמרת נקייה — עבודה יפה!");
+  }
+
+  lines.push("");
+  lines.push("─".repeat(38));
+  return lines.join("\n");
+}
+
 // ─── Visual card renderer ───────────────────────────────────────────────────
 
 function urgencyColor(u: Task["urgency"]) {
@@ -310,7 +415,7 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
   const { toast, showToast } = useSimpleToast();
   const { patients } = usePatientsState();
   const [oncallOnly, setOncallOnly] = useState(false);
-  const [view, setView] = useState<"visual" | "text">("visual");
+  const [view, setView] = useState<"visual" | "text" | "isbar">("visual");
 
 
   const shiftStart = useMemo(() => getShiftStart(), []);
@@ -348,6 +453,11 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
     [patients, filteredPatients, sections, oncallOnly, shiftStart]
   );
 
+  const isbarText = useMemo(
+    () => buildISBAR(patients, filteredPatients, shiftStart),
+    [patients, filteredPatients, shiftStart]
+  );
+
   // Summary stats
   const allTasks = filteredPatients.flatMap(p => [...p.tasks, ...p.generatedTasks]);
   const pendingCount = allTasks.filter(t => !t.done).length;
@@ -356,10 +466,14 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
   const newCount = newAdmissionIds.size;
 
   const handleCopy = async () => {
-    try { await navigator.clipboard.writeText(text); showToast("✓ הועתק ללוח"); }
+    const content = view === "isbar" ? isbarText : text;
+    try { await navigator.clipboard.writeText(content); showToast("✓ הועתק ללוח"); }
     catch { showToast("לא ניתן להעתיק אוטומטית", "error"); }
   };
-  const handleWhatsApp = () => window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  const handleWhatsApp = () => {
+    const content = view === "isbar" ? isbarText : text;
+    window.open(`https://wa.me/?text=${encodeURIComponent(content)}`, "_blank");
+  };
   const handleNativeShare = async () => {
     if (navigator.share) {
       try { await navigator.share({ text }); return; }
@@ -420,7 +534,13 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
             onClick={() => setView("text")}
             className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${view === "text" ? "text-emerald-400 border-b-2 border-emerald-400" : "text-gray-500"}`}
           >
-            📄 טקסט להעתקה
+            📄 טקסט
+          </button>
+          <button
+            onClick={() => setView("isbar")}
+            className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${view === "isbar" ? "text-emerald-400 border-b-2 border-emerald-400" : "text-gray-500"}`}
+          >
+            🩺 ISBAR
           </button>
         </div>
 
@@ -468,7 +588,7 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
                 </div>
               )}
             </div>
-          ) : (
+          ) : view === "text" ? (
             <div className="p-4">
               <pre
                 id="handoff-text"
@@ -477,6 +597,16 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
                 style={{ unicodeBidi: "plaintext" }}
               >
                 {text}
+              </pre>
+            </div>
+          ) : (
+            <div className="p-4">
+              <pre
+                className="text-sm leading-relaxed whitespace-pre-wrap break-words font-mono text-gray-300"
+                dir="auto"
+                style={{ unicodeBidi: "plaintext" }}
+              >
+                {isbarText}
               </pre>
             </div>
           )}
