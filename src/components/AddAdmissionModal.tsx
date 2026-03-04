@@ -1,6 +1,7 @@
 
 import { useState, useCallback, useRef } from "react";
 import type { PatientEntry, PatientSection } from "../types";
+import { getProxyAuthHeaders } from "../cloudSync";
 import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
 import { generateId } from "../utils/id";
 
@@ -258,9 +259,9 @@ async function extractFromLetter(
   }
 
   const endpoint = "/api/claude";
-  const headers: Record<string, string> = { "content-type": "application/json" };
-  const secret = import.meta.env.VITE_API_SECRET ?? "";
-  if (secret) headers["x-api-secret"] = secret;
+  const authHeaders = await getProxyAuthHeaders();
+  if (!authHeaders) throw new Error("נדרשת התחברות לחשבון כדי לנתח מכתבי קבלה");
+  const headers: Record<string, string> = { "content-type": "application/json", ...authHeaders };
 
   const body = { model: "claude-sonnet-4-6", max_tokens: 1500, system: EXTRACTION_SYSTEM, messages: [{ role: "user", content: messageContent }] };
 
