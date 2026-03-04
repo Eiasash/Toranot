@@ -12,6 +12,7 @@ import { applyRules } from "../engine/rules";
 import { generateId } from "../utils/id";
 import { safeGetItem, safeSetItem } from "../utils/storage";
 import { useToranotCloudSync, type ToranotCloudState, type SyncStatus, type ConflictData } from "../cloudSync";
+import { useShallow } from "zustand/react/shallow";
 import type { ScanDiff } from "../engine/smartOCR";
 
 // -----------------------------
@@ -805,11 +806,16 @@ const CloudSyncContext = createContext<CloudSyncState>({
 export function PatientsProvider({ children }: { children: ReactNode }) {
   // Read state + dispatch directly from Zustand store.
   // No useReducer here — the store owns the state.
-  const state = usePatientsStore((s) => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { dispatch: _dispatch, ...rest } = s;
-    return rest as PatientsState;
-  });
+  const state = usePatientsStore(
+    // useShallow required: spread selector returns new object every call → Zustand
+    // Object.is comparison fails every render → infinite re-render loop (#185).
+    // useShallow does property-by-property comparison instead.
+    useShallow((s) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { dispatch: _dispatch, ...rest } = s;
+      return rest as PatientsState;
+    })
+  );
   const dispatch = usePatientsStore((s) => s.dispatch);
 
   // CRITICAL: pass only the 6 primitive fields useToranotCloudSync depends on —
