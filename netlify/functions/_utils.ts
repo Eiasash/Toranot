@@ -7,7 +7,7 @@
 
 export const MAX_BODY_BYTES = 5_000_000; // 5MB — supports base64-encoded admission letter files
 export const UPSTREAM_TIMEOUT_MS = 9_000;
-export const UPSTREAM_TIMEOUT_LONG_MS = 25_000; // for file/vision requests (PDF, images)
+export const UPSTREAM_TIMEOUT_LONG_MS = 23_000; // for file/vision requests — leaves 3s buffer before Netlify's 26s function timeout
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 

@@ -11,6 +11,9 @@
 const CACHE_VERSION = 1772619848112; // force-update 2026-03-04 emergency cache purge
 const CACHE_NAME = `toranot-v${CACHE_VERSION}`;
 
+/** @type {Map<string, ReturnType<typeof setTimeout>>} */
+const pendingAlarms = new Map();
+
 const PRECACHE_ASSETS = [
   "./",
   "./index.html",
@@ -281,7 +284,6 @@ self.addEventListener("message", (event) => {
         )
       );
     } else {
-    } else {
       event.waitUntil(
         self.registration.showNotification(title, {
           body,
@@ -340,7 +342,7 @@ self.addEventListener("message", (event) => {
   if (type === "TASK_REMINDER" && title) {
     self.registration.showNotification(title, {
       body: body ?? "",
-      icon: "/icon-192.png",
+      icon: "./icon-192.png",
       requireInteraction: true,
       vibrate: [300, 100, 300, 100, 300],
     });
@@ -351,7 +353,7 @@ self.addEventListener("message", (event) => {
 function fireTaskAlarm(taskId, taskText) {
   self.registration.showNotification("⏰ תורנות — עבר הזמן!", {
     body: taskText,
-    icon: "/icon-192.png",
+    icon: "./icon-192.png",
     tag: `alarm-${taskId}`,
     requireInteraction: true,
     vibrate: [300, 100, 300, 100, 300],

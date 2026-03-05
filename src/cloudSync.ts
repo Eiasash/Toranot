@@ -363,7 +363,7 @@ function generateHandoffCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no O/0/1/I confusion
   let code = "";
   const arr = crypto.getRandomValues(new Uint8Array(8));
-  for (const byte of arr) code += chars[byte % chars.length];
+  for (const byte of arr) code += chars[byte & 31]; // 32 chars = power of 2, no modulo bias
   return code;
 }
 
@@ -423,7 +423,7 @@ function generateCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code = "";
   const arr = crypto.getRandomValues(new Uint8Array(6));
-  for (const byte of arr) code += chars[byte % chars.length];
+  for (const byte of arr) code += chars[byte & 31]; // 32 chars = power of 2, no modulo bias
   return code;
 }
 

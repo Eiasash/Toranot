@@ -56,7 +56,7 @@ function makeState(
     shiftHistory: [],
     scanMode: false,
     events: [],
-    unassignedTasks: [],
+    unassignedTasks: [] as Task[],
     ...overrides,
   };
 }
