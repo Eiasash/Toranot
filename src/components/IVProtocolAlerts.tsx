@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { memo, useState, useMemo } from "react";
 import type { PatientEntry } from "../types";
 import { matchIVProtocols, type IVProtocolMatch } from "../engine/ivProtocolMatch";
 
@@ -10,7 +10,7 @@ import { matchIVProtocols, type IVProtocolMatch } from "../engine/ivProtocolMatc
  * - SUGGEST: Diagnosis implies protocol may be relevant → muted collapsible hint,
  *            not an action item, not a task, just "FYI if needed".
  */
-export function IVProtocolAlerts({ patient }: { patient: PatientEntry }) {
+export const IVProtocolAlerts = memo(function IVProtocolAlerts({ patient }: { patient: PatientEntry }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
@@ -90,7 +90,7 @@ export function IVProtocolAlerts({ patient }: { patient: PatientEntry }) {
       )}
     </div>
   );
-}
+});
 
 // ── Active tier: expanded prep/dosing/monitoring panel ──
 function ActiveDetail({ match: m }: { match: IVProtocolMatch }) {

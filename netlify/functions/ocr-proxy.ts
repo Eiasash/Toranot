@@ -4,7 +4,7 @@
  * Migrated from legacy exports.handler to modern ES module format.
  */
 import type { Context, Config } from "@netlify/functions";
-import { checkAuth, checkRateLimit, clampInt, fetchWithTimeout, logUpstreamError, validateMessages } from "./_utils.ts";
+import { checkAuth, checkRateLimit, clampInt, fetchWithTimeout, logUpstreamError, validateMessages, safeContentType } from "./_utils.ts";
 
 // OCR only uses claude-sonnet-4-6 — block attempts to use expensive models
 const OCR_ALLOWED_MODELS = new Set(["claude-sonnet-4-6", "claude-haiku-4-5-20251001"]);
@@ -98,7 +98,7 @@ export default async (req: Request, _context: Context) => {
       return new Response(text, {
         status: response.status,
         headers: {
-          "content-type": response.headers.get("content-type") ?? "application/json",
+          "content-type": safeContentType(response),
         },
       });
     }

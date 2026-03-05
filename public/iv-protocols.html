@@ -358,16 +358,6 @@ li{margin-bottom:3px}
   For clinical use only. Verify all doses before administration.
 </div>
 
-<script>
-function toggle(el){el.parentElement.classList.toggle('open')}
-function filterCards(){
-  const q=document.getElementById('searchInput').value.toLowerCase();
-  document.querySelectorAll('.card').forEach(c=>{
-    const kw=c.dataset.keywords||'';
-    const text=c.textContent.toLowerCase();
-    c.style.display=(kw.includes(q)||text.includes(q))?'':'none';
-  });
-}
-</script>
+<script src="iv-protocols.js"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { DRUG_DOSING } from "../data/dosing";
 import type { DrugDosingEntry } from "../data/dosing";
 import { extractAntibioticsFromPlan } from "../engine/drugSafety";
@@ -451,6 +451,11 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
   });
   const [isHD, setIsHD] = useState(() => safeGetItem("toranot_crcl_hd") === "1");
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const copyTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => { if (copyTimerRef.current) clearTimeout(copyTimerRef.current); };
+  }, []);
 
   const crclBucket: CrClBucket | null = useMemo(() => {
     if (isHD) return "hd";
@@ -484,7 +489,8 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
     lines.push(``, p.notes);
     navigator.clipboard.writeText(lines.join("\n")).then(() => {
       setCopiedIdx(idx);
-      setTimeout(() => setCopiedIdx(null), 1500);
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = window.setTimeout(() => setCopiedIdx(null), 1500);
     });
   }, [crclBucket]);
 

@@ -350,6 +350,7 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
                     time: null,
                     confidence: 1,
                     note: null,
+                    dueAt: null,
                   },
                 ],
               }

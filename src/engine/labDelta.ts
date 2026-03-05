@@ -207,11 +207,13 @@ export function calculateLabDeltas(patient: PatientEntry): LabDelta[] {
 
     const baselineEntry = sorted[0];
     const latestEntry = sorted[sorted.length - 1];
+
+    // Skip labs with zero or negative baseline — prevents division by zero
+    // in percentage calculations and nonsensical peak tracking
+    if (baselineEntry.value <= 0) continue;
+
     const change = latestEntry.value - baselineEntry.value;
-    const changePercent =
-      baselineEntry.value !== 0
-        ? Math.round((change / baselineEntry.value) * 100)
-        : 0;
+    const changePercent = Math.round((change / baselineEntry.value) * 100);
 
     const direction: LabDelta["direction"] =
       change > 0 ? "up" : change < 0 ? "down" : "stable";

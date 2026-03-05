@@ -65,18 +65,21 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.addEventListener("message", (event) => {
     const { type, taskId, patientId, newDueAt } = event.data ?? {};
 
-    if (type === "TASK_DONE_FROM_NOTIFICATION" && taskId && patientId) {
+    // Validate string types — SW messages are untyped, malformed data must not propagate
+    const validId = (v: unknown): v is string => typeof v === "string" && v.length > 0;
+
+    if (type === "TASK_DONE_FROM_NOTIFICATION" && validId(taskId) && validId(patientId)) {
       // Mark the task done — same as tapping the checkbox in the UI
       // We need access to the dispatch function. Since this is outside React,
       // we use a window-level event that PatientsContext listens for.
       window.dispatchEvent(new CustomEvent("toranot:task-done", { detail: { taskId, patientId } }));
     }
 
-    if (type === "SNOOZE_TASK" && taskId && patientId && newDueAt) {
+    if (type === "SNOOZE_TASK" && validId(taskId) && validId(patientId) && typeof newDueAt === "string") {
       window.dispatchEvent(new CustomEvent("toranot:task-snooze", { detail: { taskId, patientId, newDueAt } }));
     }
 
-    if (type === "FOCUS_PATIENT" && patientId) {
+    if (type === "FOCUS_PATIENT" && validId(patientId)) {
       window.dispatchEvent(new CustomEvent("toranot:focus-patient", { detail: { patientId } }));
     }
   });

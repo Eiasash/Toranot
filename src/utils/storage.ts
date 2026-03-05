@@ -182,10 +182,10 @@ export function downloadShiftBackup(
   a.download = `toranot-${datePart}.json`;
   document.body.appendChild(a);
   a.click();
-  // Clean up — revoke after a short delay to allow the download to start
-  setTimeout(() => {
-    URL.revokeObjectURL(url);
-    document.body.removeChild(a);
-  }, 1000);
+  // Clean up synchronously — the browser has already captured the blob reference
+  // from the click event, so revoking immediately is safe and avoids a leak if
+  // the page unloads before the timeout fires.
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 

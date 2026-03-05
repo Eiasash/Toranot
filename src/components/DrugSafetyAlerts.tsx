@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import type { PatientEntry } from "../types";
 import {
   checkDrugInteractions,
@@ -17,7 +17,7 @@ const SEVERITY_ICON = {
   warning: "⚠️",
 };
 
-export function DrugSafetyAlerts({ patient }: { patient: PatientEntry }) {
+export const DrugSafetyAlerts = memo(function DrugSafetyAlerts({ patient }: { patient: PatientEntry }) {
   const [expanded, setExpanded] = useState(false);
 
   const interactions = useMemo(() => checkDrugInteractions(patient), [patient]);
@@ -83,7 +83,7 @@ export function DrugSafetyAlerts({ patient }: { patient: PatientEntry }) {
       )}
     </div>
   );
-}
+});
 
 function InteractionCard({ interaction }: { interaction: DrugInteraction }) {
   const icon = SEVERITY_ICON[interaction.severity];

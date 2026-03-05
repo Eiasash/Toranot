@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { memo, useState, useMemo } from "react";
 import type { PatientEntry, LabEntry } from "../types";
 
 // ── Critical value thresholds (same as LabTracker) ──
@@ -266,7 +266,7 @@ function SingleLabChart({
 }
 
 /** Full lab chart panel for a patient — shows all labs with ≥1 entry */
-export function LabChart({ patient }: { patient: PatientEntry }) {
+export const LabChart = memo(function LabChart({ patient }: { patient: PatientEntry }) {
   const labs = patient.labs ?? [];
   const [selectedLab, setSelectedLab] = useState<string | null>(null);
 
@@ -342,7 +342,7 @@ export function LabChart({ patient }: { patient: PatientEntry }) {
       )}
     </div>
   );
-}
+});
 
 /** Format labs for handoff text export */
 export function formatLabsForHandoff(patient: PatientEntry): string {

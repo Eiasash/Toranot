@@ -107,6 +107,8 @@ const INTERACTIONS: DrugInteraction[] = [
   { drugA: "arb", drugB: "spironolactone", severity: "major", risk: "היפרקלמיה", detail: "ARB + Spironolactone = סיכון K+ ↑↑" },
   { drugA: "acei", drugB: "potassium", severity: "major", risk: "היפרקלמיה", detail: "ACEi + KCl = סיכון K+ ↑↑. בדוק K+ לפני מתן" },
   { drugA: "acei", drugB: "trimethoprim", severity: "major", risk: "היפרקלמיה", detail: "Bactrim + ACEi = סיכון K+ ↑↑ בקשישים" },
+  { drugA: "acei", drugB: "amiloride", severity: "major", risk: "היפרקלמיה", detail: "ACEi + Amiloride = סיכון K+ ↑↑. עקוב K+ תוך 48-72h" },
+  { drugA: "arb", drugB: "amiloride", severity: "major", risk: "היפרקלמיה", detail: "ARB + Amiloride = סיכון K+ ↑↑. עקוב K+ תוך 48-72h" },
   { drugA: "spironolactone", drugB: "potassium", severity: "critical", risk: "היפרקלמיה חמורה", detail: "אין לתת KCl עם Spironolactone! סכנת חיים" },
 
   // ── Serotonin syndrome ──
