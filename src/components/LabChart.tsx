@@ -62,6 +62,7 @@ function SingleLabChart({
   );
 
   const values = sorted.map((e) => e.value);
+  if (values.length === 0) return null;
   const min = Math.min(...values);
   const max = Math.max(...values);
   const padding = (max - min) * 0.15 || 1;

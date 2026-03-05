@@ -29,7 +29,7 @@ export interface PhlebEntry {
 
 const TUBE_RULES: Array<{ pattern: RegExp; tube: TubeColour; label: string }> = [
   // Red — serum / biochemistry
-  { pattern: /\bCMP\b|BMP\b|metabolic\b|chem\b/i,                                            tube: "red",    label: "CMP" },
+  { pattern: /\bCMP\b|\bBMP\b|\bmetabolic\b|\bchem\b/i,                                       tube: "red",    label: "CMP" },
   { pattern: /\bLFT|liver.*func|ALT\b|AST\b|bili/i,                                          tube: "red",    label: "LFTs" },
   { pattern: /\btroponin\b/i,                                                                  tube: "red",    label: "Troponin" },
   { pattern: /\bCRP\b|c.?reactive/i,                                                          tube: "red",    label: "CRP" },

@@ -250,7 +250,7 @@ export function TaskDashboard({ onClose }: { onClose: () => void }) {
               >
                 <input
                   type="checkbox"
-                  checked={false}
+                  checked={d.task.done}
                   onChange={() =>
                     dispatch({
                       type: "TOGGLE_TASK",

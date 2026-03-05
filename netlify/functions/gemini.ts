@@ -43,7 +43,7 @@ function normalizeGeminiModel(input: unknown): string | null {
     "gemini-2.5-flash-lite":  "gemini-2.5-flash-lite",
     "pro":                    "gemini-2.5-pro",
     "gemini-2.5-pro":         "gemini-2.5-pro",
-    "gemini-2.5-pro":         "gemini-2.5-pro",
+    "2.5-pro":                "gemini-2.5-pro",
     "latest":                 "gemini-flash-latest",
   };
 
