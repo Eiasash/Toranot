@@ -53,14 +53,18 @@ export async function checkAuth(req: Request): Promise<Response | null> {
         return new Response("Unauthorized — invalid or expired session", { status: 401 });
       }
 
-      // Supabase returned unexpected error — fail open with a warning
-      console.warn("[auth] Supabase /auth/v1/user returned", res.status, "— failing open");
-      return null;
+      // Supabase returned unexpected error — require API_SECRET fallback instead of failing open
+      console.warn("[auth] Supabase /auth/v1/user returned", res.status, "— checking API_SECRET fallback");
+      const fallbackSecret = Netlify.env.get("API_SECRET");
+      if (fallbackSecret && req.headers.get("x-api-secret") === fallbackSecret) return null;
+      return new Response("Authentication service unavailable", { status: 503 });
 
     } catch (err) {
-      // Network timeout reaching Supabase — fail open to avoid blocking ward use
-      console.warn("[auth] Supabase JWT verification timed out — failing open:", err);
-      return null;
+      // Network timeout reaching Supabase — require API_SECRET fallback instead of failing open
+      console.warn("[auth] Supabase JWT verification timed out — checking API_SECRET fallback:", err);
+      const fallbackSecret = Netlify.env.get("API_SECRET");
+      if (fallbackSecret && req.headers.get("x-api-secret") === fallbackSecret) return null;
+      return new Response("Authentication service unavailable", { status: 503 });
     }
   }
 
@@ -183,6 +187,16 @@ export function logUpstreamError(service: string, status: number, body: string):
   console.error(`[${service}] upstream ${status}:`, body.slice(0, 500));
 }
 
+/** Whitelist safe response content-types — prevents forwarding unexpected types from upstream */
+const SAFE_CONTENT_TYPES = ["application/json", "text/plain"];
+export function safeContentType(upstream: Response): string {
+  const ct = upstream.headers.get("content-type")?.toLowerCase().trim() ?? "";
+  for (const safe of SAFE_CONTENT_TYPES) {
+    if (ct.startsWith(safe)) return ct;
+  }
+  return "application/json";
+}
+
 // ─── Rate limiting (Upstash Redis) ───────────────────────────────────────────
 
 /**
@@ -213,10 +227,9 @@ export async function checkRateLimit(
     return null; // fail-open
   }
 
-  // Extract client IP — Netlify sets x-nf-client-connection-ip
+  // Extract client IP — only trust Netlify's own header (x-forwarded-for is spoofable)
   const ip =
     req.headers.get("x-nf-client-connection-ip") ??
-    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
     "unknown";
 
   const limits = { ai: 30, ocr: 10 } as const;

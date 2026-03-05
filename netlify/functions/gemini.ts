@@ -7,6 +7,7 @@ import {
   fetchWithTimeout,
   logUpstreamError,
   validateMessages,
+  safeContentType,
 } from "./_utils.ts";
 
 // ─── Model normalization ──────────────────────────────────────────────────────
@@ -143,7 +144,7 @@ export default async (req: Request, _context: Context) => {
   return new Response(text, {
     status: upstream.status,
     headers: {
-      "content-type": upstream.headers.get("content-type") ?? "application/json",
+      "content-type": safeContentType(upstream),
     },
   });
 };
