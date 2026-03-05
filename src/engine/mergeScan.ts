@@ -6,7 +6,7 @@ import {
 } from "../utils/patientKey";
 
 function sameTask(a: Task, b: Task): boolean {
-  return a.text.trim() === b.text.trim();
+  return a.text.trim().replace(/\s+/g, " ") === b.text.trim().replace(/\s+/g, " ");
 }
 
 function mergeTaskState(oldTask: Task, newTask: Task): Task {
