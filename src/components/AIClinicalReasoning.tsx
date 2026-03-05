@@ -25,19 +25,11 @@ const GEMINI_MODEL = "gemini-2.5-flash";
 type AIProvider = "claude" | "gemini";
 
 // Render AI output safely.
-// Regex-based sanitizers are a cute hobby, not a security strategy.
-function sanitizeHTML(html: string): string {
-  return DOMPurify.sanitize(html, {
-    // Keep formatting, kill the scary stuff.
-    USE_PROFILES: { html: true },
-    FORBID_TAGS: ["script", "iframe", "object", "embed"],
-    FORBID_ATTR: ["style", "onerror", "onload"],
-  });
-}
-
-// Simple markdown → HTML for AI responses
-function renderMarkdown(text: string): string {
-  return text
+// IMPORTANT: renderMarkdown produces HTML via regex, then DOMPurify sanitizes the
+// final HTML output. This order is critical — sanitizing before rendering would let
+// regex replacements introduce new unsanitized HTML.
+function renderAndSanitize(text: string): string {
+  const html = text
     // Strip leading artifact characters (Gemini sometimes starts with lone ., ,, * etc)
     .replace(/^[.,;:\s*]+/, "")
     // Headers (## and ###)
@@ -58,6 +50,12 @@ function renderMarkdown(text: string): string {
     // Wrap in paragraph
     .replace(/^/, '<p class="mb-2">')
     .replace(/$/, '</p>');
+
+  // Sanitize the FINAL HTML — after all transformations
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ["h2", "h3", "strong", "em", "ul", "li", "p", "br"],
+    ALLOWED_ATTR: ["class"],
+  });
 }
 
 /**
@@ -538,7 +536,7 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
                   className="prose prose-sm dark:prose-invert max-w-none text-sm leading-relaxed break-words"
                   dir="auto"
                   style={{ unicodeBidi: "plaintext" }}
-                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(renderMarkdown(response)) }}
+                  dangerouslySetInnerHTML={{ __html: renderAndSanitize(response) }}
                 />
               )}
               {/* Scroll padding — clears Android nav bar + bottom safe area */}

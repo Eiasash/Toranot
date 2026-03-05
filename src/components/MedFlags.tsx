@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { PatientEntry } from "../types";
 
 // ─── Geriatric medication hazard databases ─────────────────
@@ -161,7 +162,7 @@ const colorMap: Record<string, string> = {
     "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700",
 };
 
-export function MedFlagBadges({ patient }: { patient: PatientEntry }) {
+export const MedFlagBadges = memo(function MedFlagBadges({ patient }: { patient: PatientEntry }) {
   const flags = analyzeMeds(patient);
   if (flags.length === 0) return null;
 
@@ -179,4 +180,4 @@ export function MedFlagBadges({ patient }: { patient: PatientEntry }) {
       ))}
     </div>
   );
-}
+});

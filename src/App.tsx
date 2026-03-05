@@ -559,25 +559,65 @@ function AppInner() {
       <BottomNav onAction={handleBottomNav} pendingStat={pendingStat} />
 
       {/* ── Modals (lazy-loaded — only fetched when first opened) ── */}
-      <Suspense fallback={null}>
-        {modal === "reference"  && <QuickReference onClose={() => setModal("none")} />}
-        {modal === "handoff"    && <HandoffSheet    onClose={() => setModal("none")} />}
-        {modal === "dashboard"  && <TaskDashboard   onClose={() => setModal("none")} />}
-        {modal === "history"    && <ShiftHistory    onClose={() => setModal("none")} />}
-        {modal === "search"     && <GlobalSearch    onClose={() => setModal("none")} />}
-        {modal === "qrsync"     && <QRSync          onClose={() => setModal("none")} />}
-        {modal === "capture"    && <QuickCaptureSheet onClose={() => setModal("none")} />}
-        {modal === "morning"    && <MorningReport   onClose={() => setModal("none")} />}
-        {modal === "ivprotocols" && <IVProtocols    onClose={() => setModal("none")} />}
-        {modal === "handoff_cloud" && <ShiftHandoffModal onClose={() => setModal("none")} />}
-        {modal === "shared_shift" && <SharedShiftPanel onClose={() => setModal("none")} />}
-      </Suspense>
+      <ModalErrorBoundary onClose={() => setModal("none")}>
+        <Suspense fallback={null}>
+          {modal === "reference"  && <QuickReference onClose={() => setModal("none")} />}
+          {modal === "handoff"    && <HandoffSheet    onClose={() => setModal("none")} />}
+          {modal === "dashboard"  && <TaskDashboard   onClose={() => setModal("none")} />}
+          {modal === "history"    && <ShiftHistory    onClose={() => setModal("none")} />}
+          {modal === "search"     && <GlobalSearch    onClose={() => setModal("none")} />}
+          {modal === "qrsync"     && <QRSync          onClose={() => setModal("none")} />}
+          {modal === "capture"    && <QuickCaptureSheet onClose={() => setModal("none")} />}
+          {modal === "morning"    && <MorningReport   onClose={() => setModal("none")} />}
+          {modal === "ivprotocols" && <IVProtocols    onClose={() => setModal("none")} />}
+          {modal === "handoff_cloud" && <ShiftHandoffModal onClose={() => setModal("none")} />}
+          {modal === "shared_shift" && <SharedShiftPanel onClose={() => setModal("none")} />}
+        </Suspense>
+      </ModalErrorBoundary>
 
       {/* Conflict resolution overlay — highest z-index */}
       <ConflictDialog />
       <SimpleToast state={storageToast} />
     </div>
   );
+}
+
+// ─── Modal Error Boundary — catches crashes in lazy modals without taking down the app ──
+
+class ModalErrorBoundary extends Component<
+  { children: React.ReactNode; onClose: () => void },
+  { error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode; onClose: () => void }) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("[Toranot] Modal crashed:", error, info.componentStack);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-xs w-full text-center space-y-3 shadow-xl">
+            <div className="text-3xl">⚠️</div>
+            <p className="text-sm text-gray-700 dark:text-gray-300">שגיאה בטעינת החלון</p>
+            <p className="text-xs text-gray-500 font-mono break-all">{this.state.error.message}</p>
+            <button
+              onClick={() => { this.setState({ error: null }); this.props.onClose(); }}
+              className="w-full py-2 bg-violet-600 text-white rounded-xl font-bold text-sm"
+            >
+              סגור
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 // ─── Error Boundary ───────────────────────────────────────

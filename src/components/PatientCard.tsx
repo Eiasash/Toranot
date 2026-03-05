@@ -410,6 +410,7 @@ function PatientCardBase({ patient }: { patient: PatientEntry }) {
                     dispatch({ type: "REMOVE_PATIENT", patientId: patient.id });
                   }}
                   className="text-xs px-2 py-1 rounded-lg bg-red-600 text-white"
+                  aria-label="מחק מטופל"
                 >
                   🗑️
                 </button>
@@ -433,6 +434,7 @@ function PatientCardBase({ patient }: { patient: PatientEntry }) {
                   onClick={() => { setMoveRoom(patient.room ?? ""); setMoveSection(patient.section); setShowMovePopover(true); }}
                   className="shrink-0 text-base px-1.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-700 active:bg-slate-200 dark:active:bg-slate-600 transition-colors"
                   title="העבר חדר"
+                  aria-label="העבר חדר"
                 >
                   🛏️
                 </button>
@@ -440,6 +442,7 @@ function PatientCardBase({ patient }: { patient: PatientEntry }) {
                   onClick={startEdit}
                   className="shrink-0 text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-1"
                   title="ערוך פרטי מטופל"
+                  aria-label="ערוך פרטי מטופל"
                 >
                   ✏️
                 </button>
@@ -516,6 +519,7 @@ function PatientCardBase({ patient }: { patient: PatientEntry }) {
               }
               className="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-1"
               title="הזז למעלה"
+              aria-label="הזז למעלה"
             >
               ▲
             </button>
@@ -529,6 +533,7 @@ function PatientCardBase({ patient }: { patient: PatientEntry }) {
               }
               className="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-1"
               title="הזז למטה"
+              aria-label="הזז למטה"
             >
               ▼
             </button>
