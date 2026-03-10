@@ -201,7 +201,7 @@ export function safeContentType(upstream: Response): string {
 // ─── Rate limiting (Upstash Redis) ───────────────────────────────────────────
 
 /**
- * Sliding-window rate limiter via Upstash Redis REST API.
+ * Fixed-window rate limiter via Upstash Redis REST API.
  * No SDK required — plain HTTP.
  *
  * Limits per endpoint type:
@@ -236,7 +236,7 @@ export async function checkRateLimit(
   const limits = { ai: 30, ocr: 10 } as const;
   const limit  = limits[tier];
 
-  // Sliding window: bucket per IP per minute
+  // Fixed window: bucket per IP per minute
   const window = Math.floor(Date.now() / 60_000);
   const key    = `rl:${tier}:${ip}:${window}`;
 

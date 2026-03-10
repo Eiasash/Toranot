@@ -57,11 +57,30 @@ function normalizeGeminiModel(input: unknown): string | null {
 
 // OpenAI-style messages → Gemini `contents` format.
 // Gemini roles: "user" | "model" (not "assistant")
-function toGeminiContents(messages: { role: "user" | "assistant"; content: string }[]) {
-  return messages.map((m) => ({
-    role: m.role === "assistant" ? "model" : "user",
-    parts: [{ text: m.content }],
-  }));
+// Content can be a string or an array of content blocks (text/image/document).
+// Only text blocks are forwarded — Gemini uses a different format for images/docs.
+function toGeminiContents(messages: { role: "user" | "assistant"; content: string | { type: string; text?: string }[] }[]) {
+  return messages.map((m) => {
+    let parts: { text: string }[];
+    if (typeof m.content === "string") {
+      parts = [{ text: m.content }];
+    } else if (Array.isArray(m.content)) {
+      // Extract text from content blocks; skip non-text blocks (images/documents)
+      // rather than silently corrupting them to "[object Object]"
+      parts = m.content
+        .filter((b): b is { type: "text"; text: string } => b.type === "text" && typeof b.text === "string")
+        .map((b) => ({ text: b.text }));
+      if (parts.length === 0) {
+        parts = [{ text: "" }];
+      }
+    } else {
+      parts = [{ text: String(m.content ?? "") }];
+    }
+    return {
+      role: m.role === "assistant" ? "model" : "user",
+      parts,
+    };
+  });
 }
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
@@ -80,7 +99,7 @@ export default async (req: Request, _context: Context) => {
   if (limitError) return limitError;
 
   const apiKey = Netlify.env.get("GEMINI_API_KEY");
-  if (!apiKey) return new Response("AI service not configured", { status: 500 });
+  if (!apiKey) return new Response("AI service not configured", { status: 503 });
 
   let body: unknown;
   try {
@@ -112,8 +131,8 @@ export default async (req: Request, _context: Context) => {
     contents: toGeminiContents(messages),
     generationConfig: {
       maxOutputTokens: maxTokens,
-      ...(typeof b?.temperature === "number" && { temperature: b.temperature }),
-      ...(typeof b?.top_p === "number" && { topP: b.top_p }),
+      ...(typeof b?.temperature === "number" && Number.isFinite(b.temperature) && { temperature: Math.max(0, Math.min(2, b.temperature)) }),
+      ...(typeof b?.top_p === "number" && Number.isFinite(b.top_p) && { topP: Math.max(0, Math.min(1, b.top_p)) }),
     },
   };
 
