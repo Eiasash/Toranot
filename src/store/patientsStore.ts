@@ -22,7 +22,7 @@ import {
   normalizeTask,
   type Action,
   type ShiftSnapshot,
-} from "../context/PatientsContext";
+} from "../context/reducer";
 import type { PatientEntry, Section, Task, WardEvent, LabEntry } from "../types";
 import { safeGetItem, safeSetItem } from "../utils/storage";
 import type { ScanDiff } from "../engine/smartOCR";
