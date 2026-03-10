@@ -6,7 +6,7 @@ Live: **[toranot.netlify.app](https://toranot.netlify.app)**
 
 ## Recent Changes
 
-- **fix(AddAdmissionModal):** Letter extraction (נתח) now falls back to user's stored API key when Supabase session is unavailable — consistent with Scanner and AIClinicalReasoning fallback behaviour. Proxy is preferred when available; direct Anthropic API call is used otherwise.
+- **fix(SEO/BP):** Added valid `robots.txt` and explicit `Content-Type: text/plain` header — SPA catch-all was serving `index.html` for `/robots.txt`, causing 31 Lighthouse errors and Best Practices score of 91.
 
 ---
 

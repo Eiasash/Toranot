@@ -91,6 +91,12 @@
     Cache-Control = "public, max-age=0, must-revalidate"
 
 [[headers]]
+  for = "/robots.txt"
+  [headers.values]
+    Content-Type = "text/plain"
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
   for = "/manifest.json"
   [headers.values]
     Cache-Control = "public, max-age=3600"
