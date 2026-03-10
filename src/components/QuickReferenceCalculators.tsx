@@ -4,6 +4,7 @@
  */
 import { useState, useMemo, useEffect } from "react";
 import { crclToBucket, cockcroft } from "../utils/renal";
+import { HyponatremiaProtocol, HyperkalemiaProtocol, HypercalcemiaProtocol, HypernatremiaProtocol, HypermagnesemiaProtocol } from "./OnCallProtocols";
 
 // ─────────────────────────────────────────────────────────
 // CrCl CALCULATOR (Cockcroft-Gault)
@@ -1175,8 +1176,6 @@ export function OsteoporosisProtocol() {
 // ─────────────────────────────────────────────────────────
 // UNIFIED ELECTROLYTES HUB — all electrolyte protocols in one place
 // ─────────────────────────────────────────────────────────
-
-import { HyponatremiaProtocol, HyperkalemiaProtocol, HypercalcemiaProtocol, HypernatremiaProtocol, HypermagnesemiaProtocol } from "./OnCallProtocols";
 
 const LYTE_TABS = [
   { key: "k",   icon: "🔋", label: "K+" },

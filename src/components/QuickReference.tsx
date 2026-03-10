@@ -8,7 +8,6 @@ import {
   CrClCalculator,
   CURB65Calculator,
   NEWS2Calculator,
-  ElectrolyteReference,
   InsulinReference,
   DeliriumReference,
   FallsReference,
@@ -750,7 +749,6 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
           {section === "stroke" && <div className="p-4"><AcuteStrokeProtocol /></div>}
           {section === "hyponatremia" && <div className="p-4"><HyponatremiaProtocol /></div>}
           {section === "hyperkalemia" && <div className="p-4"><HyperkalemiaProtocol /></div>}
-          {section === "hyponatremia" && <div className="p-4"><HyponatremiaProtocol /></div>}
           {section === "ecg" && <div className="p-4"><ECGInterpreter /></div>}
           {section === "hypoglycemia" && <div className="p-4"><HypoglycemiaProtocol /></div>}
           {section === "ams" && <div className="p-4"><AlteredMentalStatusProtocol /></div>}

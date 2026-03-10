@@ -372,30 +372,53 @@ export function SeizureProtocol() {
 export function DKA_HHS_Protocol() {
   return (
     <div className="space-y-3" dir="rtl">
-      <Section title="זיהוי — DKA vs HHS">
+      <Warn>הבדל קריטי: DKA = חומצה + ketones. HHS = היפרOSM + no ketones. טיפול שונה!</Warn>
+
+      <Section title="אבחון — DKA vs HHS">
+        <div className="overflow-x-auto">
+          <table className="text-xs w-full border-collapse">
+            <thead>
+              <tr className="bg-slate-100 dark:bg-slate-800">
+                <th className="text-right px-2 py-1 font-semibold">פרמטר</th>
+                <th className="px-2 py-1 font-semibold text-center">DKA קל</th>
+                <th className="px-2 py-1 font-semibold text-center">DKA קשה</th>
+                <th className="px-2 py-1 font-semibold text-center">HHS</th>
+              </tr>
+            </thead>
+            <tbody className="text-slate-600 dark:text-slate-400">
+              <tr className="border-t border-slate-200 dark:border-slate-700"><td className="px-2 py-1">Glucose</td><td className="px-2 py-1 text-center">&gt;250</td><td className="px-2 py-1 text-center">&gt;250</td><td className="px-2 py-1 text-center">&gt;600</td></tr>
+              <tr className="border-t border-slate-200 dark:border-slate-700"><td className="px-2 py-1">pH</td><td className="px-2 py-1 text-center">7.25–7.30</td><td className="px-2 py-1 text-center">&lt;7.0</td><td className="px-2 py-1 text-center">&gt;7.30</td></tr>
+              <tr className="border-t border-slate-200 dark:border-slate-700"><td className="px-2 py-1">Bicarb</td><td className="px-2 py-1 text-center">15–18</td><td className="px-2 py-1 text-center">&lt;10</td><td className="px-2 py-1 text-center">&gt;15</td></tr>
+              <tr className="border-t border-slate-200 dark:border-slate-700"><td className="px-2 py-1">Osm</td><td className="px-2 py-1 text-center">variable</td><td className="px-2 py-1 text-center">variable</td><td className="px-2 py-1 text-center">&gt;320</td></tr>
+              <tr className="border-t border-slate-200 dark:border-slate-700"><td className="px-2 py-1">Ketones</td><td className="px-2 py-1 text-center">3+</td><td className="px-2 py-1 text-center">3+</td><td className="px-2 py-1 text-center">מינימלי</td></tr>
+              <tr className="border-t border-slate-200 dark:border-slate-700"><td className="px-2 py-1">הכרה</td><td className="px-2 py-1 text-center">תקין</td><td className="px-2 py-1 text-center">מעורפל</td><td className="px-2 py-1 text-center">עד קומה</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <Tip>גריאטריה: HHS שכיח הרבה יותר! DKA בקשישים — pH עלול להיות מתון יחסית</Tip>
+      </Section>
+
+      <Section title="טיפול DKA — 4 צעדים במקביל">
+        <Step n={1}><strong>נוזלים:</strong> שעה 1 — NaCl 0.9% 1L/h. שעות 2-4 — 500ml/h. Na מתוקן &gt;140 → עבור ל-0.45%. כש-glucose ≤250 → הוסף D5</Step>
+        <Step n={2}><strong>אשלגן לפני אינסולין!</strong> K &lt;3.3 → ❌ עצור אינסולין! KCl 20-40mEq/h עד K≥3.3. K 3.3-5.3 → 20-30mEq לכל ליטר. K &gt;5.3 → אינסולין ללא K</Step>
+        <Step n={3}><strong>אינסולין (רק אחרי K≥3.3):</strong> Regular 0.1U/kg bolus → 0.1U/kg/h drip. יעד: glucose ↓50-75mg/dL/h. כש-glucose≤250 → הפחת ל-0.02-0.05U/kg/h + D5</Step>
+        <Step n={4}><strong>Bicarb — מוגבל מאוד:</strong> רק pH &lt;6.9 → NaHCO3 100mEq ב-400ml תוך 2h. pH &gt;7.0 → ❌ לא לתת!</Step>
+      </Section>
+
+      <Section title="Resolution DKA + מעקב">
         <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
-          <div><strong>DKA:</strong> glucose {">"} 250, pH {"<"} 7.3, bicarb {"<"} 18, anion gap {">"} 12, ketones +</div>
-          <div><strong>HHS:</strong> glucose {">"} 600, osm {">"} 320, no significant ketosis, altered MS. שכיח יותר בקשישים!</div>
+          <div>✅ DKA resolved = pH &gt;7.3 + bicarb &gt;18 + AG &lt;12 (לא glucose לבד!)</div>
+          <div>מעבר SC: overlap 2h. Glucose כל שעה. BMP כל 2-4h. I/O כל שעה</div>
+          <div>⚠️ SGLT2i (Empa/Dapa) → euglycemic DKA: glucose נורמלי אך ketones+AG gap!</div>
         </div>
       </Section>
 
-      <Section title="טיפול — DKA">
-        <Step n={1}><strong>נוזלים:</strong> NaCl 0.9% — ‎1L/h × 1-2h, לאחר מכן 250-500ml/h. עבור ל-0.45% אם Na מתוקן &gt;140</Step>
-        <Step n={2}><strong>אינסולין:</strong> Regular insulin 0.1U/kg/h IV (או 0.14U/kg/h ללא bolus). יעד: ירידת Glucose ‎50-70mg/dL/h</Step>
-        <Step n={3}><strong>אשלגן:</strong> K &lt;5.3 → הוסף 20-40mEq/L לנוזלים. K &lt;3.3 → תקן לפני אינסולין!</Step>
-        <Step n={4}><strong>Bicarb:</strong> רק אם pH &lt;6.9 → 100mEq NaHCO3 ב-400ml תוך 2h</Step>
-        <Step n={5}><strong>D5:</strong> כש-Glucose מגיע ל-200-250 → הוסף D5 לנוזלים, המשך אינסולין עד AG נסגר</Step>
+      <Section title="טיפול HHS — שונה מ-DKA!">
+        <Step n={1}><strong>נוזלים — הטיפול העיקרי:</strong> גירעון 8-10L! שעה 1: NaCl 0.9% 1L. אחר כך 500ml/h (הורד לאט — cerebral edema). Na&gt;140 → 0.45%. יעד: Osm ↓3-8mOsm/h</Step>
+        <Step n={2}><strong>אינסולין — מינון נמוך מאוד!</strong> 0.02-0.05U/kg/h בלבד. ❌ לא bolus! הורדה מהירה → cerebral edema</Step>
+        <Step n={3}><strong>אשלגן:</strong> בדוק K כל 2-4h — מחסור גדול כמו DKA</Step>
+        <Tip>HHS בקשישים: מצגת עיקרית = AMS. גורמים: זיהום, סטרואידים, תיאזידים, DM לא מאובחן</Tip>
       </Section>
-
-      <Section title="מעקב">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1" dir="rtl">
-          <div>Glucose כל שעה. BMP (K+, bicarb, AG) כל 2-4h. I/O כל שעה.</div>
-          <div>יעד resolution: pH &gt;7.3, bicarb &gt;15, AG &lt;12, Glucose &lt;200.</div>
-          <div>מעבר ל-SC insulin: overlap 2h עם drip. המשך IV fluids.</div>
-        </div>
-      </Section>
-
-      <Warn>HHS — נוזלים הם הטיפול העיקרי! אינסולין low-dose בלבד (0.02-0.05U/kg/h). הורדה מהירה → cerebral edema!</Warn>
     </div>
   );
 }
