@@ -152,8 +152,8 @@ const RULES: Rule[] = [
     triggerField: "all",
     tasks: [
       { text: "סוג ושתלב (Type & Screen)", urgency: "stat", category: "labs" },
-      { text: "Vitals q15min ×4 during transfusion, then q1h", urgency: "stat", category: "procedure" },
-      { text: "Watch for transfusion reaction: fever, rash, dyspnea, flank pain", urgency: "stat", category: "other" },
+      { text: "Vitals q15min ×4 during transfusion, then q1h", urgency: "routine", category: "procedure" },
+      { text: "Watch for transfusion reaction: fever, rash, dyspnea, flank pain", urgency: "routine", category: "other" },
       { text: "Post-transfusion CBC 1h after completion", urgency: "routine", category: "labs" },
     ],
   },
@@ -255,7 +255,7 @@ const RULES: Rule[] = [
       { text: "🔴 לקטט סרום (Lactate)", urgency: "stat", category: "labs" },
       { text: "🔴 ABx רחב תוך שעה — DAG: Pip-Tazo 4.5g IV q6h", urgency: "stat", category: "meds" },
       { text: "🔴 נוזלים IV: NaCl 0.9% — 30ml/kg bolus", urgency: "stat", category: "meds" },
-      { text: "ניטור שתן — יעד >0.5ml/kg/h", urgency: "stat", category: "other" },
+      { text: "ניטור שתן — יעד >0.5ml/kg/h", urgency: "routine", category: "other" },
       { text: "לקטט חוזר לאחר 4-6 שעות", urgency: "routine", category: "labs" },
       { text: "אם לקטט >4 / הלם → שקול ICU + vasopressors", urgency: "routine", category: "consult" },
     ],
@@ -268,7 +268,7 @@ const RULES: Rule[] = [
     group: "cellulitis",
     triggerField: "tasks",
     tasks: [
-      { text: "סימון גבולות בעט (+ תאריך+שעה)", urgency: "stat", category: "other" },
+      { text: "סימון גבולות בעט (+ תאריך+שעה)", urgency: "routine", category: "other" },
       { text: "תיעוד צילום", urgency: "routine", category: "other" },
       { text: "ABx — DAG: Cefazolin 2g IV q8h / Cephalexin 500 PO q6h", urgency: "stat", category: "meds" },
       { text: "אם מוגלה → Clindamycin (MRSA) + ניקוז", urgency: "routine", category: "meds" },
@@ -373,7 +373,7 @@ const RULES: Rule[] = [
     triggerField: "tasks",
     tasks: [
       { text: "Furosemide IV 40-80mg", urgency: "stat", category: "meds" },
-      { text: "I/O קפדני + משקל יומי", urgency: "stat", category: "other" },
+      { text: "I/O קפדני + משקל יומי", urgency: "routine", category: "other" },
       { text: "הגבלת נוזלים <1.5L + מלח", urgency: "routine", category: "other" },
       { text: "CXR", urgency: "routine", category: "imaging" },
       { text: "BNP / NT-proBNP", urgency: "routine", category: "labs" },
@@ -608,7 +608,7 @@ const RULES: Rule[] = [
     triggerField: "tasks",
     tasks: [
       { text: "מעבדה: Na+, Serum Osm, Urine Na+Osm, TSH, Cortisol", urgency: "stat", category: "labs" },
-      { text: "הערכת מצב נפחי", urgency: "stat", category: "other" },
+      { text: "הערכת מצב נפחי", urgency: "routine", category: "other" },
       { text: "SIADH → הגבלת נוזלים 1-1.5L/d", urgency: "routine", category: "other" },
       { text: "Na<120 + סימפטומטי → NaCl 3% IV (מקס 8mEq/L/24h!)", urgency: "stat", category: "meds" },
       { text: "Na+ q4-6h", urgency: "routine", category: "labs" },
@@ -639,7 +639,7 @@ const RULES: Rule[] = [
     group: "htnemergency",
     triggerField: "tasks",
     tasks: [
-      { text: "בדוק סימני end-organ damage: כאב ראש, הפרעות ראיה, כאב חזה, קוצר נשימה", urgency: "stat", category: "other" },
+      { text: "בדוק סימני end-organ damage: כאב ראש, הפרעות ראיה, כאב חזה, קוצר נשימה", urgency: "routine", category: "other" },
       { text: "אם ללא end-organ → PO: captopril 25mg / amlodipine 5mg", urgency: "routine", category: "meds" },
       { text: "אם end-organ → IV labetalol 20mg / nicardipine gtt → שקול ICU", urgency: "stat", category: "meds" },
       { text: "BP חוזר כל 15-30 דקות — יעד ירידה 10-20% בשעה הראשונה", urgency: "stat", category: "other" },
@@ -654,7 +654,7 @@ const RULES: Rule[] = [
     triggerField: "tasks",
     tasks: [
       { text: "ECG 12 leads — בדוק QT, Brugada, AV block, arrhythmia", urgency: "stat", category: "labs" },
-      { text: "BP שכיבה + עמידה (orthostatic)", urgency: "stat", category: "other" },
+      { text: "BP שכיבה + עמידה (orthostatic)", urgency: "routine", category: "other" },
       { text: "CBC, glucose, troponin, BMP", urgency: "stat", category: "labs" },
       { text: "אם cardiac syncope → telemetry + קרדיולוג", urgency: "stat", category: "consult" },
     ],
@@ -681,7 +681,7 @@ const RULES: Rule[] = [
     group: "abdomen",
     triggerField: "tasks",
     tasks: [
-      { text: "בדיקה גופנית: סימני פריטונאליים, אוושות מעי, נפיחות", urgency: "stat", category: "other" },
+      { text: "בדיקה גופנית: סימני פריטונאליים, אוושות מעי, נפיחות", urgency: "routine", category: "other" },
       { text: "מעבדה: CBC, CRP, lactate, lipase, LFTs", urgency: "stat", category: "labs" },
       { text: "צילום בטן עמידה / CT בטן אם חשד ניתוחי", urgency: "stat", category: "imaging" },
       { text: "NPO + IV fluids + שקול ייעוץ כירורגי", urgency: "stat", category: "consult" },
@@ -695,7 +695,7 @@ const RULES: Rule[] = [
     group: "withdrawal",
     triggerField: "tasks",
     tasks: [
-      { text: "CIWA score q1-2h — אם >8 → טפל", urgency: "stat", category: "other" },
+      { text: "CIWA score q1-2h — אם >8 → טפל", urgency: "routine", category: "other" },
       { text: "Diazepam 5-10mg PO/IV PRN (or lorazepam 1-2mg אם כבד)", urgency: "stat", category: "meds" },
       { text: "Thiamine 100mg IV לפני גלוקוז!", urgency: "stat", category: "meds" },
       { text: "אם seizure / DTs → ICU + benzo gtt", urgency: "stat", category: "consult" },
@@ -712,7 +712,7 @@ const RULES: Rule[] = [
       { text: "🔴 Epinephrine 0.3mg IM (ירך חיצונית) — חזור כל 5-15 דקות", urgency: "stat", category: "meds" },
       { text: "NS 1L bolus IV", urgency: "stat", category: "meds" },
       { text: "Diphenhydramine 50mg IV + Ranitidine 50mg IV + Methylprednisolone 125mg IV", urgency: "stat", category: "meds" },
-      { text: "ניטור 6-24 שעות (biphasic reaction)", urgency: "stat", category: "other" },
+      { text: "ניטור 6-24 שעות (biphasic reaction)", urgency: "routine", category: "other" },
     ],
   },
 
@@ -781,7 +781,7 @@ const RULES: Rule[] = [
     group: "iv_vasopressor",
     triggerField: "all",
     tasks: [
-      { text: "BP q15-30min, target MAP ≥65", urgency: "stat", category: "procedure" },
+      { text: "BP q15-30min, target MAP ≥65", urgency: "routine", category: "procedure" },
       { text: "Lactate q4-6h — trend for perfusion", urgency: "routine", category: "labs" },
       { text: "Urine output q1h — target ≥0.5 ml/kg/h", urgency: "routine", category: "procedure" },
       { text: "Verify central line access + functioning", urgency: "routine", category: "other" },
@@ -795,7 +795,7 @@ const RULES: Rule[] = [
     group: "iv_dopamine",
     triggerField: "all",
     tasks: [
-      { text: "BP + HR q15-30min; titrate to target", urgency: "stat", category: "procedure" },
+      { text: "BP + HR q15-30min; titrate to target", urgency: "routine", category: "procedure" },
       { text: "Monitor for tachyarrhythmia", urgency: "routine", category: "other" },
       { text: "Urine output q1h", urgency: "routine", category: "procedure" },
     ],
@@ -808,7 +808,7 @@ const RULES: Rule[] = [
     group: "iv_amiodarone",
     triggerField: "all",
     tasks: [
-      { text: "Continuous telemetry — watch QTc + HR", urgency: "stat", category: "procedure" },
+      { text: "Continuous telemetry — watch QTc + HR", urgency: "routine", category: "procedure" },
       { text: "BP q30min during loading (hypotension risk)", urgency: "routine", category: "procedure" },
       { text: "Check K+, Mg2+ — correct before/during infusion", urgency: "routine", category: "labs" },
     ],
