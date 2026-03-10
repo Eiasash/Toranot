@@ -72,16 +72,13 @@ export async function checkAuth(req: Request): Promise<Response | null> {
     }
   }
 
-  // ── Path 2: Legacy shared secret fallback (local dev / non-Supabase) ──
-  const secret = Netlify.env.get("API_SECRET");
+  // ── Path 2: No Supabase, no API_SECRET matched above ──
   if (!secret) {
     console.error("[auth] Neither VITE_SUPABASE_URL nor API_SECRET configured");
     return new Response("Service misconfigured", { status: 503 });
   }
-  if (req.headers.get("x-api-secret") !== secret) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-  return null;
+  // API_SECRET exists but wasn't matched (wrong value sent by client)
+  return new Response("Unauthorized", { status: 401 });
 }
 
 
