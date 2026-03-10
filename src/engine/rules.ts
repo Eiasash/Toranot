@@ -126,7 +126,7 @@ const RULES: Rule[] = [
     group: "npo",
     tasks: [
       { text: "לוודא צום - ללא אוכל ושתייה", urgency: "stat", category: "other" },
-      { text: "עירוי נוזלים IV", urgency: "urgent", category: "meds" },
+      { text: "עירוי נוזלים IV", urgency: "routine", category: "meds" },
     ],
   },
 
@@ -138,9 +138,9 @@ const RULES: Rule[] = [
     triggerField: "tasks",
     tasks: [
       { text: "בדיקות דם טרום ניתוח (CBC, CMP, PT/INR, סוג ושתלב)", urgency: "stat", category: "labs" },
-      { text: "חתימת הסכמה לניתוח", urgency: "urgent", category: "other" },
-      { text: "התייעצות הרדמה", urgency: "urgent", category: "consult" },
-      { text: "ABx מניעתי לפי פרוטוקול DAG", urgency: "urgent", category: "meds" },
+      { text: "חתימת הסכמה לניתוח", urgency: "routine", category: "other" },
+      { text: "התייעצות הרדמה", urgency: "routine", category: "consult" },
+      { text: "ABx מניעתי לפי פרוטוקול DAG", urgency: "routine", category: "meds" },
     ],
   },
 
@@ -154,7 +154,7 @@ const RULES: Rule[] = [
       { text: "סוג ושתלב (Type & Screen)", urgency: "stat", category: "labs" },
       { text: "Vitals q15min ×4 during transfusion, then q1h", urgency: "stat", category: "procedure" },
       { text: "Watch for transfusion reaction: fever, rash, dyspnea, flank pain", urgency: "stat", category: "other" },
-      { text: "Post-transfusion CBC 1h after completion", urgency: "urgent", category: "labs" },
+      { text: "Post-transfusion CBC 1h after completion", urgency: "routine", category: "labs" },
     ],
   },
 
@@ -226,7 +226,7 @@ const RULES: Rule[] = [
       { text: "אנטיגן שתן: Legionella + Pneumococcus", urgency: "routine", category: "labs" },
       { text: "ABx — DAG: Ceftriaxone 2g IV + Azithromycin 500mg (CAP); Pip-Tazo (HAP)", urgency: "stat", category: "meds" },
       { text: "חישוב CURB-65 (ראה עזר קליני)", urgency: "routine", category: "other" },
-      { text: "גזים עורקיים / SpO2", urgency: "urgent", category: "labs" },
+      { text: "גזים עורקיים / SpO2", urgency: "routine", category: "labs" },
     ],
   },
 
@@ -256,8 +256,8 @@ const RULES: Rule[] = [
       { text: "🔴 ABx רחב תוך שעה — DAG: Pip-Tazo 4.5g IV q6h", urgency: "stat", category: "meds" },
       { text: "🔴 נוזלים IV: NaCl 0.9% — 30ml/kg bolus", urgency: "stat", category: "meds" },
       { text: "ניטור שתן — יעד >0.5ml/kg/h", urgency: "stat", category: "other" },
-      { text: "לקטט חוזר לאחר 4-6 שעות", urgency: "urgent", category: "labs" },
-      { text: "אם לקטט >4 / הלם → שקול ICU + vasopressors", urgency: "urgent", category: "consult" },
+      { text: "לקטט חוזר לאחר 4-6 שעות", urgency: "routine", category: "labs" },
+      { text: "אם לקטט >4 / הלם → שקול ICU + vasopressors", urgency: "routine", category: "consult" },
     ],
   },
 
@@ -271,7 +271,7 @@ const RULES: Rule[] = [
       { text: "סימון גבולות בעט (+ תאריך+שעה)", urgency: "stat", category: "other" },
       { text: "תיעוד צילום", urgency: "routine", category: "other" },
       { text: "ABx — DAG: Cefazolin 2g IV q8h / Cephalexin 500 PO q6h", urgency: "stat", category: "meds" },
-      { text: "אם מוגלה → Clindamycin (MRSA) + ניקוז", urgency: "urgent", category: "meds" },
+      { text: "אם מוגלה → Clindamycin (MRSA) + ניקוז", urgency: "routine", category: "meds" },
     ],
   },
 
@@ -285,7 +285,7 @@ const RULES: Rule[] = [
       { text: "שליחת צואה ל-C.diff PCR/Toxin", urgency: "stat", category: "labs" },
       { text: "בידוד מגע!", urgency: "stat", category: "other" },
       { text: "הפסקת ABx מיותרים (Fluoroquinolones, Clindamycin)", urgency: "stat", category: "meds" },
-      { text: "טיפול — DAG: Vancomycin 125mg PO q6h x10d", urgency: "urgent", category: "meds" },
+      { text: "טיפול — DAG: Vancomycin 125mg PO q6h x10d", urgency: "routine", category: "meds" },
     ],
   },
 
@@ -310,11 +310,11 @@ const RULES: Rule[] = [
     group: "aki",
     triggerField: "tasks",
     tasks: [
-      { text: "US כליות (שלילת חסימה)", urgency: "urgent", category: "imaging" },
+      { text: "US כליות (שלילת חסימה)", urgency: "routine", category: "imaging" },
       { text: "הפסקת נפרוטוקסיים: NSAIDs, ACEi, ARB, Aminoglycosides", urgency: "stat", category: "meds" },
       { text: "הערכת מצב נפחי + I/O", urgency: "stat", category: "other" },
       { text: "מעבדה: Cr, BUN, K+, Na+, גזים, FENa", urgency: "stat", category: "labs" },
-      { text: "אם Pre-renal → NaCl bolus; אין שיפור → נפרולוג", urgency: "urgent", category: "consult" },
+      { text: "אם Pre-renal → NaCl bolus; אין שיפור → נפרולוג", urgency: "routine", category: "consult" },
       { text: "התאמת מינון תרופות ל-CrCl (ראה עזר קליני)", urgency: "routine", category: "meds" },
     ],
   },
@@ -328,8 +328,8 @@ const RULES: Rule[] = [
       { text: "🔴 א.ק.ג STAT (peaked T, wide QRS)", urgency: "stat", category: "labs" },
       { text: "🔴 Calcium Gluconate 10% 10ml IV (אם שינויי ECG)", urgency: "stat", category: "meds" },
       { text: "Insulin 10U IV + Dextrose 50% 50ml IV", urgency: "stat", category: "meds" },
-      { text: "Kayexalate 30g PO / PR", urgency: "urgent", category: "meds" },
-      { text: "K+ חוזר + ECG חוזר לאחר שעה", urgency: "urgent", category: "labs" },
+      { text: "Kayexalate 30g PO / PR", urgency: "routine", category: "meds" },
+      { text: "K+ חוזר + ECG חוזר לאחר שעה", urgency: "routine", category: "labs" },
       { text: "אם K>6.5 / שינויי ECG → שקול דיאליזה", urgency: "stat", category: "consult" },
     ],
   },
@@ -360,7 +360,7 @@ const RULES: Rule[] = [
       { text: "Aspirin 300mg PO", urgency: "stat", category: "meds" },
       { text: "Heparin IV / Enoxaparin SC", urgency: "stat", category: "meds" },
       { text: "NTG SL 0.4mg q5min x3 (אם SBP>90)", urgency: "stat", category: "meds" },
-      { text: "CXR", urgency: "urgent", category: "imaging" },
+      { text: "CXR", urgency: "routine", category: "imaging" },
       { text: "התייעצות קרדיולוגיה", urgency: "stat", category: "consult" },
     ],
   },
@@ -412,10 +412,10 @@ const RULES: Rule[] = [
       { text: "🔦 אמצעים לא-תרופתיים: תאורה, שעון, משקפיים, שמיעה, שתייה, משפחה", urgency: "routine", category: "other" },
       { text: "הימנע מקשירה! (מחמיר אגיטציה + סיכון)", urgency: "routine", category: "other" },
       // ── PHARMACOTHERAPY LADDER (if agitated + danger) ──
-      { text: "📋 סולם טיפול אגיטציה (מהקל לכבד):", urgency: "urgent", category: "meds" },
-      { text: "1️⃣ Quetiapine 12.5-25mg PO (בטוח בפרקינסון/DLB)", urgency: "urgent", category: "meds" },
-      { text: "2️⃣ Haloperidol 0.5mg IM (❌ לא בפרקינסון/DLB, בדוק QTc)", urgency: "urgent", category: "meds" },
-      { text: "3️⃣ Olanzapine 2.5mg PO/IM (חלופה אם QTc ארוך)", urgency: "urgent", category: "meds" },
+      { text: "📋 סולם טיפול אגיטציה (מהקל לכבד):", urgency: "routine", category: "meds" },
+      { text: "1️⃣ Quetiapine 12.5-25mg PO (בטוח בפרקינסון/DLB)", urgency: "routine", category: "meds" },
+      { text: "2️⃣ Haloperidol 0.5mg IM (❌ לא בפרקינסון/DLB, בדוק QTc)", urgency: "routine", category: "meds" },
+      { text: "3️⃣ Olanzapine 2.5mg PO/IM (חלופה אם QTc ארוך)", urgency: "routine", category: "meds" },
       { text: "4️⃣ אגיטציה קשה → Haloperidol 0.5mg IM + חזור q30min (max 3mg/24h)", urgency: "stat", category: "meds" },
       { text: "5️⃣ רפרקטורי / סכנה מיידית → Lorazepam 1mg IV (חריג! בנזו מחמיר דליריום)", urgency: "stat", category: "meds" },
       { text: "🌙 לילה: Trazodone 25-50mg PO / Melatonin 3mg (שיקום שינה)", urgency: "routine", category: "meds" },
@@ -548,8 +548,8 @@ const RULES: Rule[] = [
     triggerField: "tasks",
     tasks: [
       { text: "בדיקת INR", urgency: "stat", category: "labs" },
-      { text: "INR 3-5 (ללא דימום) → דלג מנה, הפחת מינון", urgency: "urgent", category: "meds" },
-      { text: "INR 5-9 → Vitamin K 1-2.5mg PO", urgency: "urgent", category: "meds" },
+      { text: "INR 3-5 (ללא דימום) → דלג מנה, הפחת מינון", urgency: "routine", category: "meds" },
+      { text: "INR 5-9 → Vitamin K 1-2.5mg PO", urgency: "routine", category: "meds" },
       { text: "INR >9 / דימום → Vitamin K 5-10mg IV + FFP/PCC", urgency: "stat", category: "meds" },
     ],
   },
@@ -562,10 +562,10 @@ const RULES: Rule[] = [
     triggerField: "tasks",
     tasks: [
       { text: "Ventolin + Atrovent Nebulizer", urgency: "stat", category: "meds" },
-      { text: "Prednisone 40mg PO x5d", urgency: "urgent", category: "meds" },
-      { text: "ABx אם כיח מוגלתי — DAG: Amox-Clav / Azithromycin", urgency: "urgent", category: "meds" },
-      { text: "ABG (גזים עורקיים)", urgency: "urgent", category: "labs" },
-      { text: "CXR", urgency: "urgent", category: "imaging" },
+      { text: "Prednisone 40mg PO x5d", urgency: "routine", category: "meds" },
+      { text: "ABx אם כיח מוגלתי — DAG: Amox-Clav / Azithromycin", urgency: "routine", category: "meds" },
+      { text: "ABG (גזים עורקיים)", urgency: "routine", category: "labs" },
+      { text: "CXR", urgency: "routine", category: "imaging" },
       { text: "אם pH<7.35 + pCO2>45 → BiPAP/NIV", urgency: "stat", category: "procedure" },
     ],
   },
@@ -611,7 +611,7 @@ const RULES: Rule[] = [
       { text: "הערכת מצב נפחי", urgency: "stat", category: "other" },
       { text: "SIADH → הגבלת נוזלים 1-1.5L/d", urgency: "routine", category: "other" },
       { text: "Na<120 + סימפטומטי → NaCl 3% IV (מקס 8mEq/L/24h!)", urgency: "stat", category: "meds" },
-      { text: "Na+ q4-6h", urgency: "urgent", category: "labs" },
+      { text: "Na+ q4-6h", urgency: "routine", category: "labs" },
     ],
   },
 
@@ -640,7 +640,7 @@ const RULES: Rule[] = [
     triggerField: "tasks",
     tasks: [
       { text: "בדוק סימני end-organ damage: כאב ראש, הפרעות ראיה, כאב חזה, קוצר נשימה", urgency: "stat", category: "other" },
-      { text: "אם ללא end-organ → PO: captopril 25mg / amlodipine 5mg", urgency: "urgent", category: "meds" },
+      { text: "אם ללא end-organ → PO: captopril 25mg / amlodipine 5mg", urgency: "routine", category: "meds" },
       { text: "אם end-organ → IV labetalol 20mg / nicardipine gtt → שקול ICU", urgency: "stat", category: "meds" },
       { text: "BP חוזר כל 15-30 דקות — יעד ירידה 10-20% בשעה הראשונה", urgency: "stat", category: "other" },
     ],
@@ -725,7 +725,7 @@ const RULES: Rule[] = [
     comfortRequiresExplicitTask: true, // only fires for comfort patients if doctor explicitly wrote it
     tasks: [
       { text: "Bladder Scan — אם >300ml → הכנס קטטר", urgency: "stat", category: "procedure" },
-      { text: "אם >1L → שחרור איטי (500ml כל 30 דק) — סכנת post-obstructive diuresis", urgency: "urgent", category: "other" },
+      { text: "אם >1L → שחרור איטי (500ml כל 30 דק) — סכנת post-obstructive diuresis", urgency: "routine", category: "other" },
       { text: "בדוק סיבה: anticholinergics, opioids, BPH, constipation", urgency: "routine", category: "other" },
     ],
   },
@@ -755,7 +755,7 @@ const RULES: Rule[] = [
     group: "iv_insulin",
     triggerField: "all",
     tasks: [
-      { text: "BS q2h (q1h after rate change)", urgency: "urgent", category: "procedure" },
+      { text: "BS q2h (q1h after rate change)", urgency: "routine", category: "procedure" },
       { text: "אם BS<70 → STOP drip, D50% 50ml IV, recheck q15min", urgency: "stat", category: "meds" },
       { text: "Target BS 140-180; titrate per protocol", urgency: "routine", category: "meds" },
     ],
@@ -768,7 +768,7 @@ const RULES: Rule[] = [
     group: "iv_heparin",
     triggerField: "all",
     tasks: [
-      { text: "PTT q6h — titrate per nomogram", urgency: "urgent", category: "labs" },
+      { text: "PTT q6h — titrate per nomogram", urgency: "routine", category: "labs" },
       { text: "CBC + platelets daily (HIT watch)", urgency: "routine", category: "labs" },
       { text: "בדוק סימני דימום: guaiac, hemoglobin, sites", urgency: "routine", category: "other" },
     ],
@@ -782,8 +782,8 @@ const RULES: Rule[] = [
     triggerField: "all",
     tasks: [
       { text: "BP q15-30min, target MAP ≥65", urgency: "stat", category: "procedure" },
-      { text: "Lactate q4-6h — trend for perfusion", urgency: "urgent", category: "labs" },
-      { text: "Urine output q1h — target ≥0.5 ml/kg/h", urgency: "urgent", category: "procedure" },
+      { text: "Lactate q4-6h — trend for perfusion", urgency: "routine", category: "labs" },
+      { text: "Urine output q1h — target ≥0.5 ml/kg/h", urgency: "routine", category: "procedure" },
       { text: "Verify central line access + functioning", urgency: "routine", category: "other" },
     ],
   },
@@ -796,8 +796,8 @@ const RULES: Rule[] = [
     triggerField: "all",
     tasks: [
       { text: "BP + HR q15-30min; titrate to target", urgency: "stat", category: "procedure" },
-      { text: "Monitor for tachyarrhythmia", urgency: "urgent", category: "other" },
-      { text: "Urine output q1h", urgency: "urgent", category: "procedure" },
+      { text: "Monitor for tachyarrhythmia", urgency: "routine", category: "other" },
+      { text: "Urine output q1h", urgency: "routine", category: "procedure" },
     ],
   },
 
@@ -809,8 +809,8 @@ const RULES: Rule[] = [
     triggerField: "all",
     tasks: [
       { text: "Continuous telemetry — watch QTc + HR", urgency: "stat", category: "procedure" },
-      { text: "BP q30min during loading (hypotension risk)", urgency: "urgent", category: "procedure" },
-      { text: "Check K+, Mg2+ — correct before/during infusion", urgency: "urgent", category: "labs" },
+      { text: "BP q30min during loading (hypotension risk)", urgency: "routine", category: "procedure" },
+      { text: "Check K+, Mg2+ — correct before/during infusion", urgency: "routine", category: "labs" },
     ],
   },
 
@@ -821,7 +821,7 @@ const RULES: Rule[] = [
     group: "iv_propofol",
     triggerField: "all",
     tasks: [
-      { text: "הערכת רמת סדציה q2h — תעד תגובתיות", urgency: "urgent", category: "procedure" },
+      { text: "הערכת רמת סדציה q2h — תעד תגובתיות", urgency: "routine", category: "procedure" },
       { text: "TG level q48h if >48h infusion (propofol infusion syndrome)", urgency: "routine", category: "labs" },
       { text: "Change syringe q12h", urgency: "routine", category: "meds" },
     ],
@@ -834,7 +834,7 @@ const RULES: Rule[] = [
     group: "iv_opioid",
     triggerField: "all",
     tasks: [
-      { text: "RR + SpO2 q2h — hold if RR<10 or SpO2<90%", urgency: "urgent", category: "procedure" },
+      { text: "RR + SpO2 q2h — hold if RR<10 or SpO2<90%", urgency: "routine", category: "procedure" },
       { text: "Naloxone 0.4mg IV bedside (emergency reversal)", urgency: "routine", category: "meds" },
       { text: "Bowel protocol — עצירות צפויה", urgency: "routine", category: "meds" },
     ],
@@ -847,8 +847,8 @@ const RULES: Rule[] = [
     group: "iv_midazolam",
     triggerField: "all",
     tasks: [
-      { text: "RR + SpO2 q2h — סיכון לדיכוי נשימתי", urgency: "urgent", category: "procedure" },
-      { text: "הערכת רמת הכרה q2h — תעד תגובתיות", urgency: "urgent", category: "procedure" },
+      { text: "RR + SpO2 q2h — סיכון לדיכוי נשימתי", urgency: "routine", category: "procedure" },
+      { text: "הערכת רמת הכרה q2h — תעד תגובתיות", urgency: "routine", category: "procedure" },
       { text: "⚠️ Flumazenil 0.2mg IV מוכן ליד המיטה (reversal חירום — שימוש רק אם דיכוי נשימתי)", urgency: "routine", category: "meds" },
     ],
   },
@@ -860,8 +860,8 @@ const RULES: Rule[] = [
     group: "iv_magnesium",
     triggerField: "all",
     tasks: [
-      { text: "Mg2+ level post-infusion (recheck 2h after)", urgency: "urgent", category: "labs" },
-      { text: "Monitor DTRs during infusion (loss = toxicity)", urgency: "urgent", category: "procedure" },
+      { text: "Mg2+ level post-infusion (recheck 2h after)", urgency: "routine", category: "labs" },
+      { text: "Monitor DTRs during infusion (loss = toxicity)", urgency: "routine", category: "procedure" },
       { text: "BP + HR during infusion (hypotension/bradycardia)", urgency: "routine", category: "procedure" },
     ],
   },
@@ -873,7 +873,7 @@ const RULES: Rule[] = [
     group: "iv_kphos",
     triggerField: "all",
     tasks: [
-      { text: "Phosphate + Ca2+ + K+ recheck 2h post-infusion", urgency: "urgent", category: "labs" },
+      { text: "Phosphate + Ca2+ + K+ recheck 2h post-infusion", urgency: "routine", category: "labs" },
       { text: "Infuse over ≥4h via central line if available", urgency: "routine", category: "meds" },
     ],
   },
