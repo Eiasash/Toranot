@@ -1,7 +1,11 @@
 
 import { useState, useCallback, useRef } from "react";
 import type { PatientEntry, PatientSection } from "../types";
-import { getProxyAuthHeaders } from "../cloudSync";
+import { getProxyAuthHeaders, isProxyAvailableAsync } from "../cloudSync";
+import { safeGetItem } from "../utils/storage";
+
+const API_KEY_STORAGE = "toranot-anthropic-key";
+const DIRECT_API_URL = "https://api.anthropic.com/v1/messages";
 import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
 import { generateId } from "../utils/id";
 
@@ -258,11 +262,28 @@ async function extractFromLetter(
     throw new Error("פורמט לא נתמך. יש להשתמש ב-PDF, תמונה (JPG/PNG) או DOCX.");
   }
 
-  const endpoint = "/api/claude";
-  // JWT from Supabase session. Fallback to empty headers — proxy returns 401 which
-  // is caught below and surfaced as a user-friendly message, not a silent crash.
-  const authHeaders = await getProxyAuthHeaders() ?? {};
-  const headers: Record<string, string> = { "content-type": "application/json", ...authHeaders };
+  const useProxy = await isProxyAvailableAsync();
+  const storedKey = safeGetItem(API_KEY_STORAGE) ?? "";
+
+  // Require either proxy auth or a locally stored API key
+  if (!useProxy && !storedKey) {
+    throw new Error("נדרש מפתח API. הוסף אותו בתפריט ⋯ ← הגדרות API.");
+  }
+
+  let endpoint: string;
+  const headers: Record<string, string> = { "content-type": "application/json" };
+
+  if (useProxy) {
+    endpoint = "/api/claude";
+    const authHeaders = await getProxyAuthHeaders();
+    if (authHeaders) Object.assign(headers, authHeaders);
+  } else {
+    // Direct browser call with user's stored key (same fallback as Scanner / AIClinicalReasoning)
+    endpoint = DIRECT_API_URL;
+    headers["x-api-key"] = storedKey;
+    headers["anthropic-version"] = "2023-06-01";
+    headers["anthropic-dangerous-direct-browser-access"] = "true";
+  }
 
   const body = { model: "claude-sonnet-4-6", max_tokens: 1500, system: EXTRACTION_SYSTEM, messages: [{ role: "user", content: messageContent }] };
 
@@ -276,7 +297,7 @@ async function extractFromLetter(
     const err = await res.text().catch(() => "");
     console.warn("[Toranot] /api/claude error:", res.status, err.slice(0, 200));
     if (res.status === 401) {
-      throw new Error("שגיאת הרשאה — מפתח API לא תקין. פנה למנהל המערכת.");
+      throw new Error("מפתח API לא תקין — בדוק את ההגדרות בתפריט ⋯.");
     }
     if (res.status === 429) {
       throw new Error("יותר מדי בקשות — נסה שוב בעוד דקה");

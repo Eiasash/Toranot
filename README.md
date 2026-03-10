@@ -4,6 +4,10 @@ Hebrew-language PWA for on-call geriatric ward shift management at Shaare Zedek 
 
 Live: **[toranot.netlify.app](https://toranot.netlify.app)**
 
+## Recent Changes
+
+- **fix(AddAdmissionModal):** Letter extraction (נתח) now falls back to user's stored API key when Supabase session is unavailable — consistent with Scanner and AIClinicalReasoning fallback behaviour. Proxy is preferred when available; direct Anthropic API call is used otherwise.
+
 ---
 
 ## Architecture
