@@ -80,7 +80,7 @@ export default async (req: Request, _context: Context) => {
   if (limitError) return limitError;
 
   const apiKey = Netlify.env.get("GEMINI_API_KEY");
-  if (!apiKey) return new Response("Missing GEMINI_API_KEY", { status: 500 });
+  if (!apiKey) return new Response("AI service not configured", { status: 500 });
 
   let body: unknown;
   try {
