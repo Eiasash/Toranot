@@ -48,7 +48,11 @@ import {
   AcuteKidneyInjuryProtocol,
   DeathPronouncementProtocol,
   AnticoagReversalProtocol,
+  HypercalcemiaProtocol,
+  HypernatremiaProtocol,
+  HypermagnesemiaProtocol,
 } from "./OnCallProtocols";
+import { ECGInterpreter } from "./ECGInterpreter";
 
 // ─────────────────────────────────────────────────────────
 // DATA: DAG Protocol Quick Reference
@@ -355,7 +359,11 @@ type SectionKey =
   | "abdomen"
   | "aki"
   | "death"
-  | "anticoagreversal";
+  | "anticoagreversal"
+  | "hypercalcemia"
+  | "hypernatremia"
+  | "hypermagnesemia"
+  | "ecg";
 
 interface SectionDef {
   key: SectionKey;
@@ -405,9 +413,13 @@ const SECTIONS: SectionDef[] = [
   // ── On-Call: Metabolic & Renal ──
   { key: "dka",           icon: "📊", label: "DKA / HHS",        group: "oncall_metabolic" },
   { key: "hyponatremia",  icon: "🧂", label: "היפונתרמיה",       group: "oncall_metabolic" },
+  { key: "hypernatremia", icon: "🧂", label: "היפרנתרמיה",       group: "oncall_metabolic" },
   { key: "hyperkalemia",  icon: "⬆️", label: "היפרקלמיה",       group: "oncall_metabolic" },
   { key: "hypoglycemia",  icon: "⬇️", label: "היפוגליקמיה",     group: "oncall_metabolic" },
+  { key: "hypercalcemia", icon: "🦴", label: "היפרקלצמיה",       group: "oncall_metabolic" },
+  { key: "hypermagnesemia", icon: "⚗️", label: "היפרמגנסמיה",   group: "oncall_metabolic" },
   { key: "aki",           icon: "🫘", label: "AKI חריף",         group: "oncall_metabolic" },
+  { key: "ecg",           icon: "🫀", label: "פרשן ECG",         group: "oncall_cardio" },
   // ── On-Call: Heme ──
   { key: "transfusion",      icon: "💉", label: "תגובת עירוי",     group: "oncall_heme" },
   { key: "bloodproducts",    icon: "🅰️", label: "מוצרי דם",        group: "oncall_heme" },
@@ -748,6 +760,10 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
           {section === "stroke" && <div className="p-4"><AcuteStrokeProtocol /></div>}
           {section === "hyponatremia" && <div className="p-4"><HyponatremiaProtocol /></div>}
           {section === "hyperkalemia" && <div className="p-4"><HyperkalemiaProtocol /></div>}
+          {section === "hypernatremia" && <div className="p-4"><HypernatremiaProtocol /></div>}
+          {section === "hypercalcemia" && <div className="p-4"><HypercalcemiaProtocol /></div>}
+          {section === "hypermagnesemia" && <div className="p-4"><HypermagnesemiaProtocol /></div>}
+          {section === "ecg" && <div className="p-4"><ECGInterpreter /></div>}
           {section === "hypoglycemia" && <div className="p-4"><HypoglycemiaProtocol /></div>}
           {section === "ams" && <div className="p-4"><AlteredMentalStatusProtocol /></div>}
           {section === "falloncall" && <div className="p-4"><FallProtocolOnCall /></div>}

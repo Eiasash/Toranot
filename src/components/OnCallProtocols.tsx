@@ -1032,3 +1032,105 @@ export function DeathPronouncementProtocol() {
     </div>
   );
 }
+
+export function HypercalcemiaProtocol() {
+  return (
+    <div className="space-y-3" dir="rtl">
+      <Warn>Ca&gt;14mg/dL (3.5mmol/L) = hypercalcemic crisis — טיפול מיידי ללא קשר לסימפטומים</Warn>
+
+      <Section title="חומרת Hypercalcemia">
+        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+          <div><strong>קלה:</strong> Ca 10.5–12 mg/dL — לרוב א-סימפטומטי</div>
+          <div><strong>בינונית:</strong> Ca 12–14 — עייפות, בלבול, בחילה, polyuria</div>
+          <div><strong>קשה:</strong> Ca &gt;14 — arrhythmia, קומה — Stones, Bones, Groans, Moans</div>
+        </div>
+        <Tip>Corrected Ca = Ca מדוד + 0.8×(4 - albumin). תמיד תקן לאלבומין!</Tip>
+      </Section>
+
+      <Section title="טיפול — לפי חומרה">
+        <Step n={1}><strong>נוזלים IV — תמיד ראשון:</strong> NaCl 0.9% 200-500ml/h → יעד UO ≥100-150ml/h. ❌ לא תיאזידים!</Step>
+        <Step n={2}><strong>Bisphosphonates (Ca&gt;12 / סימפטומטי):</strong> Zoledronic acid 4mg IV over 15min (CrCl&gt;30). אפקט: 2-4 ימים!</Step>
+        <Step n={3}><strong>Calcitonin (Ca&gt;14 — אפקט מהיר):</strong> 4U/kg SC/IM q12h × 24-48h. משלב עם bisphosphonate</Step>
+        <Step n={4}><strong>Steroids (Lymphoma / Sarcoid / Vit D):</strong> Hydrocortisone 200mg IV q8h × 2-3 ימים</Step>
+        <Step n={5}><strong>Dialysis (Ca&gt;18 / AKI / CHF):</strong> Hemodialysis עם low-Ca bath — נפרולוגיה</Step>
+      </Section>
+
+      <Section title="בירור גורם">
+        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+          <div>• PTH ↑ → Primary HyperPTH (שכיח #1)</div>
+          <div>• PTHrP → ממאירות (Lung, Breast, Renal)</div>
+          <div>• Vit D 25-OH → גרנולומות, Vit D toxicity</div>
+          <div>• SPEP/UPEP → Myeloma</div>
+          <div><strong>בקשישים:</strong> Primary HyperPTH &gt; Malignancy &gt; Immobilization</div>
+        </div>
+      </Section>
+    </div>
+  );
+}
+
+export function HypernatremiaProtocol() {
+  return (
+    <div className="space-y-3" dir="rtl">
+      <Warn>הורד Na &gt;10mEq/L/24h → cerebral edema! הורדה איטית בכרוני (&gt;48h)</Warn>
+
+      <Section title="אבחון וגורמים">
+        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+          <div><strong>קלה:</strong> Na 145–150 | <strong>בינונית:</strong> 150–160 | <strong>קשה:</strong> &gt;160</div>
+          <div>• <strong>Hypovolemic (הכי שכיח בקשישים!):</strong> Diarrhea, הזעה, diuretics — תן נוזלים + תיקון</div>
+          <div>• <strong>Euvolemic:</strong> DI (central/nephrogenic), insensible losses</div>
+          <div>• <strong>Hypervolemic:</strong> NaHCO3 IV, Cushing — הסר Na עודף</div>
+        </div>
+        <Tip>בקשישים: Hypernatremia = failure to drink (delirium, dysphagia, ADL). לא חוסר נוזלים עצמאי</Tip>
+      </Section>
+
+      <Section title="חישוב גירעון ותיקון">
+        <div className="text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-lg p-2">
+          <div className="font-mono">Free Water Deficit = TBW × [(Na/140) - 1]</div>
+          <div className="font-mono">TBW: ♀60yr+→0.45×kg | ♂60yr+→0.50×kg</div>
+        </div>
+        <Step n={1}><strong>קצב תיקון:</strong> חריפה (&lt;48h): ≤1-2mEq/L/h | כרונית: ≤10mEq/L/24h (≤0.5/h)</Step>
+        <Step n={2}><strong>נוזל:</strong> Hypovolemic → D5W / 0.45% NaCl. אם hemodynamically unstable: NS תחילה</Step>
+        <Step n={3}><strong>DI:</strong> Central → DDAVP 1-4mcg SC q12h. Nephrogenic → תקן גורם, אינדומתצין</Step>
+        <Step n={4}><strong>מדוד Na</strong> כל 4-6h ותאם קצב</Step>
+      </Section>
+    </div>
+  );
+}
+
+export function HypermagnesemiaProtocol() {
+  return (
+    <div className="space-y-3" dir="rtl">
+      <Warn>Mg&gt;6mEq/L = סכנת מוות! DTRs נעלמים לפני cardiac arrest. בדוק DTRs כל שעה!</Warn>
+
+      <Section title="תמונה קלינית">
+        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+          <div><strong>Mg 2.5–4:</strong> חולשה, flushing, בחילה</div>
+          <div><strong>Mg 4–6:</strong> ↓↓ DTRs, drowsiness, bradycardia, היפוטנסיה</div>
+          <div><strong>Mg &gt;6:</strong> ❌ Absent DTRs, apnea, cardiac arrest</div>
+        </div>
+      </Section>
+
+      <Section title="גורמים">
+        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+          <div>• AKI/CKD + Mg תוספים (הכי שכיח!)</div>
+          <div>• Antacids עם Mg (Maalox), MgSO4 IV</div>
+          <div>• Hypothyroidism, Addison</div>
+        </div>
+      </Section>
+
+      <Section title="טיפול">
+        <Step n={1}><strong>הפסק Mg מיידית</strong> — כל PO + IV</Step>
+        <Step n={2}><strong>Calcium Gluconate 10% 10-20ml IV over 5min — Antidote!</strong> ניתן לחזור. אפקט מיידי אך זמני</Step>
+        <Step n={3}><strong>Dialysis (Mg&gt;6 / AKI):</strong> הגדרה מובהקת — נפרולוגיה דחוף</Step>
+        <Step n={4}><strong>Supportive:</strong> IV fluids + Furosemide (אם GFR מספיק). BiPAP/intubation לapnea</Step>
+      </Section>
+
+      <Section title="מעקב">
+        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+          <div>• Mg כל 2-4h | DTRs כל שעה | SpO2 + RR</div>
+          <div>• ECG: prolonged PR, wide QRS, peaked T</div>
+        </div>
+      </Section>
+    </div>
+  );
+}
