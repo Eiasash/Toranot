@@ -8,7 +8,7 @@
  * Cross-Origin Isolation headers for SharedArrayBuffer (Tesseract.js).
  */
 
-const CACHE_VERSION = 1772619848112; // force-update 2026-03-04 emergency cache purge
+const CACHE_VERSION = 1773360000000; // force-update 2026-03-10 fix addCOIHeaders + blank page
 const CACHE_NAME = `toranot-v${CACHE_VERSION}`;
 
 /** @type {Map<string, ReturnType<typeof setTimeout>>} */
@@ -54,6 +54,22 @@ self.addEventListener("activate", (event) => {
     }),
   );
 });
+
+// ── Cross-Origin Isolation headers ──
+// Needed for SharedArrayBuffer (Tesseract.js OCR). Clones the response
+// and adds COOP/COEP headers. Falls through gracefully for opaque responses.
+function addCOIHeaders(response) {
+  // Can't modify opaque or error responses
+  if (response.type === "opaque" || response.type === "error") return response;
+  const headers = new Headers(response.headers);
+  headers.set("Cross-Origin-Embedder-Policy", "credentialless");
+  headers.set("Cross-Origin-Opener-Policy", "same-origin");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
 
 // ── Fetch ──
 self.addEventListener("fetch", (event) => {
