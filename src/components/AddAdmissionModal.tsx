@@ -515,6 +515,21 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
             >
               {letterFile ? `✓ ${letterFile.name}` : "📎 בחר קובץ..."}
             </button>
+            {letterFile && (letterFile.type === "application/pdf" || letterFile.name.endsWith(".pdf")) && (
+              <button
+                type="button"
+                onClick={() => {
+                  const url = URL.createObjectURL(letterFile);
+                  window.open(url, "_blank", "noopener");
+                  // Revoke after a delay to allow the browser to load it
+                  setTimeout(() => URL.revokeObjectURL(url), 30000);
+                }}
+                className="px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg text-xs font-semibold active:bg-gray-200 whitespace-nowrap"
+                title="פתח PDF לצפייה"
+              >
+                👁 פתח
+              </button>
+            )}
             <button
               type="button"
               onClick={handleLetterExtract}

@@ -70,10 +70,9 @@ function buildTextHandoff(patients: PatientEntry[], filteredPatients: PatientEnt
   const now = new Date();
   const dateStr = now.toLocaleDateString("he-IL");
   const timeStr = now.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
-  const newAdmissions = filteredPatients.filter(p =>
-    p.isAdmission ||
-    (p.scannedAt && isOnCallTime(new Date(p.scannedAt)) && new Date(p.scannedAt) >= shiftStart)
-  );
+  // Only explicitly admitted patients count as "new admissions".
+  // Patients from דף תורן scan (scannedAt) are existing ward patients — never new admissions.
+  const newAdmissions = filteredPatients.filter(p => p.isAdmission);
   const lines: string[] = [
     `📋 ${oncallOnly ? "מסירת תורן" : "סיכום משמרת"} — ${dateStr} ${timeStr}`,
     `${"─".repeat(35)}`,
@@ -135,10 +134,7 @@ function buildISBAR(patients: PatientEntry[], filteredPatients: PatientEntry[], 
   lines.push("");
   lines.push("📋 I — זיהוי (Identification)");
   lines.push(`  מחלקה: גריאטריה | ${filteredPatients.length} חולים במסירה`);
-  const newAdm = filteredPatients.filter(p =>
-    p.isAdmission ||
-    (p.scannedAt && isOnCallTime(new Date(p.scannedAt)) && new Date(p.scannedAt) >= shiftStart)
-  );
+  const newAdm = filteredPatients.filter(p => p.isAdmission);
   if (newAdm.length > 0) {
     lines.push(`  🆕 קבלות תורן: ${newAdm.map(p => `${p.room ?? "?"} ${p.name ?? "?"}`).join(" | ")}`);
   }
@@ -429,14 +425,12 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
     return new Set(
       patients
         .filter(p =>
-          // Explicit isAdmission flag (set by modal, survives daytime adds)
-          p.isAdmission ||
-          // OCR-scanned during on-call window
-          (p.scannedAt && isOnCallTime(new Date(p.scannedAt)) && new Date(p.scannedAt) >= shiftStart)
+          // Only explicitly admitted patients count — NOT patients from דף תורן scan
+          p.isAdmission
         )
         .map(p => p.id)
     );
-  }, [patients, shiftStart]);
+  }, [patients]);
 
   const sections = useMemo(() => {
     const map = new Map<string, PatientEntry[]>();

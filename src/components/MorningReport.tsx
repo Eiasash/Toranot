@@ -2,6 +2,7 @@ import { useMemo, useCallback, useState } from "react";
 import { usePatientsState } from "../context/PatientsContext";
 import { buildPhlebotomyList, buildPhlebotomyText, TUBE_EMOJI, TUBE_LABEL, type TubeColour } from "../utils/phlebotomy";
 import { useSimpleToast, SimpleToast } from "./SimpleConfirm";
+import { getShiftStart } from "../utils/shiftTime";
 
 function fmt(iso: string): string {
   const d = new Date(iso);
@@ -19,6 +20,7 @@ export function MorningReport({ onClose }: { onClose: () => void }) {
 
   const now = useMemo(() => Date.now(), []);
   const h24ago = useMemo(() => new Date(now - 24 * 60 * 60 * 1000).toISOString(), [now]);
+  const shiftStart = useMemo(() => getShiftStart(), []);
 
   const admissions = useMemo(() =>
     events.filter(e => e.type === "ADMISSION" && e.at >= h24ago),
@@ -41,6 +43,24 @@ export function MorningReport({ onClose }: { onClose: () => void }) {
     [events]
   );
   const phlebList = useMemo(() => buildPhlebotomyList(patients), [patients]);
+
+  // Patients acted on this shift: completed tasks, manual tasks added, notes, handover note.
+  // Excludes new admissions (already shown above) and scanned-only patients (no action taken).
+  const shiftStartISO = shiftStart.toISOString();
+  const actedon = useMemo(() => {
+    const admissionIds = new Set(
+      events.filter(e => e.type === "ADMISSION" && e.at >= h24ago).map(e => e.patientId)
+    );
+    return patients.filter(p => {
+      if (admissionIds.has(p.id)) return false; // already in admissions
+      const allTasks = [...p.tasks, ...p.generatedTasks];
+      const completedThisShift = allTasks.some(t => t.done && t.doneTime && t.doneTime >= shiftStartISO);
+      const manualTaskAdded = p.tasks.some(t => t.source === "manual");
+      const hasNote = (p.notes ?? []).length > 0;
+      const hasHandover = !!p.handoverNote;
+      return completedThisShift || manualTaskAdded || hasNote || hasHandover;
+    });
+  }, [patients, events, h24ago, shiftStartISO]);
 
   // ── Copy handlers ──────────────────────────────────────────────────────────
   const buildReport = useCallback((): string => {
@@ -65,6 +85,20 @@ export function MorningReport({ onClose }: { onClose: () => void }) {
       const badge = task.urgency === "stat" ? "🔴 STAT" : "🟡 דחוף";
       lines.push(`  • ${badge} ${patient.name ?? "?"} [${patient.room ?? "?"}] — ${task.text}`);
     });
+    if (actedon.length > 0) {
+      lines.push("");
+      lines.push(`🩺 חולים שטיפלת בהם: ${actedon.length}`);
+      actedon.forEach(p => {
+        const doneTasks = [...p.tasks, ...p.generatedTasks].filter(t => t.done);
+        const summary = [
+          doneTasks.length > 0 ? `${doneTasks.length} משימות בוצעו` : null,
+          p.tasks.some(t => t.source === "manual") ? "משימה ידנית" : null,
+          p.handoverNote ? "הערת מסירה" : null,
+          (p.notes ?? []).length > 0 ? "הערות" : null,
+        ].filter(Boolean).join(", ");
+        lines.push(`  • חד׳ ${p.room ?? "?"} ${p.name ?? "?"} — ${summary}`);
+      });
+    }
     if (unassignedTasks.length > 0) {
       lines.push("");
       lines.push(`📌 משימות לא משוייכות: ${unassignedTasks.length}`);
@@ -74,7 +108,7 @@ export function MorningReport({ onClose }: { onClose: () => void }) {
       });
     }
     return lines.join("\n");
-  }, [admissions, moves, openUrgent, unassignedTasks]);
+  }, [admissions, moves, openUrgent, unassignedTasks, actedon]);
 
   const handleCopyReport = useCallback(() => {
     navigator.clipboard.writeText(buildReport())
@@ -190,6 +224,39 @@ export function MorningReport({ onClose }: { onClose: () => void }) {
                 ))}
               </Section>
 
+              {/* Patients acted on */}
+              {actedon.length > 0 && (
+                <Section title={`🩺 חולים שטיפלת בהם (${actedon.length})`} color="green">
+                  {actedon.map(p => {
+                    const doneTasks = [...p.tasks, ...p.generatedTasks].filter(t => t.done);
+                    const tags = [
+                      doneTasks.length > 0 ? `✅ ${doneTasks.length} בוצעו` : null,
+                      p.tasks.some(t => t.source === "manual") ? "✏️ משימה ידנית" : null,
+                      p.handoverNote ? "📝 מסירה" : null,
+                      (p.notes ?? []).length > 0 ? "🗒️ הערות" : null,
+                    ].filter(Boolean);
+                    return (
+                      <div key={p.id} className="text-xs space-y-0.5">
+                        <div className="flex gap-2 items-center">
+                          <span className="font-mono text-blue-600 dark:text-blue-400 shrink-0">חד׳ {p.room ?? "?"}</span>
+                          <span className="font-medium text-gray-900 dark:text-gray-100">{p.name ?? "?"}</span>
+                          {p.age && <span className="text-gray-400">({p.age})</span>}
+                          {p.diagnosis && <span className="text-gray-500 truncate">— {p.diagnosis}</span>}
+                        </div>
+                        <div className="flex gap-1.5 flex-wrap pr-2">
+                          {tags.map((tag, i) => (
+                            <span key={i} className="text-[10px] bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded">{tag}</span>
+                          ))}
+                        </div>
+                        {p.handoverNote && (
+                          <p className="text-gray-500 dark:text-gray-400 pr-2 italic text-[11px] line-clamp-2">{p.handoverNote}</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </Section>
+              )}
+
               {/* Unassigned tasks */}
               {unassignedTasks.length > 0 && (
                 <Section title={`📌 קריאות לא משוייכות (${unassignedTasks.length})`} color="amber">
@@ -256,12 +323,13 @@ export function MorningReport({ onClose }: { onClose: () => void }) {
   );
 }
 
-function Section({ title, color, children }: { title: string; color: "blue" | "red" | "amber" | "purple"; children: React.ReactNode }) {
+function Section({ title, color, children }: { title: string; color: "blue" | "red" | "amber" | "purple" | "green"; children: React.ReactNode }) {
   const colors = {
     blue: "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700",
     red: "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700",
     amber: "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700",
     purple: "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-700",
+    green: "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700",
   };
   return (
     <div className={`rounded-xl border p-3 space-y-1.5 ${colors[color]}`}>
