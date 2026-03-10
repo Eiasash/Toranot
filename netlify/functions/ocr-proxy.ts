@@ -13,7 +13,11 @@ const OCR_DEFAULT_MODEL = "claude-sonnet-4-6";
 // OCR payloads are base64-encoded images — 10 MB limit (shared default is 50 KB)
 const OCR_MAX_BODY_BYTES = 10 * 1024 * 1024;
 
-const RETRY_DELAYS_MS = [2000, 6000, 15000];
+const RETRY_DELAYS_MS = [1500, 3000];
+// Netlify functions have a 26s timeout. Budget: ~24s for fetch + retries.
+// With 2 retries (1.5s + 3s delays) and ~8s per fetch attempt, worst case ≈ 8+1.5+8+3+8 = 28.5s.
+// Use a cumulative deadline to bail out before Netlify kills us.
+const FUNCTION_DEADLINE_MS = 24_000;
 
 export default async (req: Request, _context: Context) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204 });
@@ -31,7 +35,7 @@ export default async (req: Request, _context: Context) => {
   if (limitError) return limitError;
 
   const apiKey = Netlify.env.get("ANTHROPIC_API_KEY");
-  if (!apiKey) return new Response("Missing ANTHROPIC_API_KEY", { status: 500 });
+  if (!apiKey) return new Response("AI service not configured", { status: 503 });
 
   let body: unknown;
   try {
@@ -68,10 +72,15 @@ export default async (req: Request, _context: Context) => {
   }
   body = sanitizedBody;
 
-  // Retry on 429 / 529 (rate-limit / overloaded) with exponential backoff
+  // Retry on 429 / 529 (rate-limit / overloaded) with exponential backoff.
+  // Track a cumulative deadline to avoid exceeding Netlify's 26s function timeout.
+  const deadline = Date.now() + FUNCTION_DEADLINE_MS;
   let lastResponse: Response | null = null;
 
   for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    const remainingMs = deadline - Date.now();
+    if (remainingMs < 2000) break; // not enough time for another attempt
+
     let response: Response;
     try {
       response = await fetchWithTimeout(
@@ -85,7 +94,7 @@ export default async (req: Request, _context: Context) => {
           },
           body: JSON.stringify(body),
         },
-        24_000, // Must fire before 26s Netlify function timeout (was 28s, caused silent 504)
+        Math.min(remainingMs - 500, 20_000), // leave 500ms buffer for response handling
       );
     } catch {
       return new Response("Upstream timeout", { status: 504 });
@@ -107,18 +116,27 @@ export default async (req: Request, _context: Context) => {
     const delay = RETRY_DELAYS_MS[attempt];
     if (delay === undefined) break;
 
-    const jitter = Math.random() * 1000;
+    // Check if we have time for the delay + another attempt
+    if (Date.now() + delay + 2000 > deadline) break;
+
+    const jitter = Math.random() * 500;
     console.warn(
       `[ocr-proxy] Anthropic overloaded (${response.status}). Retry ${attempt + 1}/${RETRY_DELAYS_MS.length} in ${Math.round((delay + jitter) / 1000)}s`,
     );
     await new Promise((r) => setTimeout(r, delay + jitter));
   }
 
-  // All retries exhausted
-  const text = await lastResponse!.text().catch(() => JSON.stringify({ error: "API overloaded" }));
-  logUpstreamError("ocr-proxy", lastResponse!.status, text);
-  return new Response(text, {
-    status: lastResponse!.status,
+  // All retries exhausted or deadline approaching
+  if (lastResponse) {
+    const text = await lastResponse.text().catch(() => JSON.stringify({ error: "API overloaded" }));
+    logUpstreamError("ocr-proxy", lastResponse.status, text);
+    return new Response(text, {
+      status: lastResponse.status,
+      headers: { "content-type": "application/json" },
+    });
+  }
+  return new Response(JSON.stringify({ error: "API overloaded" }), {
+    status: 503,
     headers: { "content-type": "application/json" },
   });
 };

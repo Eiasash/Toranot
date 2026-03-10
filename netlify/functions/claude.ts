@@ -58,7 +58,7 @@ export default async (req: Request, _context: Context) => {
   if (limitError) return limitError;
 
   const apiKey = Netlify.env.get("ANTHROPIC_API_KEY");
-  if (!apiKey) return new Response("Missing ANTHROPIC_API_KEY", { status: 500 });
+  if (!apiKey) return new Response("AI service not configured", { status: 503 });
 
   let body: unknown;
   try {
@@ -93,8 +93,8 @@ export default async (req: Request, _context: Context) => {
   };
 
   if (typeof b?.system === "string") payload.system = b.system;
-  if (typeof b?.temperature === "number") payload.temperature = b.temperature;
-  if (typeof b?.top_p === "number") payload.top_p = b.top_p;
+  if (typeof b?.temperature === "number" && Number.isFinite(b.temperature)) payload.temperature = Math.max(0, Math.min(2, b.temperature));
+  if (typeof b?.top_p === "number" && Number.isFinite(b.top_p)) payload.top_p = Math.max(0, Math.min(1, b.top_p));
 
   // Use longer timeout when request contains file content blocks (PDF/image)
   const hasFileBlocks = messages.some(m =>

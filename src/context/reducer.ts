@@ -182,7 +182,7 @@ function bedOccupiedBy(
 ): string | null {
   if (!room) return null;
   const occupant = patients.find(
-    (p) => p.room === room && p.section === section && p.id !== excludeId,
+    (p) => p.room === room && p.section === section && p.id !== excludeId && !p.discharged,
   );
   return occupant?.id ?? null;
 }
@@ -518,7 +518,7 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
         (s) => s.id === action.snapshotId,
       );
       if (!snap) return state;
-      return { ...state, patients: snap.patients.map(normalizePatient) };
+      return { ...state, patients: snap.patients.map(normalizePatient), lastScanDiff: null };
     }
 
     case "DELETE_SHIFT":
@@ -533,7 +533,7 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
       return { ...state, darkMode: !state.darkMode };
 
     case "CLEAR_ALL":
-      return { ...state, patients: [], events: [], unassignedTasks: [] }; // intentionally keep shiftHistory
+      return { ...state, patients: [], events: [], unassignedTasks: [], lastScanDiff: null }; // intentionally keep shiftHistory
 
     case "REAPPLY_RULES":
       return {
@@ -604,7 +604,7 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
     }
 
     case "SYNC_SHIFT_HISTORY":
-      return { ...state, shiftHistory: action.shiftHistory };
+      return { ...state, shiftHistory: action.shiftHistory.slice(0, MAX_SHIFT_HISTORY) };
 
     case "SYNC_PATIENTS":
       return { ...state, patients: action.patients.map(normalizePatient) };
@@ -698,6 +698,7 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
         time: null,
         confidence: 1,
         note: null,
+        dueAt: null,
       };
       const event: WardEvent = {
         id: generateId("ev-"),
