@@ -1,179 +1,142 @@
-# Test Coverage Analysis — Toranot
+# Test Coverage Analysis
 
-## Current State
+**Date:** 2026-03-10
+**Current state:** 826 tests across 24 test files (824 passing, 2 pre-existing failures in cloudSync)
 
-**Test framework:** Vitest 4.0.18
-**Test files:** 3
-**Test cases:** 19 (all passing)
-**Source files:** 22 (excluding CSS/env declarations)
-**Files with tests:** 3 (~14% file coverage)
+## Overview
 
-### What's tested
-
-| File | Tests | Cases |
-|------|-------|-------|
-| `src/parser/parsePatientList.ts` | `parsePatientList.test.ts` | 10 — room parsing (6 formats), section headers, task extraction, task source |
-| `src/engine/mergeScan.ts` | `mergeScan.test.ts` | 6 — dedup, stable IDs, manual task persistence, done-state preservation, cross-section retention |
-| `src/engine/rules.ts` | `rules.test.ts` | 3 — BS rule trigger, BS categorization, BS/DM disambiguation |
-
-### What's NOT tested
-
-| File | Size | Risk |
-|------|------|------|
-| `src/engine/rules.ts` (remaining rules) | 20,849B | **High** — only 1 of 26 rules is tested |
-| `src/context/PatientsContext.tsx` (reducer) | 12,129B | **High** — all state mutations untested |
-| `src/utils/patientKey.ts` | 680B | **Medium** — dedup correctness depends on this |
-| `src/utils/id.ts` | 192B | **Low** — simple, but uniqueness guarantees unverified |
-| `src/types/patient.ts` (section detection) | 3,973B | **Medium** — `detectSectionFromHeader` and `detectSectionFromRoom` have branchy logic |
-| All 13 components | — | Out of scope for unit tests (would need React Testing Library) |
+| Category | Source files | Test files | Tests | Coverage Quality |
+|----------|-------------|------------|-------|-----------------|
+| Engine / Business Logic | 8 | 8 | ~430 | Good |
+| Utilities | 9 | 8 | ~100 | Moderate |
+| Parser | 1 | 1 | 37 | Moderate |
+| State Management (reducer) | 1 | 1 | 105 | Good |
+| State Management (store) | 1 | 0 | 0 | **None** |
+| Components | 41 | 0 | 0 | **None** |
+| Cloud Sync | 1 | 1 | 19 | Gaps |
 
 ---
 
-## Proposed Improvements — Priority Order
+## Areas to Improve
 
-### 1. Expand rules engine coverage (HIGH PRIORITY)
+### 1. Zustand Store (`src/store/patientsStore.ts`) — No tests at all
 
-**File:** `src/engine/rules.ts`
-**Current state:** Only the BS (Bladder Scan) rule is tested. There are **26 rules** total.
-**Risk:** Rule regex patterns are complex and handle Hebrew + English + medical abbreviations. Silent regressions are likely.
+This is the most critical gap. The store is the central persistence layer wrapping the reducer with Zustand middleware. It handles:
 
-**Recommended tests:**
-- **Each rule triggers correctly** — at minimum one positive test per rule (discharge, NPO, pre-op, blood transfusion, diabetes, fall risk, isolation, catheter, pneumonia, UTI, sepsis, cellulitis, C. diff, fever, AKI, hyperkalemia, hypokalemia, chest pain/ACS, CHF, DVT/PE, delirium, GI bleed, warfarin/INR, COPD, hypoglycemia, new admission, hyponatremia, stroke/TIA)
-- **Group deduplication** — verify that two rules in the same group don't double-fire (e.g., a patient with both "cellulitis" and "צלוליטיס" should only get one set of tasks)
-- **Negative cases** — verify rules don't trigger on similar but unrelated text (like the existing BS/DM disambiguation test)
-- **Task metadata** — verify urgency, category, and generatedFrom are set correctly for each rule
-- **Combined triggers** — a patient with multiple conditions (e.g., "סוכרת" + "NPO") should generate tasks from both rules
+- **`loadSavedPatients()`** — Hydrating state from localStorage on startup
+- **`loadShiftHistory()`, `loadDarkMode()`, `loadShowTomorrow()`** — Individual key loaders
+- **Persistence subscriptions** — Auto-saving state changes back to localStorage
+- **Selector helpers** — `usePatientById`, `useActiveSection`, etc.
 
-**Estimated new tests:** ~35-45
+**Why it matters:** The test runner already emits `localStorage is not defined` warnings from this module, proving it's exercised indirectly but never tested directly. A corrupted localStorage, a quota exceeded error, or a Zustand hydration failure would silently break the app.
 
-### 2. Test the reducer / state management (HIGH PRIORITY)
-
-**File:** `src/context/PatientsContext.tsx`
-**Current state:** Zero tests. The reducer has 17 action types handling all app state mutations.
-**Risk:** Every user interaction flows through this reducer. Bugs here affect all functionality.
-
-**Recommended tests (extract reducer as a pure function and test directly):**
-- `IMPORT_TEXT` — parsing + merge integration
-- `TOGGLE_TASK` — toggles done/doneTime on both `tasks` and `generatedTasks`
-- `SET_TASK_NOTE` — sets note on correct task
-- `SET_TASK_DUE` — sets dueAt on correct task
-- `ADD_TASK` — adds manual task with correct urgency inference, rejects empty text
-- `ADD_NOTE` / `REMOVE_NOTE` — add/remove with dedup and bounds checking
-- `ADD_LAB` — appends lab entry
-- `REORDER_PATIENT` — up/down swap within section, boundary behavior
-- `EDIT_PATIENT` — partial updates (name, room, section, diagnosis)
-- `REMOVE_PATIENT` — removes correct patient
-- `ARCHIVE_SHIFT` — creates snapshot, limits history to 5
-- `RESTORE_SHIFT` — restores with normalization
-- `DELETE_SHIFT` — removes correct snapshot
-- `CLEAR_ALL` — empties patients array
-- `TOGGLE_DARK_MODE` / `TOGGLE_SHOW_TOMORROW` — boolean toggles
-
-**Also test the helper functions:**
-- `normalizeTask` — handles missing/malformed fields gracefully
-- `normalizePatient` — handles missing arrays, non-array values
-- `inferUrgencyFromText` — Hebrew and English urgency keywords
-
-**Estimated new tests:** ~25-30
-
-### 3. Test patientKey utilities (MEDIUM PRIORITY)
-
-**File:** `src/utils/patientKey.ts`
-**Current state:** Zero tests. Used by `mergeScan` for dedup.
-**Risk:** If normalization breaks, rescans create duplicate patients or lose data.
-
-**Recommended tests:**
-- `normalize` handles null, undefined, empty string
-- `normalize` strips whitespace, lowercases, removes non-alphanumeric
-- `normalize` preserves Hebrew characters
-- `buildPatientKey` produces correct `section|room|name` format
-- `buildPatientLooseKey` produces correct `room|name` format (no section)
-- Two patients differing only by whitespace/case produce the same key
-- Two genuinely different patients produce different keys
-
-**Estimated new tests:** ~8-10
-
-### 4. Test section detection functions (MEDIUM PRIORITY)
-
-**File:** `src/types/patient.ts`
-**Current state:** Indirectly tested via `parsePatientList` section header test. No direct unit tests.
-**Risk:** Incorrect section detection misassigns patients to wrong ward sections.
-
-**Recommended tests for `detectSectionFromHeader`:**
-- All Hebrew section names: "צד א", "צד ב", "צד ג", "שיקום", "ניטור"
-- English variants: "side a", "rehab", "monitor"
-- With trailing separators: "צד א:", "צד ב -"
-- Rejects lines with digits (patient rows, not headers)
-- Returns null for unknown text
-
-**Recommended tests for `detectSectionFromRoom`:**
-- "ניטור1" → MONITOR
-- "מוניטור 3" → MONITOR
-- "101" → null
-- null → null
-
-**Estimated new tests:** ~12-15
-
-### 5. Test parsePatientList edge cases (MEDIUM PRIORITY)
-
-**File:** `src/parser/parsePatientList.ts`
-**Current state:** 10 tests covering the basics. Key gaps remain.
-
-**Recommended additional tests:**
-- **Multi-patient parsing** — a full multi-line document with all sections
-- **Diagnosis extraction** — verify diagnosis field is populated from remaining tokens
-- **Age parsing** — valid ages, edge cases (0, 150, non-numeric)
-- **Flag extraction** — DNR, DNI, NPO, FALL, ISO, MRSA, VRE, ESBL, C.DIFF
-- **Urgency detection** — "דחוף", "סטט", "STAT", "אורגנטי", "בוקר", "שגרה"
-- **Time extraction** — "16:30", "8:00", no time present
-- **Task classification** — imaging ("CT", "צילום"), labs ("בדיקת דם"), procedure ("BS"), discharge ("שחרור"), consult ("ייעוץ")
-- **Tomorrow notes** — segments with "מחר" or "לבוקר" go to `tomorrowNotes`, not `tasks`
-- **Column-labeled input** — "תורן: ..." format
-- **Empty/malformed input** — empty string, whitespace-only lines, very short lines
-- **Confidence calculation** — verify confidence score based on present fields
-
-**Estimated new tests:** ~15-20
-
-### 6. Add mergeScan edge cases (LOW PRIORITY)
-
-**File:** `src/engine/mergeScan.ts`
-**Current state:** 6 solid tests. Some edge cases missing.
-
-**Recommended additional tests:**
-- **Transfer detection** — patient moves from SIDE_A to SIDE_B (same room+name, different section)
-- **Notes merging** — dedup of notes across old and new entries
-- **New patient addition** — incoming patient with no existing match is added fresh
-- **Multiple rescans** — chain of 3+ scans preserves accumulated state
-- **Empty incoming scan** — all existing patients are kept
-
-**Estimated new tests:** ~5-8
+**Suggested tests:**
+- Each loader function with valid, corrupt, and missing localStorage data
+- Persistence round-trip (dispatch → localStorage → reload → state matches)
+- `safeGetItem`/`safeSetItem` behavior when localStorage throws (quota exceeded)
+- Selector stability (selectors return referentially equal values when unrelated state changes)
 
 ---
 
-## Infrastructure Recommendations
+### 2. Component tests — 41 components, 0 tests
 
-### Add tests to CI/CD
+No React component has any test coverage. Key components with significant logic:
 
-The GitHub Actions deploy workflow (`deploy.yml`) currently does **not** run tests. The build step should include `npm run test` before `npm run build` to prevent regressions from reaching production.
+| Component | Logic worth testing |
+|-----------|-------------------|
+| `DrugSafetyAlerts` | Renders interaction warnings; filters by severity |
+| `LabTracker` | Contains `parseBulkLabs` (tested indirectly) but rendering logic untested |
+| `PatientCard` | Displays acuity badge, task counts, flags — core UX surface |
+| `ParsePreview` | Shows parsed patient data before import — user-facing validation step |
+| `HandoffSheet` | Generates shift handoff documents — clinical safety concern |
+| `TaskItem` | Task completion toggle, countdown timers, urgency indicators |
+| `ShiftHandoffModal` | QR code generation, code display, cloud push |
+| `MorningReport` | Aggregates overnight events — must be accurate for clinical handoff |
 
-### Enable coverage reporting
-
-Add a coverage script to `package.json`:
-```json
-"test:coverage": "vitest run --coverage"
-```
-Install `@vitest/coverage-v8` and add a coverage threshold configuration to prevent coverage regression.
+**Suggested approach:** Add `@testing-library/react` + `jsdom` environment, then start with smoke/render tests for the most safety-critical components (`DrugSafetyAlerts`, `HandoffSheet`, `MorningReport`).
 
 ---
 
-## Summary
+### 3. Cloud Sync (`src/cloudSync.ts`) — 2 failing tests + missing scenarios
 
-| Priority | Area | Estimated Tests | Impact |
-|----------|------|-----------------|--------|
-| HIGH | Rules engine (remaining 25 rules) | 35-45 | Prevents silent rule regressions |
-| HIGH | Reducer / state management | 25-30 | Guards all user-facing state mutations |
-| MEDIUM | patientKey utilities | 8-10 | Prevents dedup failures on rescan |
-| MEDIUM | Section detection | 12-15 | Prevents ward misassignment |
-| MEDIUM | Parser edge cases | 15-20 | Improves OCR parsing robustness |
-| LOW | mergeScan edge cases | 5-8 | Covers transfer and multi-scan scenarios |
-| **Total** | | **~100-128** | |
+**Pre-existing failures:**
+- `getProxyAuthHeaders` returns a key even when no Supabase session exists (env variable leaking into test)
+- `isProxyAvailableAsync` returns true when it should return false for the same reason
+
+**Missing coverage:**
+- Conflict detection with diverged patient lists (currently mocked away)
+- Push retry with exponential backoff (timing not verified)
+- Echo suppression logic (`lastPushedJson` comparison)
+- Concurrent push/pull race conditions
+- Shared shift expiry at exact boundary (`expires_at = now`)
+- Cloud import with corrupted or schema-incompatible data
+
+---
+
+### 4. Parser edge cases (`src/parser/parsePatientList.ts`)
+
+The parser has 37 tests but handles complex free-text input (WhatsApp messages, nurse calls). Missing scenarios:
+
+- **Invalid/missing age**: What happens with `"ABC"` instead of `"72"`?
+- **Incomplete patient lines**: Room-only lines with no patient name
+- **Multiple `tomorrowNotes`** in a single line
+- **Whitespace-only sections** between patients
+- **Very long input**: Performance with 500+ patients in one paste
+- **Mixed language edge cases**: Hebrew condition names with English medication names in the same line
+
+---
+
+### 5. Rules engine cross-interactions (`src/engine/rules.ts`)
+
+The rules engine has 151 tests covering 29+ rule groups individually, but:
+
+- **No multi-rule interaction tests**: A real patient may trigger sepsis + AKI + AF + CKD simultaneously. No test verifies what happens when 5+ rule groups fire at once (task deduplication, ordering stability, total task count).
+- **Not all 58 rule groups have positive+negative tests**: Some rules are only tested via the comfort-care suppression suite.
+- **`planNotes` vs `status` distinction edge cases**: The parser routes text to different fields, and rules match on different fields — but no test verifies that a keyword in `planNotes` does NOT incorrectly trigger a rule that should only match `status`.
+
+---
+
+### 6. Drug Safety — brand names & edge cases (`src/engine/drugSafety.ts`)
+
+73 tests cover the core interaction engine well, but:
+
+- **Brand name variants**: Only generic names are tested. Real clinical data uses brand names (Rocephin = ceftriaxone, Tazocin = piperacillin/tazobactam). If `DRUG_PATTERNS` includes brand names, they need test coverage.
+- **Dialysis patients**: `onDialysis` flag should force CrCl bucket to `"hd"` — not tested.
+- **Age boundary for Beers Criteria**: The cutoff is age >= 65. No test verifies that age 64 does NOT trigger Beers alerts.
+- **Null/undefined patient age**: What happens when age is missing? Could cause NaN propagation in CrCl.
+
+---
+
+### 7. Renal calculations (`src/utils/renal.ts`) — Only 4 tests
+
+The Cockcroft-Gault calculation is clinically critical (medication dosing depends on it) but has minimal coverage:
+
+- No test for CrCl = 0 or negative creatinine
+- No test for extreme ages (e.g., age 110)
+- No test verifying the frailty creatinine floor value
+- No test for weight = 0 or undefined
+
+---
+
+### 8. Sort stability (`src/utils/sortPatients.ts`) — Only 8 tests
+
+- No stability test (patients with equal room/bed should maintain insertion order)
+- No test with non-standard room formats (`"ICU-A"`, `"Rehab-3"`)
+- No test for null/undefined room field
+
+---
+
+## Priority Ranking
+
+| Priority | Area | Impact | Effort |
+|----------|------|--------|--------|
+| **P0** | Zustand store persistence tests | High — silent data loss risk | Medium |
+| **P0** | Fix 2 failing cloudSync tests | High — CI is red | Low |
+| **P1** | Component smoke tests (top 5 safety-critical) | High — clinical UX | Medium |
+| **P1** | Multi-rule interaction tests | High — task correctness | Low |
+| **P1** | Renal calculation edge cases | High — dosing safety | Low |
+| **P2** | Parser robustness (malformed input) | Medium — import reliability | Low |
+| **P2** | Drug safety brand names + dialysis | Medium — alert completeness | Low |
+| **P2** | Cloud sync conflict/race conditions | Medium — data integrity | Medium |
+| **P3** | Sort stability | Low — cosmetic ordering | Low |
+| **P3** | Performance benchmarks (large patient lists) | Low — rare scenario | Medium |
