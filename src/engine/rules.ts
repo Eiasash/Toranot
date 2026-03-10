@@ -223,9 +223,9 @@ const RULES: Rule[] = [
     tasks: [
       { text: "תרביות דם x2 (לפני ABx!)", urgency: "stat", category: "labs" },
       { text: "צילום חזה (CXR)", urgency: "stat", category: "imaging" },
-      { text: "אנטיגן שתן: Legionella + Pneumococcus", urgency: "urgent", category: "labs" },
+      { text: "אנטיגן שתן: Legionella + Pneumococcus", urgency: "routine", category: "labs" },
       { text: "ABx — DAG: Ceftriaxone 2g IV + Azithromycin 500mg (CAP); Pip-Tazo (HAP)", urgency: "stat", category: "meds" },
-      { text: "חישוב CURB-65 (ראה עזר קליני)", urgency: "urgent", category: "other" },
+      { text: "חישוב CURB-65 (ראה עזר קליני)", urgency: "routine", category: "other" },
       { text: "גזים עורקיים / SpO2", urgency: "urgent", category: "labs" },
     ],
   },
@@ -240,7 +240,7 @@ const RULES: Rule[] = [
       { text: "תרבית שתן + בדיקת שתן כללית (לפני ABx!)", urgency: "stat", category: "labs" },
       { text: "תרביות דם x2 (אם חום/ספסיס)", urgency: "stat", category: "labs" },
       { text: "ABx — DAG: Ciprofloxacin 500 PO (לא מסובך) / Ceftriaxone 2g IV", urgency: "stat", category: "meds" },
-      { text: "שקול הוצאת/החלפת קטטר אם קיים", urgency: "urgent", category: "procedure" },
+      { text: "שקול הוצאת/החלפת קטטר אם קיים", urgency: "routine", category: "procedure" },
     ],
   },
 
@@ -269,7 +269,7 @@ const RULES: Rule[] = [
     triggerField: "tasks",
     tasks: [
       { text: "סימון גבולות בעט (+ תאריך+שעה)", urgency: "stat", category: "other" },
-      { text: "תיעוד צילום", urgency: "urgent", category: "other" },
+      { text: "תיעוד צילום", urgency: "routine", category: "other" },
       { text: "ABx — DAG: Cefazolin 2g IV q8h / Cephalexin 500 PO q6h", urgency: "stat", category: "meds" },
       { text: "אם מוגלה → Clindamycin (MRSA) + ניקוז", urgency: "urgent", category: "meds" },
     ],
@@ -297,9 +297,9 @@ const RULES: Rule[] = [
     tasks: [
       { text: "תרביות דם x2", urgency: "stat", category: "labs" },
       { text: "בדיקת שתן כללית + תרבית", urgency: "stat", category: "labs" },
-      { text: "צילום חזה (CXR)", urgency: "urgent", category: "imaging" },
-      { text: "מעבדה: CBC, CRP, Procalcitonin", urgency: "urgent", category: "labs" },
-      { text: "מיפוי מקור: קו מרכזי? קטטר? פצע? צלוליטיס?", urgency: "urgent", category: "other" },
+      { text: "צילום חזה (CXR)", urgency: "routine", category: "imaging" },
+      { text: "מעבדה: CBC, CRP, Procalcitonin", urgency: "routine", category: "labs" },
+      { text: "מיפוי מקור: קו מרכזי? קטטר? פצע? צלוליטיס?", urgency: "routine", category: "other" },
     ],
   },
 
@@ -315,7 +315,7 @@ const RULES: Rule[] = [
       { text: "הערכת מצב נפחי + I/O", urgency: "stat", category: "other" },
       { text: "מעבדה: Cr, BUN, K+, Na+, גזים, FENa", urgency: "stat", category: "labs" },
       { text: "אם Pre-renal → NaCl bolus; אין שיפור → נפרולוג", urgency: "urgent", category: "consult" },
-      { text: "התאמת מינון תרופות ל-CrCl (ראה עזר קליני)", urgency: "urgent", category: "meds" },
+      { text: "התאמת מינון תרופות ל-CrCl (ראה עזר קליני)", urgency: "routine", category: "meds" },
     ],
   },
 
@@ -341,10 +341,10 @@ const RULES: Rule[] = [
     group: "hypoK",
     tasks: [
       { text: "בדוק Mg2+ (חיוני להעלאת K+)", urgency: "stat", category: "labs" },
-      { text: "K+ PO 40-80mEq/d (אם K>3.0)", urgency: "urgent", category: "meds" },
+      { text: "K+ PO 40-80mEq/d (אם K>3.0)", urgency: "routine", category: "meds" },
       { text: "K+ IV: KCl 10mEq/h (אם K<3.0 — מוניטור)", urgency: "stat", category: "meds" },
-      { text: "ECG (U wave, ST depression)", urgency: "urgent", category: "labs" },
-      { text: "K+ חוזר לאחר 2-4h", urgency: "urgent", category: "labs" },
+      { text: "ECG (U wave, ST depression)", urgency: "routine", category: "labs" },
+      { text: "K+ חוזר לאחר 2-4h", urgency: "routine", category: "labs" },
     ],
   },
 
@@ -374,9 +374,9 @@ const RULES: Rule[] = [
     tasks: [
       { text: "Furosemide IV 40-80mg", urgency: "stat", category: "meds" },
       { text: "I/O קפדני + משקל יומי", urgency: "stat", category: "other" },
-      { text: "הגבלת נוזלים <1.5L + מלח", urgency: "urgent", category: "other" },
-      { text: "CXR", urgency: "urgent", category: "imaging" },
-      { text: "BNP / NT-proBNP", urgency: "urgent", category: "labs" },
+      { text: "הגבלת נוזלים <1.5L + מלח", urgency: "routine", category: "other" },
+      { text: "CXR", urgency: "routine", category: "imaging" },
+      { text: "BNP / NT-proBNP", urgency: "routine", category: "labs" },
       { text: "אם SpO2<90% → O2, שקול BiPAP", urgency: "stat", category: "procedure" },
     ],
   },
@@ -409,8 +409,8 @@ const RULES: Rule[] = [
       { text: "Bladder Scan — שלילת אצירה (>300ml → קטטר)", urgency: "stat", category: "procedure" },
       { text: "סקור תרופות: STOP anticholinergics, benzos, opioids, steroids", urgency: "stat", category: "meds" },
       // ── NON-PHARM (always first) ──
-      { text: "🔦 אמצעים לא-תרופתיים: תאורה, שעון, משקפיים, שמיעה, שתייה, משפחה", urgency: "urgent", category: "other" },
-      { text: "הימנע מקשירה! (מחמיר אגיטציה + סיכון)", urgency: "urgent", category: "other" },
+      { text: "🔦 אמצעים לא-תרופתיים: תאורה, שעון, משקפיים, שמיעה, שתייה, משפחה", urgency: "routine", category: "other" },
+      { text: "הימנע מקשירה! (מחמיר אגיטציה + סיכון)", urgency: "routine", category: "other" },
       // ── PHARMACOTHERAPY LADDER (if agitated + danger) ──
       { text: "📋 סולם טיפול אגיטציה (מהקל לכבד):", urgency: "urgent", category: "meds" },
       { text: "1️⃣ Quetiapine 12.5-25mg PO (בטוח בפרקינסון/DLB)", urgency: "urgent", category: "meds" },
@@ -435,7 +435,7 @@ const RULES: Rule[] = [
     triggerField: "all",
     tasks: [
       { text: "א.ק.ג לפני ואחרי מתן — QTc >500ms → STOP", urgency: "stat", category: "procedure" },
-      { text: "ניטור EPS: נוקשות, טרמור, אקתיזיה, דיסטוניה", urgency: "urgent", category: "other" },
+      { text: "ניטור EPS: נוקשות, טרמור, אקתיזיה, דיסטוניה", urgency: "routine", category: "other" },
       { text: "❌ אם פרקינסון/DLB → החלף ל-Quetiapine 12.5-25mg", urgency: "stat", category: "meds" },
       { text: "מינון קשישים: 0.5mg IM (PO אם משתף פעולה). ❌ לא >3mg/24h", urgency: "routine", category: "meds" },
     ],
@@ -448,9 +448,9 @@ const RULES: Rule[] = [
     group: "delirium_quetiapine",
     triggerField: "all",
     tasks: [
-      { text: "BP שכיבה + עמידה (אורתוסטטי!) — לפני ואחרי מתן", urgency: "urgent", category: "procedure" },
+      { text: "BP שכיבה + עמידה (אורתוסטטי!) — לפני ואחרי מתן", urgency: "routine", category: "procedure" },
       { text: "מינון התחלתי: 12.5-25mg PO HS. Max 50mg/d בקשישים", urgency: "routine", category: "meds" },
-      { text: "ניטור סדציה מוגזמת — סיכון נפילות", urgency: "urgent", category: "other" },
+      { text: "ניטור סדציה מוגזמת — סיכון נפילות", urgency: "routine", category: "other" },
       { text: "BS בבוקר (hyperglycemia risk)", urgency: "routine", category: "labs" },
     ],
   },
@@ -463,7 +463,7 @@ const RULES: Rule[] = [
     triggerField: "all",
     tasks: [
       { text: "❌ לא עם IM benzodiazepines! (respiratory depression)", urgency: "stat", category: "meds" },
-      { text: "BP — סיכון להיפוטנציה אורתוסטטית", urgency: "urgent", category: "procedure" },
+      { text: "BP — סיכון להיפוטנציה אורתוסטטית", urgency: "routine", category: "procedure" },
       { text: "מינון קשישים: 2.5-5mg PO/IM. Max 10mg/d", urgency: "routine", category: "meds" },
       { text: "BS — hyperglycemia + metabolic effects", urgency: "routine", category: "labs" },
     ],
@@ -476,9 +476,9 @@ const RULES: Rule[] = [
     group: "delirium_risperidone",
     triggerField: "all",
     tasks: [
-      { text: "BP שכיבה + עמידה — orthostatic hypotension", urgency: "urgent", category: "procedure" },
+      { text: "BP שכיבה + עמידה — orthostatic hypotension", urgency: "routine", category: "procedure" },
       { text: "מינון קשישים: 0.25-0.5mg PO BID. Max 2mg/d", urgency: "routine", category: "meds" },
-      { text: "ניטור EPS (סיכון גבוה יותר מ-quetiapine)", urgency: "urgent", category: "other" },
+      { text: "ניטור EPS (סיכון גבוה יותר מ-quetiapine)", urgency: "routine", category: "other" },
       { text: "⚠ FDA Black Box: ↑ mortality בדמנציה", urgency: "routine", category: "other" },
     ],
   },
@@ -491,7 +491,7 @@ const RULES: Rule[] = [
     triggerField: "all",
     tasks: [
       { text: "HR + BP q15min — bradycardia + hypotension common", urgency: "stat", category: "procedure" },
-      { text: "Sedation score (RASS) q1-2h — target 0 to -2", urgency: "urgent", category: "procedure" },
+      { text: "Sedation score (RASS) q1-2h — target 0 to -2", urgency: "routine", category: "procedure" },
       { text: "Loading dose: 1mcg/kg over 10min → 0.2-0.7 mcg/kg/h", urgency: "routine", category: "meds" },
       { text: "ICU/ניטור setting only — continuous telemetry required", urgency: "stat", category: "other" },
     ],
@@ -504,7 +504,7 @@ const RULES: Rule[] = [
     group: "delirium_trazodone",
     triggerField: "all",
     tasks: [
-      { text: "BP — orthostatic hypotension risk, especially nocturnal", urgency: "urgent", category: "procedure" },
+      { text: "BP — orthostatic hypotension risk, especially nocturnal", urgency: "routine", category: "procedure" },
       { text: "מינון: 25-50mg PO HS. ❌ לא >100mg בקשישים", urgency: "routine", category: "meds" },
       { text: "ניטור סדציה יתרה בבוקר — סיכון נפילות", urgency: "routine", category: "other" },
     ],
@@ -591,9 +591,9 @@ const RULES: Rule[] = [
     tasks: [
       // Phrased as VERIFY+ORDER — labs may already be sent by the admitting doc.
       // The on-call task is to confirm they went out and review results.
-      { text: "וודא בדיקות קבלה / הזמן אם חסרות: CBC, CMP, Mg, PO4, PT/INR, CRP", urgency: "urgent", category: "labs" },
+      { text: "וודא בדיקות קבלה / הזמן אם חסרות: CBC, CMP, Mg, PO4, PT/INR, CRP", urgency: "routine", category: "labs" },
       // ECG is justified on-call for age >50 or cardiac history — genuinely missable at admission.
-      { text: "ECG (>50y / רקע קרדיאלי)", urgency: "urgent", category: "labs" },
+      { text: "ECG (>50y / רקע קרדיאלי)", urgency: "routine", category: "labs" },
       // CXR removed: on-call doc cannot determine from text whether a recent CXR exists.
       // Blind ordering leads to alarm fatigue on this task. Handled by primary team.
       // Med rec, fall risk, DVT prophylaxis = admitting doctor / morning team
@@ -609,7 +609,7 @@ const RULES: Rule[] = [
     tasks: [
       { text: "מעבדה: Na+, Serum Osm, Urine Na+Osm, TSH, Cortisol", urgency: "stat", category: "labs" },
       { text: "הערכת מצב נפחי", urgency: "stat", category: "other" },
-      { text: "SIADH → הגבלת נוזלים 1-1.5L/d", urgency: "urgent", category: "other" },
+      { text: "SIADH → הגבלת נוזלים 1-1.5L/d", urgency: "routine", category: "other" },
       { text: "Na<120 + סימפטומטי → NaCl 3% IV (מקס 8mEq/L/24h!)", urgency: "stat", category: "meds" },
       { text: "Na+ q4-6h", urgency: "urgent", category: "labs" },
     ],
@@ -726,7 +726,7 @@ const RULES: Rule[] = [
     tasks: [
       { text: "Bladder Scan — אם >300ml → הכנס קטטר", urgency: "stat", category: "procedure" },
       { text: "אם >1L → שחרור איטי (500ml כל 30 דק) — סכנת post-obstructive diuresis", urgency: "urgent", category: "other" },
-      { text: "בדוק סיבה: anticholinergics, opioids, BPH, constipation", urgency: "urgent", category: "other" },
+      { text: "בדוק סיבה: anticholinergics, opioids, BPH, constipation", urgency: "routine", category: "other" },
     ],
   },
 
@@ -889,7 +889,7 @@ const RULES: Rule[] = [
     triggerField: "all",
     comfortCareOnly: true,
     tasks: [
-      { text: "הערכת נוחות: נשימה נוחה? גרגור/הפרשות? סימני כאב? אי-שקט? (ללא מדידת RR/SpO2)", urgency: "urgent", category: "procedure" },
+      { text: "הערכת נוחות: נשימה נוחה? גרגור/הפרשות? סימני כאב? אי-שקט? (ללא מדידת RR/SpO2)", urgency: "routine", category: "procedure" },
       { text: "גרגור? → Hyoscine (Buscopan) 0.4mg SC/SL PRN להפחתת הפרשות", urgency: "routine", category: "meds" },
     ],
   },
@@ -927,9 +927,9 @@ const RULES: Rule[] = [
     group: "delirium_nonpharm_bundle",
     triggerField: "all",
     tasks: [
-      { text: "Re-orient q1h: שעון גדול + לוח תאריך + שם ורמת הכרה — תיעוד", urgency: "urgent", category: "procedure" },
-      { text: "משקפיים + מכשיר שמיעה במקום — הפחתת תחושת חשכה ובלבול", urgency: "urgent", category: "procedure" },
-      { text: "הסר קטטרים/עירויים מיותרים ('un-tether') — הפחתת אגיטציה", urgency: "urgent", category: "procedure" },
+      { text: "Re-orient q1h: שעון גדול + לוח תאריך + שם ורמת הכרה — תיעוד", urgency: "routine", category: "procedure" },
+      { text: "משקפיים + מכשיר שמיעה במקום — הפחתת תחושת חשכה ובלבול", urgency: "routine", category: "procedure" },
+      { text: "הסר קטטרים/עירויים מיותרים ('un-tether') — הפחתת אגיטציה", urgency: "routine", category: "procedure" },
       { text: "תאורה מתאימה: בהירות ביום, חשכה ב-22:00 — תמיכה בציקל שינה", urgency: "routine", category: "procedure" },
       { text: "Early mobilization בבוקר אם מצב מאפשר", urgency: "routine", category: "procedure" },
     ],
