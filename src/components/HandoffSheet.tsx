@@ -53,16 +53,19 @@ function formatPatient(p: PatientEntry): string {
   return lines.join("\n");
 }
 
-import { isOnCallTime, getShiftStart } from "../utils/shiftTime";
+import { getShiftStart } from "../utils/shiftTime";
 
-function isOncallRelevant(p: PatientEntry, shiftStart: Date): boolean {
-  // Manually added admissions are always on-call relevant regardless of time
+function isOncallRelevant(p: PatientEntry, _shiftStart: Date): boolean {
+  // New admission added this shift = always show
   if (p.isAdmission) return true;
-  if (p.scannedAt && isOnCallTime(new Date(p.scannedAt)) && new Date(p.scannedAt) >= shiftStart) return true;
-  // Only manual tasks indicate on-call action — "extracted" tasks exist on every scanned patient
+  // On-call doc manually added a task = action taken
   if (p.tasks.some(t => t.source === "manual")) return true;
+  // On-call doc completed any task = action taken
   if ([...p.tasks, ...p.generatedTasks].some(t => t.done)) return true;
+  // Handover note written = action taken
   if (p.handoverNote) return true;
+  // Scanned-only patients (no actions taken) are NOT on-call relevant
+  // They appear in "כולם" (all patients) mode only
   return false;
 }
 
@@ -510,7 +513,7 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
               onClick={() => setOncallOnly(v => !v)}
               className={`text-xs px-2 py-1 rounded-lg font-medium border transition-colors ${oncallOnly ? "bg-white text-emerald-700 border-white" : "bg-emerald-700 text-emerald-100 border-emerald-600"}`}
             >
-              {oncallOnly ? "🩺 תורן" : "📋 כולם"}
+              {oncallOnly ? "🩺 פעלתי" : "📋 כל המחלקה"}
             </button>
             <button onClick={onClose} className="text-white/70 hover:text-white text-xl px-2">✕</button>
           </div>

@@ -18,6 +18,7 @@ import {
   OrthoGeriatricAdmission,
   PhoneDirectory,
   OsteoporosisProtocol,
+  UnifiedElectrolytesHub,
 } from "./QuickReferenceCalculators";
 import {
   ChestPainProtocol,
@@ -48,9 +49,6 @@ import {
   AcuteKidneyInjuryProtocol,
   DeathPronouncementProtocol,
   AnticoagReversalProtocol,
-  HypercalcemiaProtocol,
-  HypernatremiaProtocol,
-  HypermagnesemiaProtocol,
 } from "./OnCallProtocols";
 import { ECGInterpreter } from "./ECGInterpreter";
 
@@ -360,9 +358,6 @@ type SectionKey =
   | "aki"
   | "death"
   | "anticoagreversal"
-  | "hypercalcemia"
-  | "hypernatremia"
-  | "hypermagnesemia"
   | "ecg";
 
 interface SectionDef {
@@ -412,12 +407,7 @@ const SECTIONS: SectionDef[] = [
   { key: "ams",         icon: "😶‍🌫️", label: "שינוי הכרה",       group: "oncall_neuro" },
   // ── On-Call: Metabolic & Renal ──
   { key: "dka",           icon: "📊", label: "DKA / HHS",        group: "oncall_metabolic" },
-  { key: "hyponatremia",  icon: "🧂", label: "היפונתרמיה",       group: "oncall_metabolic" },
-  { key: "hypernatremia", icon: "🧂", label: "היפרנתרמיה",       group: "oncall_metabolic" },
-  { key: "hyperkalemia",  icon: "⬆️", label: "היפרקלמיה",       group: "oncall_metabolic" },
   { key: "hypoglycemia",  icon: "⬇️", label: "היפוגליקמיה",     group: "oncall_metabolic" },
-  { key: "hypercalcemia", icon: "🦴", label: "היפרקלצמיה",       group: "oncall_metabolic" },
-  { key: "hypermagnesemia", icon: "⚗️", label: "היפרמגנסמיה",   group: "oncall_metabolic" },
   { key: "aki",           icon: "🫘", label: "AKI חריף",         group: "oncall_metabolic" },
   { key: "ecg",           icon: "🫀", label: "פרשן ECG",         group: "oncall_cardio" },
   // ── On-Call: Heme ──
@@ -733,7 +723,7 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
           {section === "crcl" && <div className="p-4"><CrClCalculator onCrClChange={(crcl, hd) => handleCrClChange(crcl, hd)} /></div>}
           {section === "curb65" && <div className="p-4"><CURB65Calculator /></div>}
           {section === "news2" && <div className="p-4"><NEWS2Calculator /></div>}
-          {section === "lytes" && <div className="p-4"><ElectrolyteReference /></div>}
+          {section === "lytes" && <div className="p-4"><UnifiedElectrolytesHub /></div>}
           {section === "insulin" && <div className="p-4"><InsulinReference /></div>}
           {section === "delirium" && <div className="p-4"><DeliriumReference /></div>}
           {section === "falls" && <div className="p-4"><FallsReference /></div>}
@@ -760,9 +750,7 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
           {section === "stroke" && <div className="p-4"><AcuteStrokeProtocol /></div>}
           {section === "hyponatremia" && <div className="p-4"><HyponatremiaProtocol /></div>}
           {section === "hyperkalemia" && <div className="p-4"><HyperkalemiaProtocol /></div>}
-          {section === "hypernatremia" && <div className="p-4"><HypernatremiaProtocol /></div>}
-          {section === "hypercalcemia" && <div className="p-4"><HypercalcemiaProtocol /></div>}
-          {section === "hypermagnesemia" && <div className="p-4"><HypermagnesemiaProtocol /></div>}
+          {section === "hyponatremia" && <div className="p-4"><HyponatremiaProtocol /></div>}
           {section === "ecg" && <div className="p-4"><ECGInterpreter /></div>}
           {section === "hypoglycemia" && <div className="p-4"><HypoglycemiaProtocol /></div>}
           {section === "ams" && <div className="p-4"><AlteredMentalStatusProtocol /></div>}

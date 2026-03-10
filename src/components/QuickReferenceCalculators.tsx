@@ -37,22 +37,22 @@ export function CrClCalculator({ onCrClChange }: { onCrClChange?: (crcl: number 
     <div className="space-y-3">
       <h3 className="font-bold text-sm">מחשבון CrCl (Cockcroft-Gault)</h3>
       <div className="grid grid-cols-2 gap-2">
-        <label className="text-xs text-gray-600">
+        <label className="text-xs text-gray-600 dark:text-gray-400">
           גיל
           <input type="number" value={age} onChange={(e) => setAge(e.target.value)}
-            className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 rounded-lg" placeholder="75" />
+            className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" placeholder="75" />
         </label>
-        <label className="text-xs text-gray-600">
+        <label className="text-xs text-gray-600 dark:text-gray-400">
           משקל (kg)
           <input type="number" value={weight} onChange={(e) => setWeight(e.target.value)}
-            className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 rounded-lg" placeholder="70" />
+            className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" placeholder="70" />
         </label>
-        <label className="text-xs text-gray-600">
+        <label className="text-xs text-gray-600 dark:text-gray-400">
           Creatinine (mg/dL)
           <input type="number" step="0.1" value={creatinine} onChange={(e) => setCr(e.target.value)}
-            className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 rounded-lg" placeholder="1.2" />
+            className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" placeholder="1.2" />
         </label>
-        <div className="flex flex-col gap-1 text-xs text-gray-600 justify-end pb-1.5">
+        <div className="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-400 justify-end pb-1.5">
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={female} onChange={() => setFemale(!female)}
               className="h-4 w-4 rounded accent-blue-600" />
@@ -67,11 +67,11 @@ export function CrClCalculator({ onCrClChange }: { onCrClChange?: (crcl: number 
       </div>
       {(crcl !== null || isHD) && (
         <div className={`text-center text-lg font-bold p-3 rounded-xl ${
-          isHD ? "bg-purple-100 text-purple-800" :
-          crcl! > 60 ? "bg-green-100 text-green-800" :
+          isHD ? "bg-purple-100 text-purple-800 dark:text-purple-300" :
+          crcl! > 60 ? "bg-green-100 text-green-800 dark:text-green-300" :
           crcl! > 30 ? "bg-yellow-100 text-yellow-800" :
           crcl! > 15 ? "bg-orange-100 text-orange-800" :
-          "bg-red-100 text-red-800"
+          "bg-red-100 text-red-800 dark:text-red-300"
         }`}>
           {isHD ? "HD — דיאליזה" : `CrCl = ${crcl} ml/min`}
           {bucket && (
@@ -84,7 +84,7 @@ export function CrClCalculator({ onCrClChange }: { onCrClChange?: (crcl: number 
             </div>
           )}
           {bucket && bucket !== "gt50" && (
-            <div className="text-xs font-semibold mt-2 bg-white/50 rounded-lg p-1.5">
+            <div className="text-xs font-semibold mt-2 bg-white/50 dark:bg-gray-700/50 rounded-lg p-1.5">
               💊 חזור ללשונית ABx לראות מינונים מותאמים
             </div>
           )}
@@ -108,10 +108,10 @@ export function CURB65Calculator() {
   const score = [c, u, r, b, age65].filter(Boolean).length;
 
   const interpretation = score <= 1
-    ? { text: "סיכון נמוך — שקול טיפול אמבולטורי", color: "bg-green-100 text-green-800" }
+    ? { text: "סיכון נמוך — שקול טיפול אמבולטורי", color: "bg-green-100 text-green-800 dark:text-green-300" }
     : score === 2
     ? { text: "סיכון בינוני — אשפוז קצר / מעקב צמוד", color: "bg-yellow-100 text-yellow-800" }
-    : { text: "סיכון גבוה — אשפוז. ≥4 שקול ICU", color: "bg-red-100 text-red-800" };
+    : { text: "סיכון גבוה — אשפוז. ≥4 שקול ICU", color: "bg-red-100 text-red-800 dark:text-red-300" };
 
   return (
     <div className="space-y-3">
@@ -219,46 +219,46 @@ export function NEWS2Calculator() {
   }, [rr, spo2, isType2, onO2, temp, sbp, hr, avpu]);
 
   const interpretation = score >= 7
-    ? { text: "🔴 גבוה מאוד — שקול ICU. ניטור רציף. רופא בכיר!", color: "bg-red-100 text-red-800 border-red-300" }
+    ? { text: "🔴 גבוה מאוד — שקול ICU. ניטור רציף. רופא בכיר!", color: "bg-red-100 text-red-800 dark:text-red-300 border-red-300" }
     : score >= 5
     ? { text: "🟠 בינוני-גבוה — הערכה דחופה. שקול escalation", color: "bg-orange-100 text-orange-800 border-orange-300" }
     : score >= 1
     ? { text: "🟡 נמוך — הערכה ע\"י אחות. שקול הגברת ניטור", color: "bg-yellow-100 text-yellow-800 border-yellow-300" }
-    : { text: "🟢 0 — ניטור שגרתי", color: "bg-green-100 text-green-800 border-green-300" };
+    : { text: "🟢 0 — ניטור שגרתי", color: "bg-green-100 text-green-800 dark:text-green-300 border-green-300" };
 
   return (
     <div className="space-y-3">
       <h3 className="font-bold text-sm">NEWS2 (National Early Warning Score 2)</h3>
       <div className="grid grid-cols-2 gap-2">
-        <label className="text-xs text-gray-600">
+        <label className="text-xs text-gray-600 dark:text-gray-400">
           קצב נשימה (RR)
           <input type="number" value={rr} onChange={(e) => setRR(e.target.value)}
-            className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 rounded-lg" placeholder="16" />
+            className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" placeholder="16" />
         </label>
-        <label className="text-xs text-gray-600">
+        <label className="text-xs text-gray-600 dark:text-gray-400">
           SpO2 (%)
           <input type="number" value={spo2} onChange={(e) => setSpO2(e.target.value)}
-            className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 rounded-lg" placeholder="96" />
+            className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" placeholder="96" />
         </label>
-        <label className="text-xs text-gray-600">
+        <label className="text-xs text-gray-600 dark:text-gray-400">
           חום (°C)
           <input type="number" step="0.1" value={temp} onChange={(e) => setTemp(e.target.value)}
-            className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 rounded-lg" placeholder="37.0" />
+            className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" placeholder="37.0" />
         </label>
-        <label className="text-xs text-gray-600">
+        <label className="text-xs text-gray-600 dark:text-gray-400">
           SBP (mmHg)
           <input type="number" value={sbp} onChange={(e) => setSBP(e.target.value)}
-            className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 rounded-lg" placeholder="120" />
+            className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" placeholder="120" />
         </label>
-        <label className="text-xs text-gray-600">
+        <label className="text-xs text-gray-600 dark:text-gray-400">
           דופק (HR)
           <input type="number" value={hr} onChange={(e) => setHR(e.target.value)}
-            className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 rounded-lg" placeholder="80" />
+            className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" placeholder="80" />
         </label>
-        <label className="text-xs text-gray-600">
+        <label className="text-xs text-gray-600 dark:text-gray-400">
           AVPU
           <select value={avpu} onChange={(e) => setAVPU(e.target.value)}
-            className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 rounded-lg bg-white">
+            className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
             <option value="A">A — ערני</option>
             <option value="V">V — מגיב לקול</option>
             <option value="P">P — מגיב לכאב</option>
@@ -295,77 +295,77 @@ export function ElectrolyteReference() {
     <div className="space-y-4">
       <h3 className="font-bold text-sm">פרוטוקולי תיקון אלקטרוליטים</h3>
 
-      <div className="border border-gray-200 rounded-xl p-3 space-y-2">
-        <div className="font-bold text-sm text-purple-800">🔋 אשלגן (K+)</div>
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-3 space-y-2">
+        <div className="font-bold text-sm text-purple-800 dark:text-purple-300">🔋 אשלגן (K+)</div>
         <div className="text-xs space-y-1.5">
-          <div className="bg-yellow-50 p-2 rounded-lg">
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-lg">
             <span className="font-semibold">K+ 3.0-3.4:</span> KCl 40mEq PO x2-3/d
           </div>
-          <div className="bg-orange-50 p-2 rounded-lg">
+          <div className="bg-orange-50 dark:bg-orange-900/20 p-2 rounded-lg">
             <span className="font-semibold">K+ 2.5-2.9:</span> KCl 10mEq/h IV (max 20mEq/h peripheral, 40 central) + PO
           </div>
-          <div className="bg-red-50 p-2 rounded-lg">
+          <div className="bg-red-50 dark:bg-red-900/20 p-2 rounded-lg">
             <span className="font-semibold">K+ &lt;2.5 / ECG∆:</span> KCl 20mEq/h IV (monitor!) + MgSO4 2g IV
           </div>
-          <div className="text-gray-600 italic">💡 תמיד בדוק Mg — היפומגנזמיה = K+ לא מתתקן!</div>
+          <div className="text-gray-600 dark:text-gray-400 italic">💡 תמיד בדוק Mg — היפומגנזמיה = K+ לא מתתקן!</div>
         </div>
       </div>
 
-      <div className="border border-gray-200 rounded-xl p-3 space-y-2">
-        <div className="font-bold text-sm text-blue-800">🧲 מגנזיום (Mg2+)</div>
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-3 space-y-2">
+        <div className="font-bold text-sm text-blue-800 dark:text-blue-300">🧲 מגנזיום (Mg2+)</div>
         <div className="text-xs space-y-1.5">
-          <div className="bg-yellow-50 p-2 rounded-lg">
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-lg">
             <span className="font-semibold">Mg 1.2-1.6:</span> MgO 400mg PO x2/d (אם כליות תקינות)
           </div>
-          <div className="bg-orange-50 p-2 rounded-lg">
+          <div className="bg-orange-50 dark:bg-orange-900/20 p-2 rounded-lg">
             <span className="font-semibold">Mg &lt;1.2 / סימפטומטי:</span> MgSO4 2g IV over 1h → 4-6g over 24h
           </div>
-          <div className="text-gray-600 italic">💡 חיוני לתיקון היפוקלמיה והיפוקלצמיה</div>
+          <div className="text-gray-600 dark:text-gray-400 italic">💡 חיוני לתיקון היפוקלמיה והיפוקלצמיה</div>
         </div>
       </div>
 
-      <div className="border border-gray-200 rounded-xl p-3 space-y-2">
-        <div className="font-bold text-sm text-green-800">🦴 סידן (Ca2+)</div>
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-3 space-y-2">
+        <div className="font-bold text-sm text-green-800 dark:text-green-300">🦴 סידן (Ca2+)</div>
         <div className="text-xs space-y-1.5">
-          <div className="bg-gray-50 p-2 rounded-lg">
+          <div className="bg-gray-50 dark:bg-gray-800/60 p-2 rounded-lg">
             <span className="font-semibold">תיקון לאלבומין:</span> Ca_corrected = Ca + 0.8 × (4.0 − Albumin)
           </div>
-          <div className="bg-yellow-50 p-2 rounded-lg">
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-lg">
             <span className="font-semibold">קל:</span> CaCO3 500mg PO x3/d + Vitamin D
           </div>
-          <div className="bg-red-50 p-2 rounded-lg">
+          <div className="bg-red-50 dark:bg-red-900/20 p-2 rounded-lg">
             <span className="font-semibold">חמור / סימפטומטי:</span> Ca Gluconate 10% 10-20ml IV over 10min → gtt
           </div>
-          <div className="text-gray-600 italic">💡 אם גם היפומגנזמיה — תקן Mg קודם!</div>
+          <div className="text-gray-600 dark:text-gray-400 italic">💡 אם גם היפומגנזמיה — תקן Mg קודם!</div>
         </div>
       </div>
 
-      <div className="border border-gray-200 rounded-xl p-3 space-y-2">
-        <div className="font-bold text-sm text-amber-800">⚡ זרחן (PO4)</div>
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-3 space-y-2">
+        <div className="font-bold text-sm text-amber-800 dark:text-amber-300">⚡ זרחן (PO4)</div>
         <div className="text-xs space-y-1.5">
-          <div className="bg-yellow-50 p-2 rounded-lg">
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-lg">
             <span className="font-semibold">PO4 1.5-2.5:</span> Phospho-Soda 5ml PO x2-3/d
           </div>
-          <div className="bg-red-50 p-2 rounded-lg">
+          <div className="bg-red-50 dark:bg-red-900/20 p-2 rounded-lg">
             <span className="font-semibold">PO4 &lt;1.5:</span> KPhos/NaPhos 15-30mmol IV over 6h
           </div>
-          <div className="text-gray-600 italic">💡 שכיח ב-refeeding, DKA, ספסיס. עלול לגרום חולשת שרירים ואי"נ נשימתית</div>
+          <div className="text-gray-600 dark:text-gray-400 italic">💡 שכיח ב-refeeding, DKA, ספסיס. עלול לגרום חולשת שרירים ואי"נ נשימתית</div>
         </div>
       </div>
 
-      <div className="border border-gray-200 rounded-xl p-3 space-y-2">
-        <div className="font-bold text-sm text-indigo-800">💧 נתרן (Na+)</div>
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-3 space-y-2">
+        <div className="font-bold text-sm text-indigo-800 dark:text-indigo-300">💧 נתרן (Na+)</div>
         <div className="text-xs space-y-1.5">
-          <div className="bg-yellow-50 p-2 rounded-lg">
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-lg">
             <span className="font-semibold">Na 125-130 אסימפטומטי:</span> הגבלת נוזלים 1-1.5L/d + בדוק SIADH
           </div>
-          <div className="bg-orange-50 p-2 rounded-lg">
+          <div className="bg-orange-50 dark:bg-orange-900/20 p-2 rounded-lg">
             <span className="font-semibold">Na 120-125 סימפטומטי:</span> NaCl 0.9% IV + Furosemide אם SIADH
           </div>
-          <div className="bg-red-50 p-2 rounded-lg">
+          <div className="bg-red-50 dark:bg-red-900/20 p-2 rounded-lg">
             <span className="font-semibold">Na &lt;120 / seizures:</span> NaCl 3% 100ml IV over 10min (bolus x3 max)
           </div>
-          <div className="text-gray-600 italic">🔴 מקסימום תיקון: 8 mEq/L / 24h! (סכנת ODS)</div>
+          <div className="text-gray-600 dark:text-gray-400 italic">🔴 מקסימום תיקון: 8 mEq/L / 24h! (סכנת ODS)</div>
         </div>
       </div>
     </div>
@@ -395,42 +395,42 @@ export function InsulinReference() {
     <div className="space-y-4">
       <h3 className="font-bold text-sm">ניהול סוכר באשפוז</h3>
 
-      <div className="border border-gray-200 rounded-xl p-3 space-y-2">
-        <div className="font-bold text-sm text-blue-800">📊 Sliding Scale — תיקון מהיר</div>
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-3 space-y-2">
+        <div className="font-bold text-sm text-blue-800 dark:text-blue-300">📊 Sliding Scale — תיקון מהיר</div>
         <div className="text-xs">
           <table className="w-full text-right">
             <thead>
-              <tr className="border-b border-gray-200">
+              <tr className="border-b border-gray-200 dark:border-gray-700">
                 <th className="py-1 px-1">סוכר (mg/dL)</th>
                 <th className="py-1 px-1">Low</th>
                 <th className="py-1 px-1">Medium</th>
                 <th className="py-1 px-1">High</th>
               </tr>
             </thead>
-            <tbody className="text-gray-700">
+            <tbody className="text-gray-700 dark:text-gray-300">
               <tr><td className="py-0.5 px-1">150-199</td><td>0</td><td>1</td><td>2</td></tr>
-              <tr className="bg-yellow-50"><td className="py-0.5 px-1">200-249</td><td>1</td><td>2</td><td>4</td></tr>
+              <tr className="bg-yellow-50 dark:bg-yellow-900/20"><td className="py-0.5 px-1">200-249</td><td>1</td><td>2</td><td>4</td></tr>
               <tr><td className="py-0.5 px-1">250-299</td><td>2</td><td>4</td><td>6</td></tr>
-              <tr className="bg-orange-50"><td className="py-0.5 px-1">300-349</td><td>3</td><td>5</td><td>8</td></tr>
-              <tr className="bg-red-50"><td className="py-0.5 px-1">&gt;350</td><td>4</td><td>7</td><td>10</td></tr>
+              <tr className="bg-orange-50 dark:bg-orange-900/20"><td className="py-0.5 px-1">300-349</td><td>3</td><td>5</td><td>8</td></tr>
+              <tr className="bg-red-50 dark:bg-red-900/20"><td className="py-0.5 px-1">&gt;350</td><td>4</td><td>7</td><td>10</td></tr>
             </tbody>
           </table>
-          <div className="text-gray-500 mt-1.5 italic">* יחידות Regular insulin SC. Low = רגיש/רזה/קשיש, High = שמן/סטרואידים</div>
+          <div className="text-gray-500 dark:text-gray-400 mt-1.5 italic">* יחידות Regular insulin SC. Low = רגיש/רזה/קשיש, High = שמן/סטרואידים</div>
         </div>
       </div>
 
-      <div className="border border-gray-200 rounded-xl p-3 space-y-2">
-        <div className="font-bold text-sm text-green-800">💉 חישוב Basal-Bolus</div>
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-3 space-y-2">
+        <div className="font-bold text-sm text-green-800 dark:text-green-300">💉 חישוב Basal-Bolus</div>
         <div className="grid grid-cols-2 gap-2">
-          <label className="text-xs text-gray-600">
+          <label className="text-xs text-gray-600 dark:text-gray-400">
             משקל (kg)
             <input type="number" value={weight} onChange={(e) => setWeight(e.target.value)}
-              className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 rounded-lg" placeholder="70" />
+              className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" placeholder="70" />
           </label>
-          <label className="text-xs text-gray-600">
+          <label className="text-xs text-gray-600 dark:text-gray-400">
             רגישות לאינסולין
             <select value={sensitivity} onChange={(e) => setSensitivity(e.target.value as "low" | "medium" | "high")}
-              className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 rounded-lg bg-white">
+              className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
               <option value="low">נמוכה (0.2U/kg) — קשיש/רזה/CKD</option>
               <option value="medium">בינונית (0.3U/kg)</option>
               <option value="high">גבוהה (0.4U/kg) — השמנה/סטרואידים</option>
@@ -438,23 +438,23 @@ export function InsulinReference() {
           </label>
         </div>
         {basalDose && (
-          <div className="bg-blue-50 p-3 rounded-xl text-sm space-y-1">
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl text-sm space-y-1">
             <div><span className="font-semibold">TDD:</span> ~{basalDose.tdd}U/day</div>
             <div><span className="font-semibold">Basal (50%):</span> Glargine {basalDose.basal}U SC HS</div>
             <div><span className="font-semibold">Bolus (50%÷3):</span> Lispro ~{basalDose.bolus}U SC AC x3</div>
-            <div className="text-xs text-gray-500 mt-1">+ Correction factor ≈ 1700 ÷ TDD = {Math.round(1700 / basalDose.tdd)} mg/dL per unit</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">+ Correction factor ≈ 1700 ÷ TDD = {Math.round(1700 / basalDose.tdd)} mg/dL per unit</div>
           </div>
         )}
       </div>
 
-      <div className="border border-gray-200 rounded-xl p-3 space-y-2">
-        <div className="font-bold text-sm text-red-800">⚠️ כללי זהב</div>
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-3 space-y-2">
+        <div className="font-bold text-sm text-red-800 dark:text-red-300">⚠️ כללי זהב</div>
         <div className="text-xs space-y-1.5">
-          <div className="bg-red-50 p-2 rounded-lg">🔴 <span className="font-semibold">אף פעם לא עוצרים basal insulin!</span> אפילו NPO — תן 50-80% מהמינון</div>
-          <div className="bg-orange-50 p-2 rounded-lg">🟠 <span className="font-semibold">Type 1:</span> חייב basal — אחרת DKA תוך שעות</div>
-          <div className="bg-yellow-50 p-2 rounded-lg">🟡 <span className="font-semibold">Sliding scale alone:</span> לא מספיק! תמיד שלב basal</div>
-          <div className="bg-blue-50 p-2 rounded-lg">🔵 <span className="font-semibold">יעד:</span> 140-180 mg/dL (קשישים: עד 200 מותר)</div>
-          <div className="bg-purple-50 p-2 rounded-lg">🟣 <span className="font-semibold">Hold metformin:</span> CrCl&lt;30, contrast, surgery, sepsis</div>
+          <div className="bg-red-50 dark:bg-red-900/20 p-2 rounded-lg">🔴 <span className="font-semibold">אף פעם לא עוצרים basal insulin!</span> אפילו NPO — תן 50-80% מהמינון</div>
+          <div className="bg-orange-50 dark:bg-orange-900/20 p-2 rounded-lg">🟠 <span className="font-semibold">Type 1:</span> חייב basal — אחרת DKA תוך שעות</div>
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-lg">🟡 <span className="font-semibold">Sliding scale alone:</span> לא מספיק! תמיד שלב basal</div>
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded-lg">🔵 <span className="font-semibold">יעד:</span> 140-180 mg/dL (קשישים: עד 200 מותר)</div>
+          <div className="bg-purple-50 dark:bg-purple-900/20 p-2 rounded-lg">🟣 <span className="font-semibold">Hold metformin:</span> CrCl&lt;30, contrast, surgery, sepsis</div>
         </div>
       </div>
     </div>
@@ -480,7 +480,7 @@ export function DeliriumReference() {
 
       {/* CAM Tool */}
       <div className="border border-gray-200 dark:border-[#1a1a2e] rounded-xl p-3 space-y-2">
-        <div className="font-bold text-sm text-purple-800 dark:text-purple-300">CAM — Confusion Assessment Method</div>
+        <div className="font-bold text-sm text-purple-800 dark:text-purple-300 dark:text-purple-300">CAM — Confusion Assessment Method</div>
         <div className="space-y-2">
           {[
             { val: cam1, set: setCam1, num: "1", label: "שינוי חריף / תנודתי", desc: "האם מצב ההכרה השתנה בצורה חריפה? האם משתנה במהלך היום?" },
@@ -493,13 +493,13 @@ export function DeliriumReference() {
                 className="h-4 w-4 mt-0.5 rounded accent-purple-600 shrink-0" />
               <div>
                 <span className="font-medium">{item.num}. {item.label}</span>
-                <div className="text-xs text-gray-500 mt-0.5">{item.desc}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{item.desc}</div>
               </div>
             </label>
           ))}
         </div>
         <div className={`text-center p-3 rounded-xl font-bold ${
-          camPositive ? "bg-red-100 text-red-800 dark:bg-red-950/30 dark:text-red-300" : "bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-300"
+          camPositive ? "bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-950/30 dark:text-red-300" : "bg-green-100 text-green-800 dark:text-green-300 dark:bg-green-950/30 dark:text-green-300"
         }`}>
           CAM {camPositive ? "חיובי ✓ — דליריום" : "שלילי"}
           <div className="text-xs font-normal mt-1">
@@ -512,7 +512,7 @@ export function DeliriumReference() {
 
       {/* Prevention — HELP protocol */}
       <div className="border border-gray-200 dark:border-[#1a1a2e] rounded-xl p-3 space-y-2">
-        <div className="font-bold text-sm text-blue-800 dark:text-blue-300">מניעה — פרוטוקול HELP</div>
+        <div className="font-bold text-sm text-blue-800 dark:text-blue-300 dark:text-blue-300">מניעה — פרוטוקול HELP</div>
         <div className="text-xs space-y-1.5">
           <div className="bg-blue-50 dark:bg-blue-950/20 p-2 rounded-lg">🕐 <span className="font-semibold">אוריינטציה:</span> שעון, לוח שנה, תמונות משפחה, חלון. הסבר לחולה איפה הוא ומה קורה.</div>
           <div className="bg-blue-50 dark:bg-blue-950/20 p-2 rounded-lg">😴 <span className="font-semibold">שינה:</span> Melatonin 3-5mg HS. ❌ אוזניות/מסכת עיניים. הפחתת רעש/אור בלילה.</div>
@@ -540,7 +540,7 @@ export function DeliriumReference() {
 
       {/* Management */}
       <div className="border border-gray-200 dark:border-[#1a1a2e] rounded-xl p-3 space-y-2">
-        <div className="font-bold text-sm text-red-800 dark:text-red-300">טיפול באגיטציה</div>
+        <div className="font-bold text-sm text-red-800 dark:text-red-300 dark:text-red-300">טיפול באגיטציה</div>
         <div className="text-xs space-y-1.5">
           <div className="bg-green-50 dark:bg-green-950/20 p-2 rounded-lg">🟢 <span className="font-semibold">קו ראשון:</span> De-escalation מילולי. הסבר רגוע. נוכחות משפחה. הורד restraints!</div>
           <div className="bg-yellow-50 dark:bg-yellow-950/20 p-2 rounded-lg">🟡 <span className="font-semibold">קו שני:</span> Haloperidol 0.5-1mg PO/IV (❌ לא בפרקינסון/DLB!)</div>
@@ -569,9 +569,9 @@ export function FallsReference() {
   const score = (history ? 25 : 0) + (secondaryDx ? 15 : 0) + (ambulatoryAid ? 15 : 0)
     + (ivLine ? 20 : 0) + gait + mental;
 
-  const risk = score >= 45 ? { label: "סיכון גבוה", color: "bg-red-100 text-red-800 dark:bg-red-950/30 dark:text-red-300" }
+  const risk = score >= 45 ? { label: "סיכון גבוה", color: "bg-red-100 text-red-800 dark:text-red-300 dark:bg-red-950/30 dark:text-red-300" }
     : score >= 25 ? { label: "סיכון בינוני", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-950/30 dark:text-yellow-300" }
-    : { label: "סיכון נמוך", color: "bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-300" };
+    : { label: "סיכון נמוך", color: "bg-green-100 text-green-800 dark:text-green-300 dark:bg-green-950/30 dark:text-green-300" };
 
   return (
     <div className="space-y-4">
@@ -597,7 +597,7 @@ export function FallsReference() {
             <input type="checkbox" checked={ivLine} onChange={() => setIvLine(!ivLine)} className="h-4 w-4 rounded accent-orange-600" />
             עירוי IV / Heparin Lock — 20
           </label>
-          <label className="text-xs text-gray-600 dark:text-gray-400">
+          <label className="text-xs text-gray-600 dark:text-gray-400 dark:text-gray-400">
             הליכה
             <select value={gait} onChange={(e) => setGait(Number(e.target.value) as 0|10|20)}
               className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 dark:border-[#1a1a2e] rounded-lg bg-white dark:bg-[#111]">
@@ -606,7 +606,7 @@ export function FallsReference() {
               <option value={20}>מוגבלת / אחיזה ברהיטים — 20</option>
             </select>
           </label>
-          <label className="text-xs text-gray-600 dark:text-gray-400">
+          <label className="text-xs text-gray-600 dark:text-gray-400 dark:text-gray-400">
             מצב מנטלי
             <select value={mental} onChange={(e) => setMental(Number(e.target.value) as 0|15)}
               className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 dark:border-[#1a1a2e] rounded-lg bg-white dark:bg-[#111]">
@@ -627,7 +627,7 @@ export function FallsReference() {
 
       {/* Prevention checklist */}
       <div className="border border-gray-200 dark:border-[#1a1a2e] rounded-xl p-3 space-y-2">
-        <div className="font-bold text-sm text-blue-800 dark:text-blue-300">מניעה — צ׳קליסט</div>
+        <div className="font-bold text-sm text-blue-800 dark:text-blue-300 dark:text-blue-300">מניעה — צ׳קליסט</div>
         <div className="text-xs space-y-1.5">
           <div className="bg-blue-50 dark:bg-blue-950/20 p-2 rounded-lg">🛏️ <span className="font-semibold">סביבה:</span> מיטה נמוכה, מעקות למעלה, אור לילה, רצפה יבשה, פעמון בהישג יד</div>
           <div className="bg-blue-50 dark:bg-blue-950/20 p-2 rounded-lg">👟 <span className="font-semibold">נעליים:</span> סגורות, נגד החלקה. ❌ לא גרביים בלבד!</div>
@@ -640,7 +640,7 @@ export function FallsReference() {
 
       {/* Post-fall protocol */}
       <div className="border border-gray-200 dark:border-[#1a1a2e] rounded-xl p-3 space-y-2">
-        <div className="font-bold text-sm text-red-800 dark:text-red-300">אחרי נפילה — פרוטוקול</div>
+        <div className="font-bold text-sm text-red-800 dark:text-red-300 dark:text-red-300">אחרי נפילה — פרוטוקול</div>
         <div className="text-xs space-y-1.5">
           <div className="bg-red-50 dark:bg-red-950/20 p-2 rounded-lg">1. בדיקה גופנית + vital signs + GCS</div>
           <div className="bg-red-50 dark:bg-red-950/20 p-2 rounded-lg">2. על אנטיקואגולציה? → CT ראש (SDH!)</div>
@@ -699,12 +699,12 @@ export function BeersReference() {
           <div key={i} className="border border-red-200 dark:border-red-900/30 rounded-xl p-3 space-y-1.5">
             <div className="flex items-baseline justify-between gap-2">
               <div>
-                <span className="font-bold text-sm text-red-800 dark:text-red-300">{b.drug}</span>
-                <span className="text-xs text-gray-500 mr-2">{b.drugHe}</span>
+                <span className="font-bold text-sm text-red-800 dark:text-red-300 dark:text-red-300">{b.drug}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 mr-2">{b.drugHe}</span>
               </div>
               <span className="text-[10px] bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-300 px-1.5 py-0.5 rounded-full shrink-0">PIM</span>
             </div>
-            <div className="text-xs text-gray-500" dir="ltr">{b.examples}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400" dir="ltr">{b.examples}</div>
             <div className="text-xs text-red-700 dark:text-red-400">⚠ {b.reason}</div>
             <div className="text-xs text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/20 p-1.5 rounded-lg">✅ חלופה: {b.alt}</div>
           </div>
@@ -725,7 +725,7 @@ export function PressureInjuryReference() {
 
       {/* Staging */}
       <div className="border border-gray-200 dark:border-[#1a1a2e] rounded-xl p-3 space-y-2">
-        <div className="font-bold text-sm text-purple-800 dark:text-purple-300">דירוג (NPUAP)</div>
+        <div className="font-bold text-sm text-purple-800 dark:text-purple-300 dark:text-purple-300">דירוג (NPUAP)</div>
         <div className="text-xs space-y-1.5">
           <div className="bg-yellow-50 dark:bg-yellow-950/20 p-2 rounded-lg"><span className="font-bold">Stage 1:</span> אודם שלא נעלם בלחיצה (non-blanchable erythema). עור שלם.</div>
           <div className="bg-orange-50 dark:bg-orange-950/20 p-2 rounded-lg"><span className="font-bold">Stage 2:</span> אובדן עור חלקי — שלפוחית / שחיקה. דרמיס חשוף. אדום/ורוד.</div>
@@ -738,7 +738,7 @@ export function PressureInjuryReference() {
 
       {/* Prevention */}
       <div className="border border-gray-200 dark:border-[#1a1a2e] rounded-xl p-3 space-y-2">
-        <div className="font-bold text-sm text-blue-800 dark:text-blue-300">מניעה</div>
+        <div className="font-bold text-sm text-blue-800 dark:text-blue-300 dark:text-blue-300">מניעה</div>
         <div className="text-xs space-y-1.5">
           <div className="bg-blue-50 dark:bg-blue-950/20 p-2 rounded-lg">🔄 <span className="font-semibold">הפיכות:</span> כל 2 שעות. תיעוד!</div>
           <div className="bg-blue-50 dark:bg-blue-950/20 p-2 rounded-lg">🛏️ <span className="font-semibold">מזרן:</span> מזרן הפחתת לחץ (alternating pressure / foam)</div>
@@ -750,7 +750,7 @@ export function PressureInjuryReference() {
 
       {/* Treatment by stage */}
       <div className="border border-gray-200 dark:border-[#1a1a2e] rounded-xl p-3 space-y-2">
-        <div className="font-bold text-sm text-green-800 dark:text-green-300">טיפול לפי שלב</div>
+        <div className="font-bold text-sm text-green-800 dark:text-green-300 dark:text-green-300">טיפול לפי שלב</div>
         <div className="text-xs space-y-1.5">
           <div className="bg-green-50 dark:bg-green-950/20 p-2 rounded-lg"><span className="font-bold">Stage 1-2:</span> הסר לחץ. חבישה לחה (hydrocolloid / foam). ❌ אל תעשה debridement</div>
           <div className="bg-yellow-50 dark:bg-yellow-950/20 p-2 rounded-lg"><span className="font-bold">Stage 3-4:</span> ניקוי + debridement. חבישה לחה. שקול VAC therapy. ייעוץ פלסטיקה</div>
@@ -790,7 +790,7 @@ export function DischargeChecklist() {
     <div className="space-y-3">
       <h3 className="font-bold text-sm">🏥 צ׳קליסט שחרור — גריאטרי</h3>
       <div className={`text-center text-xs font-medium px-3 py-2 rounded-xl ${
-        doneCount === ITEMS.length ? "bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-300" :
+        doneCount === ITEMS.length ? "bg-green-100 text-green-800 dark:text-green-300 dark:bg-green-950/30 dark:text-green-300" :
         doneCount > 0 ? "bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-300" :
         "bg-gray-100 text-gray-500 dark:bg-[#111] dark:text-gray-400"
       }`}>
@@ -812,7 +812,7 @@ export function DischargeChecklist() {
               onChange={() => toggle(item.key)}
               className="h-4 w-4 mt-0.5 rounded accent-green-600 shrink-0"
             />
-            <div className={`text-xs ${checks[item.key] ? "text-green-800 dark:text-green-300" : "text-gray-700 dark:text-gray-300"}`}>
+            <div className={`text-xs ${checks[item.key] ? "text-green-800 dark:text-green-300 dark:text-green-300" : "text-gray-700 dark:text-gray-300"}`}>
               <span className="mr-1">{item.icon}</span> {item.text}
             </div>
           </label>
@@ -929,7 +929,7 @@ export function OrthoGeriatricAdmission() {
 
       <div className={`text-center text-xs font-medium px-3 py-2 rounded-xl ${
         done === total
-          ? "bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-300"
+          ? "bg-green-100 text-green-800 dark:text-green-300 dark:bg-green-950/30 dark:text-green-300"
           : done > 0
           ? "bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-300"
           : "bg-gray-100 text-gray-500 dark:bg-[#111] dark:text-gray-400"
@@ -956,7 +956,7 @@ export function OrthoGeriatricAdmission() {
                 className="h-4 w-4 mt-0.5 rounded accent-green-600 shrink-0"
               />
               <div className={`text-xs ${
-                checks[item.key] ? "text-green-800 dark:text-green-300" : "text-gray-700 dark:text-gray-300"
+                checks[item.key] ? "text-green-800 dark:text-green-300 dark:text-green-300" : "text-gray-700 dark:text-gray-300"
               }`}>
                 <span className="mr-1">{item.icon}</span> {item.text}
                 {item.sub && <div className="text-[10px] text-slate-400 mt-0.5">{item.sub}</div>}
@@ -1106,7 +1106,7 @@ export function OsteoporosisProtocol() {
         </div>
 
         <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-2.5 text-xs">
-          <div className="font-bold text-green-800 dark:text-green-300">סידן:</div>
+          <div className="font-bold text-green-800 dark:text-green-300 dark:text-green-300">סידן:</div>
           <div className="text-slate-700 dark:text-slate-300">
             Calcium Carbonate 600 מ"ג/יום + 600 מ"ג מהדיאטה (חלב, טחינה). ייעוץ דיאטנית במידת הצורך.
           </div>
@@ -1147,7 +1147,7 @@ export function OsteoporosisProtocol() {
         <div className="font-bold text-sm text-purple-700 dark:text-purple-300">2. טיפול מכוון לאוסטיאופורוזיס</div>
 
         <div className="bg-purple-50 dark:bg-purple-950/20 rounded-lg p-2.5 text-xs space-y-1.5">
-          <div className="font-bold text-purple-800 dark:text-purple-300">שבר צוואר ירך:</div>
+          <div className="font-bold text-purple-800 dark:text-purple-300 dark:text-purple-300">שבר צוואר ירך:</div>
           <div className="text-slate-700 dark:text-slate-300 space-y-1">
             <div>• <span className="font-semibold">קו ראשון:</span> Zolendronic Acid (<span className="font-semibold">Aclasta</span>)</div>
             <div>• <span className="font-semibold">קו שני:</span> Denosumab (<span className="font-semibold">Prolia</span>)</div>
@@ -1168,6 +1168,150 @@ export function OsteoporosisProtocol() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// UNIFIED ELECTROLYTES HUB — all electrolyte protocols in one place
+// ─────────────────────────────────────────────────────────
+
+import { HyponatremiaProtocol, HyperkalemiaProtocol, HypercalcemiaProtocol, HypernatremiaProtocol, HypermagnesemiaProtocol } from "./OnCallProtocols";
+
+const LYTE_TABS = [
+  { key: "k",   icon: "🔋", label: "K+" },
+  { key: "na",  icon: "🧂", label: "Na" },
+  { key: "mg",  icon: "🧲", label: "Mg" },
+  { key: "ca",  icon: "🦴", label: "Ca" },
+  { key: "po4", icon: "⚡", label: "PO4" },
+];
+
+function KSection() {
+  return (
+    <div className="space-y-3">
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-3 space-y-2">
+        <div className="font-bold text-sm text-purple-800 dark:text-purple-300">היפוקלמיה — תיקון</div>
+        <div className="text-xs space-y-1.5">
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-lg"><span className="font-semibold">K+ 3.0–3.4:</span> KCl 40mEq PO x2-3/d</div>
+          <div className="bg-orange-50 dark:bg-orange-900/20 p-2 rounded-lg"><span className="font-semibold">K+ 2.5–2.9:</span> KCl 10mEq/h IV + PO (max 20mEq/h peripheral)</div>
+          <div className="bg-red-50 dark:bg-red-900/20 p-2 rounded-lg"><span className="font-semibold">K+ &lt;2.5 / ECG∆:</span> KCl 20mEq/h IV + MgSO4 2g IV</div>
+          <div className="text-gray-600 dark:text-gray-400 italic">💡 תמיד בדוק Mg — היפומגנזמיה = K+ לא מתתקן!</div>
+        </div>
+      </div>
+      <HyperkalemiaProtocol />
+    </div>
+  );
+}
+
+function NaSection() {
+  return (
+    <div className="space-y-3">
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-3 space-y-2">
+        <div className="font-bold text-sm text-indigo-800 dark:text-indigo-300">היפונתרמיה — תיקון מהיר</div>
+        <div className="text-xs space-y-1.5">
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-lg"><span className="font-semibold">Na 125–130 א-סימפטומטי:</span> הגבלת נוזלים 1-1.5L/d + בדוק SIADH</div>
+          <div className="bg-orange-50 dark:bg-orange-900/20 p-2 rounded-lg"><span className="font-semibold">Na 120–125 סימפטומטי:</span> NaCl 0.9% IV + Furosemide אם SIADH</div>
+          <div className="bg-red-50 dark:bg-red-900/20 p-2 rounded-lg"><span className="font-semibold">Na &lt;120 / seizures:</span> NaCl 3% 100ml IV over 10min (x3 max)</div>
+          <div className="text-red-700 dark:text-red-400 font-semibold text-xs">🔴 מקסימום תיקון: 8 mEq/L / 24h! (סכנת ODS)</div>
+        </div>
+      </div>
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+        <div className="font-bold text-xs text-gray-600 dark:text-gray-400 uppercase mb-2">היפרנתרמיה</div>
+        <HypernatremiaProtocol />
+      </div>
+    </div>
+  );
+}
+
+function MgSection() {
+  return (
+    <div className="space-y-3">
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-3 space-y-2">
+        <div className="font-bold text-sm text-blue-800 dark:text-blue-300">היפומגנזמיה — תיקון</div>
+        <div className="text-xs space-y-1.5">
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-lg"><span className="font-semibold">Mg 1.2–1.6:</span> MgO 400mg PO x2/d</div>
+          <div className="bg-orange-50 dark:bg-orange-900/20 p-2 rounded-lg"><span className="font-semibold">Mg &lt;1.2 / סימפטומטי:</span> MgSO4 2g IV over 1h → 4-6g over 24h</div>
+          <div className="text-gray-600 dark:text-gray-400 italic">💡 חיוני לתיקון היפוקלמיה והיפוקלצמיה</div>
+        </div>
+      </div>
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+        <div className="font-bold text-xs text-gray-600 dark:text-gray-400 uppercase mb-2">היפרמגנסמיה</div>
+        <HypermagnesemiaProtocol />
+      </div>
+    </div>
+  );
+}
+
+function CaSection() {
+  return (
+    <div className="space-y-3">
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-3 space-y-2">
+        <div className="font-bold text-sm text-green-800 dark:text-green-300">היפוקלצמיה — תיקון</div>
+        <div className="text-xs space-y-1.5">
+          <div className="bg-gray-50 dark:bg-gray-800/60 p-2 rounded-lg"><span className="font-semibold">תיקון לאלבומין:</span> Ca_corrected = Ca + 0.8 × (4.0 − Albumin)</div>
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-lg"><span className="font-semibold">קל:</span> CaCO3 500mg PO x3/d + Vitamin D</div>
+          <div className="bg-red-50 dark:bg-red-900/20 p-2 rounded-lg"><span className="font-semibold">חמור / סימפטומטי:</span> Ca Gluconate 10% 10-20ml IV over 10min → gtt</div>
+          <div className="text-gray-600 dark:text-gray-400 italic">💡 אם גם היפומגנזמיה — תקן Mg קודם!</div>
+        </div>
+      </div>
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+        <div className="font-bold text-xs text-gray-600 dark:text-gray-400 uppercase mb-2">היפרקלצמיה</div>
+        <HypercalcemiaProtocol />
+      </div>
+    </div>
+  );
+}
+
+function PO4Section() {
+  return (
+    <div className="space-y-3">
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-3 space-y-2">
+        <div className="font-bold text-sm text-amber-800 dark:text-amber-300">היפופוספטמיה — תיקון</div>
+        <div className="text-xs space-y-1.5">
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-lg"><span className="font-semibold">PO4 1.5–2.5:</span> Phospho-Soda 5ml PO x2-3/d</div>
+          <div className="bg-red-50 dark:bg-red-900/20 p-2 rounded-lg"><span className="font-semibold">PO4 &lt;1.5:</span> KPhos/NaPhos 15-30mmol IV over 6h</div>
+          <div className="text-gray-600 dark:text-gray-400 italic">💡 שכיח ב-refeeding, DKA, ספסיס. עלול לגרום חולשת שרירים ואי"ן נשימתית</div>
+        </div>
+      </div>
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-3 space-y-2">
+        <div className="font-bold text-sm text-amber-800 dark:text-amber-300">היפרפוספטמיה</div>
+        <div className="text-xs space-y-1.5">
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-lg"><span className="font-semibold">גורמים:</span> AKI/CKD, Rhabdomyolysis, Hypoparathyroidism</div>
+          <div className="bg-slate-50 dark:bg-slate-800/60 p-2 rounded-lg"><span className="font-semibold">טיפול:</span> Phosphate binders (Calcium carbonate AC), תיקון AKI, דיאטה</div>
+          <div className="text-gray-600 dark:text-gray-400 italic">💡 Hyperphosphatemia + Hypocalcemia = AKI עד הוכחת אחרת</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function UnifiedElectrolytesHub() {
+  const [activeTab, setActiveTab] = useState<string>("k");
+  return (
+    <div className="space-y-3" dir="rtl">
+      {/* Tab bar */}
+      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800/60 rounded-xl p-1">
+        {LYTE_TABS.map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+              activeTab === tab.key
+                ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-300 shadow-sm"
+                : "text-slate-500 dark:text-slate-400"
+            }`}
+          >
+            <div>{tab.icon}</div>
+            <div className="text-[10px] mt-0.5">{tab.label}</div>
+          </button>
+        ))}
+      </div>
+      {/* Content */}
+      {activeTab === "k"   && <KSection />}
+      {activeTab === "na"  && <NaSection />}
+      {activeTab === "mg"  && <MgSection />}
+      {activeTab === "ca"  && <CaSection />}
+      {activeTab === "po4" && <PO4Section />}
     </div>
   );
 }
