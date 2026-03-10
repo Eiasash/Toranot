@@ -26,6 +26,10 @@ export const UPSTREAM_TIMEOUT_LONG_MS = 23_000; // for file/vision requests — 
 // so local dev without Supabase continues to work.
 
 export async function checkAuth(req: Request): Promise<Response | null> {
+  // ── Fast path: API_SECRET (works with or without Supabase) ─────────────
+  const secret = Netlify.env.get("API_SECRET");
+  if (secret && req.headers.get("x-api-secret") === secret) return null;
+
   const supabaseUrl  = Netlify.env.get("VITE_SUPABASE_URL");
   const supabaseAnon = Netlify.env.get("VITE_SUPABASE_ANON_KEY");
 
@@ -35,7 +39,7 @@ export async function checkAuth(req: Request): Promise<Response | null> {
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
 
     if (!token) {
-      return new Response("Unauthorized — Supabase session required", { status: 401 });
+      return new Response("Unauthorized — no session or API secret", { status: 401 });
     }
 
     try {
@@ -68,16 +72,13 @@ export async function checkAuth(req: Request): Promise<Response | null> {
     }
   }
 
-  // ── Path 2: Legacy shared secret fallback (local dev / non-Supabase) ──
-  const secret = Netlify.env.get("API_SECRET");
+  // ── Path 2: No Supabase, no API_SECRET matched above ──
   if (!secret) {
     console.error("[auth] Neither VITE_SUPABASE_URL nor API_SECRET configured");
     return new Response("Service misconfigured", { status: 503 });
   }
-  if (req.headers.get("x-api-secret") !== secret) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-  return null;
+  // API_SECRET exists but wasn't matched (wrong value sent by client)
+  return new Response("Unauthorized", { status: 401 });
 }
 
 

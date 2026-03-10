@@ -78,22 +78,26 @@ async function getUserId(): Promise<string | null> {
 }
 
 /**
- * Returns Authorization headers carrying the current Supabase JWT.
- * Use for all proxy calls instead of the old x-api-secret / VITE_API_SECRET.
- * Returns null if user has no active session (not logged in).
+ * Returns auth headers for proxy calls.
+ * Priority: Supabase JWT > VITE_API_SECRET shared secret > null.
  */
 export async function getProxyAuthHeaders(): Promise<Record<string, string> | null> {
-  if (!supabase) return null;
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.access_token) return null;
-  return { "Authorization": `Bearer ${session.access_token}` };
+  if (supabase) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) return { "Authorization": `Bearer ${session.access_token}` };
+  }
+  // Fallback: shared secret (set as VITE_API_SECRET in Netlify env vars)
+  const apiSecret = import.meta.env.VITE_API_SECRET as string | undefined;
+  if (apiSecret) return { "x-api-secret": apiSecret };
+  return null;
 }
 
 /**
- * Async proxy availability check — replaces !!import.meta.env.VITE_API_SECRET.
- * Returns true when user is logged in (has an active Supabase session).
+ * Async proxy availability check.
+ * Returns true when user is logged in OR a shared API secret is configured.
  */
 export async function isProxyAvailableAsync(): Promise<boolean> {
+  if (import.meta.env.VITE_API_SECRET) return true;
   if (!supabase) return false;
   const { data: { session } } = await supabase.auth.getSession();
   return !!session?.access_token;
