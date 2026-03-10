@@ -901,8 +901,8 @@ const RULES: Rule[] = [
     group: "aspiration_risk",
     triggerField: "all",
     tasks: [
-      { text: "ראש מיטה 30–45° בזמן האכלה ו-30 דקות לאחריה — מניעת אספירציה", urgency: "urgent", category: "procedure" },
-      { text: "Swallowing screen לפני כל פומי (מים קודם, זהירות עם טקסטורה)", urgency: "urgent", category: "procedure" },
+      { text: "ראש מיטה 30–45° בזמן האכלה ו-30 דקות לאחריה — מניעת אספירציה", urgency: "routine", category: "procedure" },
+      { text: "Swallowing screen לפני כל פומי (מים קודם, זהירות עם טקסטורה)", urgency: "routine", category: "procedure" },
       { text: "IV access פתוח / NG tube אם NPO ממושך — בדוק מצב תזונתי", urgency: "routine", category: "procedure" },
     ],
   },
@@ -914,7 +914,7 @@ const RULES: Rule[] = [
     group: "pressure_ulcer",
     triggerField: "all",
     tasks: [
-      { text: "החלפת תנוחה q2h — תיעוד בגיליון סיעודי (מניעת פצע לחץ)", urgency: "urgent", category: "procedure" },
+      { text: "החלפת תנוחה q2h — תיעוד בגיליון סיעודי (מניעת פצע לחץ)", urgency: "routine", category: "procedure" },
       { text: "בדיקת עקבים + עצמות בולטות בכל משמרת", urgency: "routine", category: "procedure" },
       { text: "מזרן אנטי-דקוביטוס — בקש אם אין", urgency: "routine", category: "procedure" },
     ],
