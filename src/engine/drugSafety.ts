@@ -662,3 +662,187 @@ export function extractAntibioticsFromPlan(planText: string): string[] {
   }
   return found;
 }
+
+// ════════════════════════════════════════════════════════════
+// 5. ALLERGY CROSS-CHECK
+// ════════════════════════════════════════════════════════════
+
+export interface AllergyWarning {
+  allergy: string;        // what the patient is allergic to
+  drug: string;           // drug found in tasks/meds
+  severity: "critical" | "major";
+  risk: string;           // Hebrew description
+}
+
+/**
+ * Allergy → drug family mapping.
+ * If a patient reports allergy to the key, ALL drugs in the family are flagged.
+ * Cross-reactivity (e.g., penicillin → cephalosporin) is flagged as "major" not "critical".
+ */
+const ALLERGY_FAMILIES: Array<{
+  allergyPattern: RegExp;
+  /** Drug patterns from DRUG_PATTERNS keys or regexes that match task/med text */
+  directMatches: RegExp[];
+  /** Cross-reactive drug classes (lower severity) */
+  crossReactive?: RegExp[];
+  familyName: string;
+}> = [
+  {
+    allergyPattern: /penicillin|פניצילין|pcn|amoxicillin|אמוקסיצילין|ampicillin|אמפיצילין/i,
+    familyName: "Penicillin",
+    directMatches: [
+      /amoxicillin|אמוקסיצילין|augmentin|אוגמנטין|amoxiclav/i,
+      /ampicillin|אמפיצילין|unasyn/i,
+      /piperacillin|פיפרצילין|tazocin|tazorex|pip[\s/-]*tazo/i,
+      /penicillin|פניצילין/i,
+    ],
+    crossReactive: [
+      /ceftriaxone|rocephin|צפטריאקסון/i,
+      /cefazolin|cefamezin|צפזולין/i,
+      /cephalexin|ceforal|צפלקסין/i,
+      /cefuroxime|zinacef|צפורוקסים/i,
+      /cefepime|צפפים/i,
+      /ceftazidime|fortum|צפטזידים/i,
+    ],
+  },
+  {
+    allergyPattern: /cephalosporin|צפלוספורין|cefazolin|ceftriaxone|cephalexin/i,
+    familyName: "Cephalosporin",
+    directMatches: [
+      /ceftriaxone|rocephin|צפטריאקסון/i,
+      /cefazolin|cefamezin|צפזולין/i,
+      /cephalexin|ceforal|צפלקסין/i,
+      /cefuroxime|zinacef|צפורוקסים/i,
+      /cefepime|צפפים/i,
+      /ceftazidime|fortum|צפטזידים/i,
+      /ceftazidime[\s/-]*avibactam|zavicefta/i,
+    ],
+    crossReactive: [
+      /amoxicillin|אמוקסיצילין|augmentin|אוגמנטין/i,
+      /ampicillin|אמפיצילין|unasyn/i,
+      /piperacillin|tazocin|pip[\s/-]*tazo/i,
+    ],
+  },
+  {
+    allergyPattern: /sulfa|סולפא|sulfon|sulfonamide|bactrim|באקטרים|septra/i,
+    familyName: "Sulfonamide",
+    directMatches: [
+      /trimethoprim|TMP|bactrim|באקטרים|septra|sulfamethoxazole/i,
+    ],
+  },
+  {
+    allergyPattern: /fluoroquinolone|quinolone|קווינולון|cipro|ציפרו|levofloxacin/i,
+    familyName: "Fluoroquinolone",
+    directMatches: [
+      /ciprofloxacin|cipro(?!lex)|ציפרופלוקסצין/i,
+      /levofloxacin|tavanic|לבופלוקסצין/i,
+      /moxifloxacin|avelox/i,
+    ],
+  },
+  {
+    allergyPattern: /carbapenem|קרבפנם|meropenem|imipenem|ertapenem/i,
+    familyName: "Carbapenem",
+    directMatches: [
+      /meropenem|meronem/i,
+      /ertapenem|invanz/i,
+      /imipenem/i,
+    ],
+  },
+  {
+    allergyPattern: /vancomycin|ונקומיצין/i,
+    familyName: "Vancomycin",
+    directMatches: [/vancomycin|ונקומיצין/i],
+  },
+  {
+    allergyPattern: /metronidazole|מטרונידזול|flagyl|פלאגיל/i,
+    familyName: "Metronidazole",
+    directMatches: [/metronidazole|flagyl|פלאגיל|מטרונידזול/i],
+  },
+  {
+    allergyPattern: /codeine|קודאין|morphine|מורפין|opioid|אופיואיד/i,
+    familyName: "Opioid",
+    directMatches: [
+      /morphine|מורפין/i,
+      /codeine|קודאין/i,
+      /oxycodone|אוקסיקודון/i,
+      /fentanyl|פנטניל/i,
+      /tramadol|טרמדול|tramadex/i,
+    ],
+  },
+  {
+    allergyPattern: /nsaid|ibuprofen|diclofenac|naproxen|aspirin/i,
+    familyName: "NSAID",
+    directMatches: [
+      /ibuprofen|איבופרופן|advil|nurofen/i,
+      /diclofenac|דיקלופנק|voltaren/i,
+      /naproxen|נפרוקסן/i,
+      /aspirin|אספירין|cardioaspirin/i,
+    ],
+  },
+];
+
+/**
+ * Check if any drugs in patient's tasks or meds notes match their known allergies.
+ */
+export function checkAllergyConflicts(patient: PatientEntry): AllergyWarning[] {
+  const allergies = (patient as PatientEntry & { allergies?: string[] }).allergies;
+  if (!allergies || allergies.length === 0) return [];
+
+  // Collect all drug text from tasks, generated tasks, notes, and planNotes
+  const allText = [
+    ...patient.tasks.map(t => t.text),
+    ...patient.generatedTasks.map(t => t.text),
+    ...(patient.notes ?? []),
+    ...(patient.planNotes ?? []),
+    ...(patient.status ?? []),
+  ].join(" ");
+
+  if (!allText.trim()) return [];
+
+  const warnings: AllergyWarning[] = [];
+  const seen = new Set<string>();
+
+  for (const allergy of allergies) {
+    for (const family of ALLERGY_FAMILIES) {
+      if (!family.allergyPattern.test(allergy)) continue;
+
+      // Direct matches — critical severity
+      for (const drugRx of family.directMatches) {
+        if (drugRx.test(allText)) {
+          const drugMatch = allText.match(drugRx);
+          const key = `${allergy}-${family.familyName}-direct`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            warnings.push({
+              allergy: allergy,
+              drug: drugMatch?.[0] ?? family.familyName,
+              severity: "critical",
+              risk: `⚠️ אלרגיה ל-${family.familyName}! נמצא ${drugMatch?.[0] ?? family.familyName} בתוכנית הטיפול`,
+            });
+          }
+        }
+      }
+
+      // Cross-reactive matches — major severity
+      if (family.crossReactive) {
+        for (const drugRx of family.crossReactive) {
+          if (drugRx.test(allText)) {
+            const drugMatch = allText.match(drugRx);
+            const key = `${allergy}-${family.familyName}-cross`;
+            if (!seen.has(key)) {
+              seen.add(key);
+              warnings.push({
+                allergy: allergy,
+                drug: drugMatch?.[0] ?? "cross-reactive",
+                severity: "major",
+                risk: `Cross-reactivity: אלרגיה ל-${family.familyName} ← ${drugMatch?.[0] ?? "related drug"} (1-2% cross-react)`,
+              });
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return warnings;
+}

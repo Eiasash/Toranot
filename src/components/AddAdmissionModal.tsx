@@ -216,8 +216,9 @@ The JSON must have this exact shape:
   "bed": number or null,
   "status": "" | "DNR" | "DNI" | "DNR/DNI",
   "meds": ["list of relevant chronic/home medications, max 8"],
+  "allergies": ["known drug allergies, exact names as written, empty array if none mentioned"],
   "morningPresentation": "Concise morning handover in English suitable for ward rounds. Format: [Name, Age] admitted [date if known] with [chief complaint]. PMH: [key comorbidities]. Presenting: [vitals/exam findings if available]. Workup: [key labs/imaging]. Assessment: [working diagnosis]. Plan: [key management steps]. Pending: [outstanding issues for morning team].",
-  "remarks": "Any other clinically relevant info not captured above (e.g. social, functional status, allergies)"
+  "remarks": "Any other clinically relevant info not captured above (e.g. social, functional status)"
 }`;
 
 interface ExtractedData {
@@ -228,6 +229,7 @@ interface ExtractedData {
   bed?: number | null;
   status?: "" | "DNR" | "DNI" | "DNR/DNI";
   meds?: string[];
+  allergies?: string[];
   morningPresentation?: string;
   remarks?: string;
 }
@@ -336,6 +338,7 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
   const [status, setStatus] = useState<"" | "DNR" | "DNI" | "DNR/DNI">("");
   const [remarks, setRemarks] = useState("");
   const [meds, setMeds] = useState<string[]>([]);
+  const [allergies, setAllergies] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [parsed, setParsed] = useState(false);
 
@@ -402,6 +405,12 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
       if (extracted.status) setStatus(extracted.status);
       if (safeMeds.length > 0) {
         setMeds(prev => Array.from(new Set([...prev, ...safeMeds])));
+      }
+      const safeAllergies = (extracted.allergies ?? []).filter(
+        (a): a is string => typeof a === "string" && a.trim().length > 0 && a.trim().length < 80,
+      ).slice(0, 10);
+      if (safeAllergies.length > 0) {
+        setAllergies(prev => Array.from(new Set([...prev, ...safeAllergies])));
       }
       if (extracted.remarks) {
         setRemarks(prev => prev ? `${prev}\n${extracted.remarks}` : extracted.remarks!);
@@ -472,6 +481,7 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
         ...(meds.length > 0 ? [`מדים: ${meds.join(", ")}`] : []),
       ],
       labs: [],
+      allergies: allergies.length > 0 ? allergies : [],
       scannedAt: new Date().toISOString(),
       confidence: 1,
       order: Date.now(),
@@ -832,6 +842,29 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
                 <option value="DNI">DNI</option>
                 <option value="DNR/DNI">DNR/DNI</option>
               </select>
+            </div>
+
+            <div>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                אלרגיות לתרופות <span className="text-red-400 font-bold">⚠</span>
+              </label>
+              <input
+                value={allergies.join(", ")}
+                onChange={(e) => setAllergies(e.target.value.split(",").map(s => s.trim()).filter(Boolean))}
+                placeholder="penicillin, sulfa, codeine..."
+                dir="auto"
+                className={inputCls}
+              />
+              {allergies.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {allergies.map((a) => (
+                    <span key={a} className="text-[10px] px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-700">
+                      {a}
+                      <button onClick={() => setAllergies(prev => prev.filter(x => x !== a))} className="mr-1 font-bold">×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div>

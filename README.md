@@ -6,6 +6,9 @@ Live: **[toranot.netlify.app](https://toranot.netlify.app)**
 
 ## Recent Changes
 
+- **feat(safety): allergy field + drug cross-check** — Added `allergies: string[]` to PatientEntry. Auto-extracted from admission letters. Drug safety engine now cross-checks allergies against prescribed drugs (penicillin family, cephalosporin cross-reactivity, sulfa, FQ, carbapenems, opioids, NSAIDs). Allergy badges shown in PatientCard, conflicts appear at top of DrugSafetyAlerts.
+- **feat(labs): critical value push notifications** — When entering labs with critical values (K+ >6.0, Hb <7.0, Cr >5.0, etc.), fires a browser/PWA notification immediately. Works with both inline lab entry and bulk lab entry.
+- **fix(resilience): per-feature error boundaries** — Scanner, AIClinicalReasoning, and AddAdmissionModal each wrapped in InlineErrorBoundary. A crash in any of these shows an inline error message instead of killing the entire app.
 - **fix(SEO/BP):** Added valid `robots.txt` and explicit `Content-Type: text/plain` header — SPA catch-all was serving `index.html` for `/robots.txt`, causing 31 Lighthouse errors and Best Practices score of 91.
 
 ---
@@ -21,7 +24,7 @@ src/
     patientsStore.ts    — Zustand store (source of truth, subscribeWithSelector middleware)
   engine/
     rules.ts            — geriatric task generation rules engine
-    drugSafety.ts       — Beers Criteria 2023 + drug interaction alerts
+    drugSafety.ts       — Beers Criteria 2023 + drug interaction alerts + allergy cross-check
     labDelta.ts         — KDIGO AKI / Hb delta alerting
     acuity.ts           — patient acuity scoring
     antibiotic/         — empiric antibiotic engine with SZMC DAG guidelines
@@ -31,8 +34,10 @@ src/
     parsePatientList.ts — WhatsApp/nurse-call text → PatientEntry[]
   utils/
     renal.ts            — Cockcroft-Gault with frailty creatinine floor (≥75yo)
+    labAlerts.ts        — critical lab value push notifications
   components/
     SimpleConfirm.tsx   — useSimpleConfirm + useSimpleToast (PWA-safe, replaces window.confirm/alert)
+    InlineErrorBoundary.tsx — per-feature error boundary for Scanner/AI/Admission
   cloudSync.ts          — Supabase cloud sync, handoff codes, shared shifts, JWT auth helpers
 netlify/functions/
   _utils.ts             — Supabase JWT verification (async checkAuth), rate limiting

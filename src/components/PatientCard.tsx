@@ -14,6 +14,7 @@ import { generateHints } from "../engine/hints";
 import { showUndoToast } from "./UndoToast";
 import { TaskTemplates } from "./TaskTemplates";
 import { NurseTemplates } from "./NurseTemplates";
+import { InlineErrorBoundary } from "./InlineErrorBoundary";
 // Lazy-loaded — pulled in only when the AI panel or mic button is first rendered
 const AIClinicalReasoning = lazy(() => import("./AIClinicalReasoning").then(m => ({ default: m.AIClinicalReasoning })));
 const VoiceButton = lazy(() => import("./VoiceInput").then(m => ({ default: m.VoiceButton })));
@@ -558,6 +559,21 @@ function PatientCardBase({ patient }: { patient: PatientEntry }) {
         </div>
       )}
 
+      {/* Allergies */}
+      {(patient.allergies ?? []).length > 0 && (
+        <div className="flex flex-wrap gap-1.5 items-center">
+          <span className="text-[10px] font-bold text-red-600 dark:text-red-400">אלרגיות:</span>
+          {(patient.allergies ?? []).map((a) => (
+            <span
+              key={a}
+              className="text-[10px] px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700 font-semibold"
+            >
+              ⚠ {a}
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* Status + tomorrow + manual notes */}
       {(patient.status.length > 0 ||
         (showTomorrow && patient.tomorrowNotes.length > 0) ||
@@ -933,9 +949,11 @@ function PatientCardBase({ patient }: { patient: PatientEntry }) {
         <NurseTemplates patient={patient} onClose={() => setShowNurseTemplates(false)} />
       )}
       {showAI && (
+        <InlineErrorBoundary label="ניתוח קליני AI" onDismiss={() => setShowAI(false)}>
         <Suspense fallback={<div className="p-4 text-center text-sm text-gray-500">טוען...</div>}>
           <AIClinicalReasoning patient={patient} onClose={() => setShowAI(false)} />
         </Suspense>
+        </InlineErrorBoundary>
       )}
     </div>
   );

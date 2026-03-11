@@ -83,6 +83,7 @@ export function normalizePatient(p: RawPatient): PatientEntry {
       : [],
     notes: Array.isArray(p.notes) ? p.notes : [],
     labs: Array.isArray(p.labs) ? p.labs : [],
+    allergies: Array.isArray(p.allergies) ? p.allergies : [],
     order: typeof p.order === "number" ? p.order : 0,
     ...(p.discharged ? { discharged: true } : {}),
     ...(p.isAdmission ? { isAdmission: true } : {}),
@@ -114,7 +115,7 @@ export type Action =
   | { type: "ADD_PHOTO"; patientId: string; photo: import("../types").PatientPhoto }
   | { type: "REMOVE_PHOTO"; patientId: string; photoId: string }
   | { type: "REORDER_PATIENT"; patientId: string; direction: "up" | "down" }
-  | { type: "EDIT_PATIENT"; patientId: string; name?: string; room?: string; section?: PatientSection; diagnosis?: string; discharged?: boolean }
+  | { type: "EDIT_PATIENT"; patientId: string; name?: string; room?: string; section?: PatientSection; diagnosis?: string; discharged?: boolean; allergies?: string[] }
   | { type: "REMOVE_PATIENT"; patientId: string }
   | { type: "ARCHIVE_SHIFT"; label: string }
   | { type: "RESTORE_SHIFT"; snapshotId: string }
@@ -486,6 +487,7 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
                 ...(action.section !== undefined && { section: action.section }),
                 ...(action.diagnosis !== undefined && { diagnosis: action.diagnosis }),
                 ...(action.discharged !== undefined && { discharged: action.discharged }),
+                ...(action.allergies !== undefined && { allergies: action.allergies }),
               }
             : p,
         ),

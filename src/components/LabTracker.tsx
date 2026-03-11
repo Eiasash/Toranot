@@ -3,6 +3,8 @@ import { usePatientsDispatch } from "../context/PatientsContext";
 import type { PatientEntry, LabEntry } from "../types";
 import { generateId } from "../utils/id";
 import { hapticWarning } from "../utils/haptics";
+import { checkCriticalLab } from "../utils/labAlerts";
+import { usePatientsStore } from "../store/patientsStore";
 
 const COMMON_LABS = ["Cr", "K+", "Na", "WBC", "Hb", "PLT", "CRP", "Glucose", "INR", "Lactate"] as const;
 
@@ -111,6 +113,9 @@ function InlineLabInput({
     dispatch({ type: "ADD_LAB", patientId, lab });
     const severity = getLabSeverity(label, v);
     if (severity === "critical" || severity === "warning") hapticWarning();
+    // Fire push notification for critical values
+    const patientName = usePatientsStore.getState().patients.find(p => p.id === patientId)?.name ?? null;
+    checkCriticalLab(label, v, patientName);
     onClose();
   };
 
@@ -295,6 +300,7 @@ export function AddLabForm({
     };
 
     dispatch({ type: "ADD_LAB", patientId: patient.id, lab });
+    checkCriticalLab(label.trim(), v, patient.name);
     setValue("");
     // Keep label for rapid entry of same lab
   };
@@ -316,6 +322,7 @@ export function AddLabForm({
       });
       const severity = getLabSeverity(l, v);
       if (severity === "critical" || severity === "warning") hapticWarning();
+      checkCriticalLab(l, v, patient.name);
     }
     setBulkText("");
     setBulkPreview([]);

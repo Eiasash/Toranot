@@ -87,6 +87,9 @@ export type PatientEntry = {
   // Photo attachments (base64 data URLs, stored in localStorage)
   photos?: PatientPhoto[];
 
+  // Known drug allergies (e.g., ["penicillin", "sulfa"])
+  allergies?: string[];
+
   // Display order within section (lower = higher on list)
   order?: number;
 };

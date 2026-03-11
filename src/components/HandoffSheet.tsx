@@ -7,6 +7,7 @@ import {
   checkDrugInteractions,
   checkRenalDoseWarnings,
   checkBeersCriteria,
+  checkAllergyConflicts,
 } from "../engine/drugSafety";
 import { calculateLabDeltas } from "../engine/labDelta";
 
@@ -107,7 +108,7 @@ function buildTextHandoff(patients: PatientEntry[], filteredPatients: PatientEnt
   const urgentDone = allTasks.filter((t) => t.done && t.urgency === "urgent").length;
   let totalSafetyAlerts = 0, patientsWithAlerts = 0;
   for (const p of filteredPatients) {
-    const count = checkDrugInteractions(p).length + checkRenalDoseWarnings(p).length + calculateLabDeltas(p).length + checkBeersCriteria(p).length;
+    const count = checkDrugInteractions(p).length + checkRenalDoseWarnings(p).length + calculateLabDeltas(p).length + checkBeersCriteria(p).length + checkAllergyConflicts(p).length;
     totalSafetyAlerts += count;
     if (count > 0) patientsWithAlerts++;
   }

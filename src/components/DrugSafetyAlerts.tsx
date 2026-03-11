@@ -4,9 +4,11 @@ import {
   checkDrugInteractions,
   checkRenalDoseWarnings,
   checkBeersCriteria,
+  checkAllergyConflicts,
   type DrugInteraction,
   type RenalWarning,
   type BeersCriteria,
+  type AllergyWarning,
 } from "../engine/drugSafety";
 import { calculateLabDeltas, type LabDelta } from "../engine/labDelta";
 
@@ -24,15 +26,17 @@ export const DrugSafetyAlerts = memo(function DrugSafetyAlerts({ patient }: { pa
   const renalWarnings = useMemo(() => checkRenalDoseWarnings(patient), [patient]);
   const labDeltas = useMemo(() => calculateLabDeltas(patient), [patient]);
   const beers = useMemo(() => checkBeersCriteria(patient), [patient]);
+  const allergyWarnings = useMemo(() => checkAllergyConflicts(patient), [patient]);
 
-  const totalAlerts = interactions.length + renalWarnings.length + labDeltas.length + beers.length;
+  const totalAlerts = interactions.length + renalWarnings.length + labDeltas.length + beers.length + allergyWarnings.length;
   if (totalAlerts === 0) return null;
 
   const hasCritical =
     interactions.some((i) => i.severity === "critical") ||
     renalWarnings.some((w) => w.severity === "critical") ||
     labDeltas.some((d) => d.severity === "critical") ||
-    beers.some((b) => b.severity === "avoid");
+    beers.some((b) => b.severity === "avoid") ||
+    allergyWarnings.some((a) => a.severity === "critical");
 
   return (
     <div>
@@ -53,6 +57,11 @@ export const DrugSafetyAlerts = memo(function DrugSafetyAlerts({ patient }: { pa
 
       {expanded && (
         <div className="mt-2 space-y-2">
+          {/* Allergy conflicts — show first, highest priority */}
+          {allergyWarnings.map((aw, i) => (
+            <AllergyCard key={`al-${i}`} warning={aw} />
+          ))}
+
           {/* Drug interactions */}
           {interactions.map((ix, i) => (
             <InteractionCard key={`ix-${i}`} interaction={ix} />
@@ -162,6 +171,22 @@ function BeersCard({ item }: { item: BeersCriteria }) {
       </div>
       <div className="text-gray-700 dark:text-gray-300">{item.concern}</div>
       <div className="text-purple-700 dark:text-purple-300 font-medium">{item.recommendation}</div>
+    </div>
+  );
+}
+
+function AllergyCard({ warning }: { warning: AllergyWarning }) {
+  const isCritical = warning.severity === "critical";
+  const bg = isCritical
+    ? "border-red-400 dark:border-red-600 bg-red-100 dark:bg-red-900/40"
+    : "border-orange-300 dark:border-orange-700 bg-orange-50/70 dark:bg-orange-900/30";
+
+  return (
+    <div className={`border-2 rounded-lg p-2 text-xs space-y-0.5 ${bg}`}>
+      <div className="font-bold dark:text-gray-100">
+        {isCritical ? "🚨" : "⚠️"} אלרגיה — {warning.allergy}
+      </div>
+      <div className="text-gray-700 dark:text-gray-300">{warning.risk}</div>
     </div>
   );
 }
