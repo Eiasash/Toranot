@@ -6,6 +6,11 @@ Live: **[toranot.netlify.app](https://toranot.netlify.app)**
 
 ## Recent Changes
 
+- **fix(AI): require is not defined** — Replaced CJS `require("../cloudSync")` with ESM import in AIClinicalReasoning. The `require` call crashed in Vite/browser, blocking the AI clinical analysis feature entirely.
+- **feat(morning-report): show what you did** — Enhanced "חולים שטיפלת בהם" section: summary badges (✅ X בוצעו, ✏️ משימה ידנית, 📝 הערות, 📌 מסירה) + full task/note detail below. הערות and handover notes now have distinct highlighted backgrounds.
+- **feat(handoff): tighter פעלתי filter** — `isOncallRelevant` now scopes completed-task check to THIS shift only (by `doneTime >= shiftStart`). Patients with tasks completed in previous shifts no longer leak into the handoff.
+- **feat(handoff): prominent הערות** — Doctor notes in handoff cards now render in a distinct amber background box labeled "📝 הערות תורן". Text handoff also labels notes as structured section.
+- **feat(sort): activity sort option** — Added "🩺 לפי פעילות" sort to patient list dropdown. Floats patients with on-call activity (manual tasks, completed tasks, notes, handover) to top.
 - **feat(safety): allergy field + drug cross-check** — Added `allergies: string[]` to PatientEntry. Auto-extracted from admission letters. Drug safety engine now cross-checks allergies against prescribed drugs (penicillin family, cephalosporin cross-reactivity, sulfa, FQ, carbapenems, opioids, NSAIDs). Allergy badges shown in PatientCard, conflicts appear at top of DrugSafetyAlerts.
 - **feat(labs): critical value push notifications** — When entering labs with critical values (K+ >6.0, Hb <7.0, Cr >5.0, etc.), fires a browser/PWA notification immediately. Works with both inline lab entry and bulk lab entry.
 - **fix(resilience): per-feature error boundaries** — Scanner, AIClinicalReasoning, and AddAdmissionModal each wrapped in InlineErrorBoundary. A crash in any of these shows an inline error message instead of killing the entire app.

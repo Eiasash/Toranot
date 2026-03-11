@@ -46,7 +46,10 @@ function formatPatient(p: PatientEntry): string {
       lines.push(`    ✅ ${t.text}${noteStr}`);
     }
   }
-  if (notes.length > 0) lines.push(`  הערות: ${notes.join(", ")}`);
+  if (notes.length > 0) {
+    lines.push(`  📝 הערות תורן:`);
+    notes.forEach(n => lines.push(`    ${n}`));
+  }
   if (p.tomorrowNotes.length > 0) lines.push(`  מחר: ${p.tomorrowNotes.join(", ")}`);
   if (p.handoverNote) lines.push(`  📌 ${p.handoverNote}`);
   // Per-patient safety alerts omitted from text handoff — see DrugSafetyAlerts view.
@@ -56,15 +59,18 @@ function formatPatient(p: PatientEntry): string {
 
 import { getShiftStart } from "../utils/shiftTime";
 
-function isOncallRelevant(p: PatientEntry, _shiftStart: Date): boolean {
+function isOncallRelevant(p: PatientEntry, shiftStart: Date): boolean {
+  const shiftISO = shiftStart.toISOString();
   // New admission added this shift = always show
   if (p.isAdmission) return true;
   // On-call doc manually added a task = action taken
   if (p.tasks.some(t => t.source === "manual")) return true;
-  // On-call doc completed any task = action taken
-  if ([...p.tasks, ...p.generatedTasks].some(t => t.done)) return true;
+  // On-call doc completed a task THIS SHIFT = action taken
+  if ([...p.tasks, ...p.generatedTasks].some(t => t.done && t.doneTime && t.doneTime >= shiftISO)) return true;
   // Handover note written = action taken
   if (p.handoverNote) return true;
+  // Notes written = action taken
+  if ((p.notes ?? []).length > 0) return true;
   // Scanned-only patients (no actions taken) are NOT on-call relevant
   // They appear in "כולם" (all patients) mode only
   return false;
@@ -203,6 +209,13 @@ function buildISBAR(patients: PatientEntry[], filteredPatients: PatientEntry[], 
     lines.push(`  📝 הערות מסירה:`);
     patientsWithHandoverNote.slice(0, 5).forEach(p => {
       lines.push(`    חד׳ ${p.room ?? "?"} ${p.name ?? "?"}: ${p.handoverNote}`);
+    });
+  }
+  const patientsWithNotes = filteredPatients.filter(p => (p.notes ?? []).length > 0);
+  if (patientsWithNotes.length > 0) {
+    lines.push(`  📝 הערות:`);
+    patientsWithNotes.slice(0, 5).forEach(p => {
+      lines.push(`    חד׳ ${p.room ?? "?"} ${p.name ?? "?"}: ${(p.notes ?? []).join("; ")}`);
     });
   }
 
@@ -382,6 +395,16 @@ function PatientCard({ p, isNew }: { p: PatientEntry; isNew: boolean }) {
           </p>
         )}
 
+        {/* Doctor notes — prominent display */}
+        {(p.notes ?? []).length > 0 && (
+          <div className="bg-amber-900/30 border border-amber-700/50 rounded-lg px-2.5 py-2 space-y-1">
+            <p className="text-xs font-bold text-amber-300">📝 הערות תורן</p>
+            {(p.notes ?? []).map((n, i) => (
+              <p key={i} className="text-xs text-amber-100 leading-relaxed">{n}</p>
+            ))}
+          </div>
+        )}
+
         {/* Safety alerts removed from handoff — see DrugSafetyAlerts in patient detail view */}
       </div>
     </div>
@@ -414,7 +437,7 @@ function SectionBlock({ label, patients, newIds }: { label: string; patients: Pa
 export function HandoffSheet({ onClose }: { onClose: () => void }) {
   const { toast, showToast } = useSimpleToast();
   const { patients } = usePatientsState();
-  const [oncallOnly, setOncallOnly] = useState(false);
+  const [oncallOnly, setOncallOnly] = useState(true);
   const [view, setView] = useState<"visual" | "text" | "isbar">("visual");
 
 

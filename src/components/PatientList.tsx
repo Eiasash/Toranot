@@ -56,7 +56,7 @@ class PatientCardErrorBoundary extends Component<
 export function PatientList() {
   const { patients, activeSection } = usePatientsState();
   const dispatch = usePatientsDispatch();
-  const [sortMode, setSortMode] = useState<"room" | "severity" | "name" | "new">("room");
+  const [sortMode, setSortMode] = useState<"room" | "severity" | "name" | "new" | "activity">("room");
 
   const filtered = useMemo(() => {
     const sectionPatients = activeSection === "ALL"
@@ -72,6 +72,23 @@ export function PatientList() {
         const aN = isNewThisShift(a) ? 0 : 1;
         const bN = isNewThisShift(b) ? 0 : 1;
         if (aN !== bN) return aN - bN;
+        return comparePatientsByRoom(a, b);
+      });
+    } else if (sortMode === "activity") {
+      // Patients with any on-call activity float to top
+      const hasActivity = (p: typeof sorted[0]) => {
+        if (p.tasks.some(t => t.source === "manual")) return true;
+        if ([...p.tasks, ...p.generatedTasks].some(t => t.done)) return true;
+        if (p.handoverNote) return true;
+        if ((p.notes ?? []).length > 0) return true;
+        return false;
+      };
+      sorted.sort((a, b) => {
+        const dDiff = (a.discharged ? 1 : 0) - (b.discharged ? 1 : 0);
+        if (dDiff !== 0) return dDiff;
+        const aAct = hasActivity(a) ? 0 : 1;
+        const bAct = hasActivity(b) ? 0 : 1;
+        if (aAct !== bAct) return aAct - bAct;
         return comparePatientsByRoom(a, b);
       });
     } else {
@@ -137,11 +154,12 @@ export function PatientList() {
             </span>
             <select
               value={sortMode}
-              onChange={e => setSortMode(e.target.value as "room" | "severity" | "name")}
+              onChange={e => setSortMode(e.target.value as "room" | "severity" | "name" | "new" | "activity")}
               className="text-xs px-2 py-1 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-none outline-none"
             >
               <option value="room">📋 לפי חדר</option>
               <option value="new">🆕 קבלות תורן</option>
+              <option value="activity">🩺 לפי פעילות</option>
               <option value="severity">🔥 לפי חומרה</option>
               <option value="name">א→ב לפי שם</option>
             </select>

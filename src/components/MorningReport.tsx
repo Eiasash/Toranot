@@ -90,13 +90,19 @@ export function MorningReport({ onClose }: { onClose: () => void }) {
       lines.push(`🩺 חולים שטיפלת בהם: ${actedon.length}`);
       actedon.forEach(p => {
         const doneTasks = [...p.tasks, ...p.generatedTasks].filter(t => t.done);
-        const summary = [
-          doneTasks.length > 0 ? `${doneTasks.length} משימות בוצעו` : null,
-          p.tasks.some(t => t.source === "manual") ? "משימה ידנית" : null,
-          p.handoverNote ? "הערת מסירה" : null,
-          (p.notes ?? []).length > 0 ? "הערות" : null,
-        ].filter(Boolean).join(", ");
-        lines.push(`  • חד׳ ${p.room ?? "?"} ${p.name ?? "?"} — ${summary}`);
+        const manualPending = p.tasks.filter(t => t.source === "manual" && !t.done);
+        const notes = p.notes ?? [];
+        lines.push(`  • חד׳ ${p.room ?? "?"} ${p.name ?? "?"} ${p.diagnosis ? `— ${p.diagnosis}` : ""}`);
+        doneTasks.forEach(t => {
+          const noteStr = t.note ? ` → ${t.note}` : "";
+          lines.push(`    ✅ ${t.text}${noteStr}`);
+        });
+        manualPending.forEach(t => lines.push(`    ✏️ ${t.text}`));
+        if (notes.length > 0) {
+          lines.push(`    📝 הערות:`);
+          notes.forEach(n => lines.push(`      ${n}`));
+        }
+        if (p.handoverNote) lines.push(`    📌 מסירה: ${p.handoverNote}`);
       });
     }
     if (unassignedTasks.length > 0) {
@@ -229,27 +235,79 @@ export function MorningReport({ onClose }: { onClose: () => void }) {
                 <Section title={`🩺 חולים שטיפלת בהם (${actedon.length})`} color="green">
                   {actedon.map(p => {
                     const doneTasks = [...p.tasks, ...p.generatedTasks].filter(t => t.done);
-                    const tags = [
-                      doneTasks.length > 0 ? `✅ ${doneTasks.length} בוצעו` : null,
-                      p.tasks.some(t => t.source === "manual") ? "✏️ משימה ידנית" : null,
-                      p.handoverNote ? "📝 מסירה" : null,
-                      (p.notes ?? []).length > 0 ? "🗒️ הערות" : null,
-                    ].filter(Boolean);
+                    const manualTasks = p.tasks.filter(t => t.source === "manual" && !t.done);
+                    const notes = p.notes ?? [];
                     return (
-                      <div key={p.id} className="text-xs space-y-0.5">
-                        <div className="flex gap-2 items-center">
+                      <div key={p.id} className="text-xs space-y-1.5 pb-3 border-b border-green-200/30 dark:border-green-700/30 last:border-0 last:pb-0">
+                        {/* Patient header */}
+                        <div className="flex gap-2 items-center flex-wrap">
                           <span className="font-mono text-blue-600 dark:text-blue-400 shrink-0">חד׳ {p.room ?? "?"}</span>
                           <span className="font-medium text-gray-900 dark:text-gray-100">{p.name ?? "?"}</span>
                           {p.age && <span className="text-gray-400">({p.age})</span>}
                           {p.diagnosis && <span className="text-gray-500 truncate">— {p.diagnosis}</span>}
                         </div>
-                        <div className="flex gap-1.5 flex-wrap pr-2">
-                          {tags.map((tag, i) => (
-                            <span key={i} className="text-[10px] bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded">{tag}</span>
-                          ))}
+                        {/* Summary badges */}
+                        <div className="flex gap-1.5 flex-wrap">
+                          {doneTasks.length > 0 && (
+                            <span className="inline-flex items-center gap-1 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 rounded-full px-2 py-0.5 text-[10px] font-medium">
+                              ✅ {doneTasks.length} בוצעו
+                            </span>
+                          )}
+                          {manualTasks.length > 0 && (
+                            <span className="inline-flex items-center gap-1 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded-full px-2 py-0.5 text-[10px] font-medium">
+                              ✏️ משימה ידנית
+                            </span>
+                          )}
+                          {notes.length > 0 && (
+                            <span className="inline-flex items-center gap-1 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded-full px-2 py-0.5 text-[10px] font-medium">
+                              📝 הערות
+                            </span>
+                          )}
+                          {p.handoverNote && (
+                            <span className="inline-flex items-center gap-1 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-full px-2 py-0.5 text-[10px] font-medium">
+                              📌 מסירה
+                            </span>
+                          )}
                         </div>
+                        {/* Detail: completed tasks — show WHAT was done */}
+                        {doneTasks.length > 0 && (
+                          <div className="pr-2 space-y-0.5">
+                            {doneTasks.map(t => (
+                              <div key={t.id} className="flex items-start gap-1 text-[11px]">
+                                <span className="text-green-500 shrink-0">✓</span>
+                                <span className="text-gray-700 dark:text-gray-300">{t.text}</span>
+                                {t.note && <span className="text-green-600 dark:text-green-400 font-medium">→ {t.note}</span>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {/* Detail: pending manual tasks */}
+                        {manualTasks.length > 0 && (
+                          <div className="pr-2 space-y-0.5">
+                            {manualTasks.map(t => (
+                              <div key={t.id} className="flex items-start gap-1 text-[11px]">
+                                <span className="text-amber-500 shrink-0">✏️</span>
+                                <span className="text-gray-700 dark:text-gray-300">{t.text}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {/* Detail: הערות — full text, prominent */}
+                        {notes.length > 0 && (
+                          <div className="bg-amber-50/50 dark:bg-amber-900/20 border border-amber-200/50 dark:border-amber-700/30 rounded-lg px-2 py-1.5 space-y-0.5">
+                            {notes.map((n, i) => (
+                              <div key={i} className="flex items-start gap-1 text-[11px]">
+                                <span className="text-amber-500 shrink-0">📝</span>
+                                <span className="text-amber-800 dark:text-amber-200">{n}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {/* Detail: handover note */}
                         {p.handoverNote && (
-                          <p className="text-gray-500 dark:text-gray-400 pr-2 italic text-[11px] line-clamp-2">{p.handoverNote}</p>
+                          <div className="bg-blue-50/50 dark:bg-blue-900/20 border border-blue-200/50 dark:border-blue-700/30 rounded-lg px-2 py-1.5">
+                            <p className="text-blue-800 dark:text-blue-200 text-[11px]">📌 {p.handoverNote}</p>
+                          </div>
                         )}
                       </div>
                     );

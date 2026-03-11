@@ -11,7 +11,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import type { PatientEntry } from "../types";
-import { getProxyAuthHeaders, isProxyAvailableAsync } from "../cloudSync";
+import { getProxyAuthHeaders, isProxyAvailableAsync, supabase } from "../cloudSync";
 import { safeGetItem, safeSetItem } from "../utils/storage";
 import DOMPurify from "dompurify";
 
@@ -277,7 +277,6 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
     // Seed initial value
     isProxyAvailableAsync().then(setProxyMode).catch(() => setProxyMode(false));
     // Keep in sync when user logs in/out during the session
-    const { supabase } = require("../cloudSync") as { supabase: import("@supabase/supabase-js").SupabaseClient | null };
     if (!supabase) return;
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       setProxyMode(!!session?.access_token);
