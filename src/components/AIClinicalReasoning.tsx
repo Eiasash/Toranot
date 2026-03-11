@@ -389,7 +389,7 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
                 onClick={() => switchProvider("gemini")}
                 className={`text-[11px] px-2 py-1 rounded-md font-medium transition-colors ${
                   provider === "gemini"
-                    ? "bg-white text-violet-800"
+                    ? "bg-white dark:bg-violet-100 text-violet-800"
                     : "text-violet-200 hover:text-white"
                 }`}
                 title="Gemini 3.1 Pro"
@@ -400,7 +400,7 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
                 onClick={() => switchProvider("claude")}
                 className={`text-[11px] px-2 py-1 rounded-md font-medium transition-colors ${
                   provider === "claude"
-                    ? "bg-white text-violet-800"
+                    ? "bg-white dark:bg-violet-100 text-violet-800"
                     : "text-violet-200 hover:text-white"
                 }`}
                 title="Claude Sonnet"

@@ -116,7 +116,7 @@ export function InputArea() {
         </button>
         <button
           onClick={() => setMode("text")}
-          className="flex items-center justify-center gap-3 w-full py-4 bg-gray-100 text-gray-700 rounded-xl text-base font-medium active:bg-gray-200 active:scale-[0.98] transition-transform"
+          className="flex items-center justify-center gap-3 w-full py-4 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-xl text-base font-medium active:bg-gray-200 dark:active:bg-gray-700 active:scale-[0.98] transition-transform"
         >
           <TextIcon />
           הקלד / הדבק טקסט
@@ -156,7 +156,7 @@ export function InputArea() {
         rows={8}
         autoFocus
         style={{ unicodeBidi: "plaintext" }}
-        className="w-full p-3 border border-gray-300 rounded-xl bg-white text-gray-900 placeholder:text-gray-400 text-base leading-relaxed resize-y focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none whitespace-pre-wrap break-words"
+        className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 text-base leading-relaxed resize-y focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none whitespace-pre-wrap break-words"
       />
       {parseError && (
         <div className="bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-sm text-red-700 text-right">
@@ -172,7 +172,7 @@ export function InputArea() {
       </button>
       <button
         onClick={() => setMode("choose")}
-        className="w-full py-3 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium active:bg-gray-200"
+        className="w-full py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm font-medium active:bg-gray-200 dark:active:bg-gray-700"
       >
         חזור
       </button>

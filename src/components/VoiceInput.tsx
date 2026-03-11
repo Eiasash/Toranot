@@ -236,7 +236,7 @@ export function VoiceButton({ onResult, onStructuredResult, structured = false }
           <span className={`px-1 rounded text-[10px] font-bold ${
             lastParsed.urgency === "stat" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" :
             lastParsed.urgency === "urgent" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" :
-            "bg-gray-100 text-gray-500"
+            "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
           }`}>
             {lastParsed.urgency === "stat" ? "סטט" : lastParsed.urgency === "urgent" ? "דחוף" : "רגיל"}
           </span>

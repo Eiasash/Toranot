@@ -161,7 +161,7 @@ export function ECGInterpreter() {
       {preview && !result && (
         <div className="space-y-3">
           <div className="relative rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
-            <img src={preview} alt="ECG" className="w-full object-contain max-h-56 bg-white" />
+            <img src={preview} alt="ECG" className="w-full object-contain max-h-56 bg-white dark:bg-gray-900" />
             <button onClick={reset}
               className="absolute top-2 left-2 bg-black/60 text-white text-xs rounded-lg px-2 py-1">
               × החלף
@@ -188,7 +188,7 @@ export function ECGInterpreter() {
         <div className="space-y-3">
           {preview && (
             <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
-              <img src={preview} alt="ECG" className="w-full object-contain max-h-32 bg-white" />
+              <img src={preview} alt="ECG" className="w-full object-contain max-h-32 bg-white dark:bg-gray-900" />
             </div>
           )}
 

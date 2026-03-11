@@ -33,7 +33,7 @@ function urgencyBadge(urgency: Task["urgency"]) {
       );
     default:
       return (
-        <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200" role="status">
+        <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600" role="status">
           שגרה
         </span>
       );
@@ -191,7 +191,7 @@ export function TaskItem({
           onChange={onToggle}
           onClick={(e) => e.stopPropagation()}
           aria-label={`סמן ${task.text} כבוצע`}
-          className="mt-1 h-6 w-6 rounded border-gray-300 bg-white accent-blue-600 text-blue-600 focus:ring-blue-500 flex-shrink-0"
+          className="mt-1 h-6 w-6 rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 accent-blue-600 text-blue-600 focus:ring-blue-500 flex-shrink-0"
         />
 
         <div className="flex-1 min-w-0">
@@ -313,7 +313,7 @@ export function TaskItem({
                     ❌ בטל
                   </button>
                 )}
-                <button type="button" onClick={() => setShowTimer(false)} className="text-xs px-2 py-1 rounded-lg border border-gray-300 text-gray-600">סגור</button>
+                <button type="button" onClick={() => setShowTimer(false)} className="text-xs px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300">סגור</button>
               </div>
             </div>
           )}

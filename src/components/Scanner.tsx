@@ -489,12 +489,12 @@ export function Scanner({ onTextExtracted, onCancel }: ScannerProps) {
   if (state.step === "preview") {
     return (
       <div className="flex flex-col gap-3">
-        <img src={state.imageUrl} alt="תצוגה מקדימה" className="w-full max-h-[40vh] rounded-xl border border-gray-200 object-contain bg-gray-50" />
+        <img src={state.imageUrl} alt="תצוגה מקדימה" className="w-full max-h-[40vh] rounded-xl border border-gray-200 dark:border-gray-700 object-contain bg-gray-50 dark:bg-gray-800" />
         <button onClick={() => runOcr(state.file, state.imageUrl)}
           className="flex items-center justify-center gap-2 w-full py-4 bg-blue-600 text-white rounded-xl text-lg font-medium active:bg-blue-700 active:scale-[0.98] transition-transform">
           <ScanIcon size={22} /> סרוק עם Claude Vision
         </button>
-        <button onClick={cleanup} className="w-full py-3 bg-gray-100 text-gray-600 rounded-xl text-base font-medium active:bg-gray-200">
+        <button onClick={cleanup} className="w-full py-3 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl text-base font-medium active:bg-gray-200 dark:active:bg-gray-600">
           צלם שוב
         </button>
       </div>
@@ -510,10 +510,10 @@ export function Scanner({ onTextExtracted, onCancel }: ScannerProps) {
         </div>
         <div className="grid grid-cols-3 gap-2">
           {state.items.slice(0, 6).map((it, idx) => (
-            <img key={idx} src={it.imageUrl} alt={`דף ${idx + 1}`} className="w-full h-20 rounded-lg border border-gray-200 object-cover bg-gray-50" />
+            <img key={idx} src={it.imageUrl} alt={`דף ${idx + 1}`} className="w-full h-20 rounded-lg border border-gray-200 dark:border-gray-700 object-cover bg-gray-50 dark:bg-gray-800" />
           ))}
           {state.items.length > 6 && (
-            <div className="w-full h-20 rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center text-xs text-gray-500">
+            <div className="w-full h-20 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-xs text-gray-500 dark:text-gray-400">
               +{state.items.length - 6}
             </div>
           )}
@@ -524,7 +524,7 @@ export function Scanner({ onTextExtracted, onCancel }: ScannerProps) {
         >
           <ScanIcon size={22} /> סרוק הכל
         </button>
-        <button onClick={cleanup} className="w-full py-3 bg-gray-100 text-gray-600 rounded-xl text-base font-medium active:bg-gray-200">
+        <button onClick={cleanup} className="w-full py-3 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl text-base font-medium active:bg-gray-200 dark:active:bg-gray-600">
           ביטול
         </button>
       </div>
@@ -534,7 +534,7 @@ export function Scanner({ onTextExtracted, onCancel }: ScannerProps) {
   if (state.step === "scanning") {
     return (
       <div className="flex flex-col gap-4 items-center py-6">
-        <img src={state.imageUrl} alt="סורק..." className="w-full max-h-[30vh] rounded-xl border border-gray-200 object-contain opacity-50" />
+        <img src={state.imageUrl} alt="סורק..." className="w-full max-h-[30vh] rounded-xl border border-gray-200 dark:border-gray-700 object-contain opacity-50" />
         <div className="flex items-center gap-3 text-blue-700 font-medium">
           <Spinner /> <span>{state.retryMsg ?? "Claude Vision קורא את הדף..."}</span>
         </div>
@@ -555,7 +555,7 @@ export function Scanner({ onTextExtracted, onCancel }: ScannerProps) {
           <button onClick={() => setEditingKey(true)} className="text-xs text-blue-500 underline">עדכן API Key</button>
         </div>
         <button onClick={() => setState({ step: "idle" })} className="w-full py-3 bg-emerald-600 text-white rounded-xl text-sm font-medium">נסה שוב</button>
-        <button onClick={() => { setState({ step: "idle" }); onCancel(); }} className="w-full py-3 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium">עבור להקלדת טקסט</button>
+        <button onClick={() => { setState({ step: "idle" }); onCancel(); }} className="w-full py-3 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl text-sm font-medium">עבור להקלדת טקסט</button>
       </div>
     );
   }
@@ -565,7 +565,7 @@ export function Scanner({ onTextExtracted, onCancel }: ScannerProps) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex gap-3">
-        <img src={doneState.imageUrl} alt="תוצאה" className="w-20 h-20 rounded-lg border border-gray-200 object-cover shrink-0" />
+        <img src={doneState.imageUrl} alt="תוצאה" className="w-20 h-20 rounded-lg border border-gray-200 dark:border-gray-700 object-cover shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-gray-700 mb-1">טקסט שזוהה:</p>
           <p className="text-xs text-gray-400">ניתן לערוך לפני הייבוא</p>
@@ -577,7 +577,7 @@ export function Scanner({ onTextExtracted, onCancel }: ScannerProps) {
         dir="auto"
         rows={8}
         style={{ unicodeBidi: "plaintext" }}
-        className="w-full p-3 border border-gray-300 rounded-xl text-base leading-relaxed resize-y focus:ring-2 focus:ring-blue-400 outline-none whitespace-pre-wrap break-words font-mono max-h-[40vh]"
+        className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-base leading-relaxed resize-y focus:ring-2 focus:ring-blue-400 outline-none whitespace-pre-wrap break-words font-mono max-h-[40vh]"
       />
       <button
         onClick={() => handleUseText(doneState.text)}
@@ -588,7 +588,7 @@ export function Scanner({ onTextExtracted, onCancel }: ScannerProps) {
       </button>
       <div className="flex gap-2">
         <button onClick={cleanup} className="flex-1 py-3 bg-amber-100 text-amber-800 rounded-xl text-sm font-medium">סרוק שוב</button>
-        <button onClick={() => { cleanup(); onCancel(); }} className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium">ביטול</button>
+        <button onClick={() => { cleanup(); onCancel(); }} className="flex-1 py-3 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl text-sm font-medium">ביטול</button>
       </div>
     </div>
   );
