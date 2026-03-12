@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
 import { CloudAuthPanel } from "./CloudAuthPanel";
 import { supabase } from "../cloudSync";
+import { safeGetItem, safeSetItem, safeRemoveItem } from "../utils/storage";
 import { ConfirmModal, type ConfirmDialog } from "../App";
 
 export type OverflowModal = "history" | "qrsync" | "capture" | "morning" | "ivprotocols" | "handoff_cloud" | "shared_shift";
@@ -276,7 +277,7 @@ export function OverflowMenu({ onOpenModal }: { onOpenModal: (m: "history" | "qr
 const API_KEY_STORAGE = "toranot-anthropic-key";
 
 function ApiKeyPanel() {
-  const stored = localStorage.getItem(API_KEY_STORAGE) ?? "";
+  const stored = safeGetItem(API_KEY_STORAGE) ?? "";
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const [saved, setSaved] = useState(false);
@@ -295,8 +296,8 @@ function ApiKeyPanel() {
   const handleSave = () => {
     const key = draft.trim();
     if (key.startsWith("sk-ant-") || key === "") {
-      if (key) localStorage.setItem(API_KEY_STORAGE, key);
-      else localStorage.removeItem(API_KEY_STORAGE);
+      if (key) safeSetItem(API_KEY_STORAGE, key);
+      else safeRemoveItem(API_KEY_STORAGE);
       setEditing(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -304,7 +305,7 @@ function ApiKeyPanel() {
   };
 
   const handleClear = () => {
-    localStorage.removeItem(API_KEY_STORAGE);
+    safeRemoveItem(API_KEY_STORAGE);
     setEditing(false);
     setSaved(false);
   };

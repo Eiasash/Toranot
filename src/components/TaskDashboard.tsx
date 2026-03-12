@@ -355,7 +355,7 @@ export function TaskDashboard({ onClose }: { onClose: () => void }) {
           {(() => {
             const completed: DashTask[] = [];
             for (const p of patients) {
-              for (const t of [...p.tasks, ...p.generatedTasks]) {
+              for (const t of [...p.tasks, ...p.generatedTasks.filter(gt => !gt.dismissed)]) {
                 if (t.done) completed.push({ task: t, patient: p });
               }
             }

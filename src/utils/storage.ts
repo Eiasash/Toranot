@@ -21,6 +21,16 @@ export function safeSetItem(key: string, value: string): boolean {
   }
 }
 
+export function safeRemoveItem(key: string): boolean {
+  try {
+    localStorage.removeItem(key);
+    return true;
+  } catch (err) {
+    console.warn(`Failed to remove localStorage key "${key}":`, err);
+    return false;
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────
 // Schema validation
 //

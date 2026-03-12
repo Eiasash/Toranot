@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
-import { safeGetItem } from "../utils/storage";
+import { safeGetItem, safeSetItem, safeRemoveItem } from "../utils/storage";
 import {
   createSharedShift,
   updateSharedShift,
@@ -130,8 +130,8 @@ export function SharedShiftPanel({ onClose }: { onClose: () => void }) {
       const code = await createSharedShift(toCloudState(state));
       setShareCode(code);
       setRole("host");
-      localStorage.setItem(SHARE_CODE_KEY, code);
-      localStorage.setItem(SHARE_ROLE_KEY, "host");
+      safeSetItem(SHARE_CODE_KEY, code);
+      safeSetItem(SHARE_ROLE_KEY, "host");
       startHostPush(code);
       setLastSync(new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" }));
     } catch (e) { setError(String(e)); }
@@ -143,8 +143,8 @@ export function SharedShiftPanel({ onClose }: { onClose: () => void }) {
     if (shareCode) await deleteSharedShift(shareCode).catch(() => {});
     stopHostPush();
     setShareCode(""); setRole(null); setLastSync(null);
-    localStorage.removeItem(SHARE_CODE_KEY);
-    localStorage.removeItem(SHARE_ROLE_KEY);
+    safeRemoveItem(SHARE_CODE_KEY);
+    safeRemoveItem(SHARE_ROLE_KEY);
   };
 
   // Guest: join
@@ -157,8 +157,8 @@ export function SharedShiftPanel({ onClose }: { onClose: () => void }) {
     dispatch({ type: "IMPORT_CLOUD_STATE", state: result.state });
     setGuestCode(code);
     setRole("guest");
-    localStorage.setItem(GUEST_CODE_KEY, code);
-    localStorage.setItem(SHARE_ROLE_KEY, "guest");
+    safeSetItem(GUEST_CODE_KEY, code);
+    safeSetItem(SHARE_ROLE_KEY, "guest");
     startGuestSync(code);
     setLastSync(new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" }));
     setLoading(false);
@@ -169,8 +169,8 @@ export function SharedShiftPanel({ onClose }: { onClose: () => void }) {
     stopPoll();
     if (guestPushRef.current) { clearInterval(guestPushRef.current); guestPushRef.current = null; }
     setGuestCode(""); setRole(null); setLastSync(null); setGuestInput("");
-    localStorage.removeItem(GUEST_CODE_KEY);
-    localStorage.removeItem(SHARE_ROLE_KEY);
+    safeRemoveItem(GUEST_CODE_KEY);
+    safeRemoveItem(SHARE_ROLE_KEY);
   };
 
   const copyCode = async () => {

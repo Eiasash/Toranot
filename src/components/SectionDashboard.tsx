@@ -34,7 +34,7 @@ function summarizeSection(patients: PatientEntry[]): Omit<SectionSummary, "secti
   let flaggedPatients = 0;
 
   for (const p of patients) {
-    const allTasks = [...p.tasks, ...p.generatedTasks];
+    const allTasks = [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)];
     const pending = allTasks.filter((t) => !t.done);
     const done = allTasks.filter((t) => t.done);
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, Component, type ErrorInfo, lazy, Suspense } from "react";
 import { PatientsProvider } from "./context/PatientsContext";
 import { createHandoff, pullHandoff, type ToranotCloudState } from "./cloudSync";
+import { safeSetItem } from "./utils/storage";
 import { SectionTabs } from "./components/SectionTabs";
 import { InputArea } from "./components/InputArea";
 import { PatientList } from "./components/PatientList";
@@ -681,9 +682,7 @@ export function App() {
     if (!hash.includes("apikey=")) return;
     const match = hash.match(/apikey=([^&]+)/);
     if (match?.[1]) {
-      try {
-        localStorage.setItem("toranot-anthropic-key", decodeURIComponent(match[1]));
-      } catch { /* quota */ }
+      safeSetItem("toranot-anthropic-key", decodeURIComponent(match[1]));
       // Clean the URL so key isn't visible in address bar / history
       const cleanHash = hash.replace(/[#&]?apikey=[^&]+/, "").replace(/^#$/, "");
       window.history.replaceState(null, "", window.location.pathname + (cleanHash || ""));

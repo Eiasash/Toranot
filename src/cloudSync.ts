@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Action } from "./context/reducer";
+import { safeSetItem } from "./utils/storage";
 
 export type ToranotCloudState = {
   patients: unknown[];
@@ -235,11 +236,7 @@ export function useToranotCloudSync(
         const { state: remote, updatedAt } = await pullCloud();
         if (cancelled || !remote) { setStatus("synced"); setLastSync(new Date()); return; }
 
-        try {
-          localStorage.setItem(STORAGE_KEY_LAST_PULL, updatedAt ?? "");
-        } catch {
-          /* quota */
-        }
+        safeSetItem(STORAGE_KEY_LAST_PULL, updatedAt ?? "");
 
         // Conflict detection: if local has patients and cloud has DIFFERENT patients
         // Compare by patient ID sets to avoid false conflicts from JSON key ordering
