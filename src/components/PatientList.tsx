@@ -78,7 +78,7 @@ export function PatientList() {
       // Patients with any on-call activity float to top
       const hasActivity = (p: typeof sorted[0]) => {
         if (p.tasks.some(t => t.source === "manual")) return true;
-        if ([...p.tasks, ...p.generatedTasks].some(t => t.done)) return true;
+        if ([...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)].some(t => t.done)) return true;
         if (p.handoverNote) return true;
         if ((p.notes ?? []).length > 0) return true;
         return false;

@@ -18,7 +18,7 @@ function urgencyLabel(u: Task["urgency"]) {
 }
 
 function formatPatient(p: PatientEntry): string {
-  const allTasks = [...p.tasks, ...p.generatedTasks];
+  const allTasks = [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)];
   const pending = allTasks.filter((t) => !t.done);
   const done = allTasks.filter((t) => t.done);
   const notes = p.notes ?? [];
@@ -66,7 +66,7 @@ function isOncallRelevant(p: PatientEntry, shiftStart: Date): boolean {
   // On-call doc manually added a task = action taken
   if (p.tasks.some(t => t.source === "manual")) return true;
   // On-call doc completed a task THIS SHIFT = action taken
-  if ([...p.tasks, ...p.generatedTasks].some(t => t.done && t.doneTime && t.doneTime >= shiftISO)) return true;
+  if ([...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)].some(t => t.done && t.doneTime && t.doneTime >= shiftISO)) return true;
   // Handover note written = action taken
   if (p.handoverNote) return true;
   // Notes written = action taken
@@ -106,7 +106,7 @@ function buildTextHandoff(patients: PatientEntry[], filteredPatients: PatientEnt
     lines.push("");
     for (const p of pts) { lines.push(formatPatient(p)); lines.push(""); }
   }
-  const allTasks = filteredPatients.flatMap((p) => [...p.tasks, ...p.generatedTasks]);
+  const allTasks = filteredPatients.flatMap((p) => [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)]);
   const totalDone = allTasks.filter((t) => t.done).length;
   const totalPending = allTasks.filter((t) => !t.done).length;
   const statPending = allTasks.filter((t) => !t.done && t.urgency === "stat").length;
@@ -200,7 +200,7 @@ function buildISBAR(patients: PatientEntry[], filteredPatients: PatientEntry[], 
   const comfortPatients = filteredPatients.filter(p =>
     [...p.status, ...p.flags, p.diagnosis ?? ""].some(s => /comfort|palliative|DNR|נוחות|פליאטיב/i.test(s))
   );
-  const allTasks = filteredPatients.flatMap(p => [...p.tasks, ...p.generatedTasks]);
+  const allTasks = filteredPatients.flatMap(p => [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)]);
   const donePct = allTasks.length > 0 ? Math.round((allTasks.filter(t => t.done).length / allTasks.length) * 100) : 100;
   lines.push(`  ✅ ביצוע משימות: ${donePct}% (${allTasks.filter(t => t.done).length}/${allTasks.length})`);
   if (comfortPatients.length > 0) lines.push(`  🕊️ Comfort care: ${comfortPatients.map(p => `${p.room ?? "?"} ${p.name ?? "?"}`).join(", ")}`);
@@ -480,7 +480,7 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
   );
 
   // Summary stats
-  const allTasks = filteredPatients.flatMap(p => [...p.tasks, ...p.generatedTasks]);
+  const allTasks = filteredPatients.flatMap(p => [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)]);
   const pendingCount = allTasks.filter(t => !t.done).length;
   const doneCount = allTasks.filter(t => t.done).length;
   const statCount = allTasks.filter(t => !t.done && t.urgency === "stat").length;

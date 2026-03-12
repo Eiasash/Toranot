@@ -53,7 +53,7 @@ export function MorningReport({ onClose }: { onClose: () => void }) {
     );
     return patients.filter(p => {
       if (admissionIds.has(p.id)) return false; // already in admissions
-      const allTasks = [...p.tasks, ...p.generatedTasks];
+      const allTasks = [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)];
       const completedThisShift = allTasks.some(t => t.done && t.doneTime && t.doneTime >= shiftStartISO);
       const manualTaskAdded = p.tasks.some(t => t.source === "manual");
       const hasNote = (p.notes ?? []).length > 0;
@@ -89,7 +89,7 @@ export function MorningReport({ onClose }: { onClose: () => void }) {
       lines.push("");
       lines.push(`🩺 חולים שטיפלת בהם: ${actedon.length}`);
       actedon.forEach(p => {
-        const doneTasks = [...p.tasks, ...p.generatedTasks].filter(t => t.done);
+        const doneTasks = [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)].filter(t => t.done);
         const manualPending = p.tasks.filter(t => t.source === "manual" && !t.done);
         const notes = p.notes ?? [];
         lines.push(`  • חד׳ ${p.room ?? "?"} ${p.name ?? "?"} ${p.diagnosis ? `— ${p.diagnosis}` : ""}`);
@@ -234,7 +234,7 @@ export function MorningReport({ onClose }: { onClose: () => void }) {
               {actedon.length > 0 && (
                 <Section title={`🩺 חולים שטיפלת בהם (${actedon.length})`} color="green">
                   {actedon.map(p => {
-                    const doneTasks = [...p.tasks, ...p.generatedTasks].filter(t => t.done);
+                    const doneTasks = [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)].filter(t => t.done);
                     const manualTasks = p.tasks.filter(t => t.source === "manual" && !t.done);
                     const notes = p.notes ?? [];
                     return (
