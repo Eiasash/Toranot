@@ -41,7 +41,7 @@ function urgencyBadge(urgency: Task["urgency"]) {
 }
 
 function backgroundFromUrgency(task: Task) {
-  if (task.done) return "bg-white dark:bg-gray-800";
+  if (task.done) return "bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-600";
   switch (task.urgency) {
     case "stat":
       return "bg-red-50 dark:bg-red-900/20";
@@ -164,7 +164,6 @@ export function TaskItem({
         className={[
           "flex items-start gap-2 p-2 rounded-lg border relative",
           backgroundFromUrgency(task),
-          task.done ? "opacity-60" : "",
         ].join(" ")}
         style={{
           transform: swipeX > 0 ? `translateX(${swipeX}px)` : undefined,
@@ -191,12 +190,18 @@ export function TaskItem({
           onChange={onToggle}
           onClick={(e) => e.stopPropagation()}
           aria-label={`סמן ${task.text} כבוצע`}
-          className="mt-1 h-6 w-6 rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 accent-blue-600 text-blue-600 focus:ring-blue-500 flex-shrink-0"
+          className={[
+            "mt-1 h-6 w-6 rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-blue-500 flex-shrink-0",
+            task.done ? "accent-emerald-600 text-emerald-600" : "accent-blue-600 text-blue-600",
+          ].join(" ")}
         />
 
         <div className="flex-1 min-w-0">
           <div
-            className="text-sm leading-snug whitespace-pre-wrap break-words"
+            className={[
+              "text-sm leading-snug whitespace-pre-wrap break-words",
+              task.done ? "line-through text-gray-400 dark:text-gray-500" : "text-gray-900 dark:text-gray-100",
+            ].join(" ")}
             dir="auto"
             style={{ unicodeBidi: "plaintext" }}
           >
@@ -212,7 +217,7 @@ export function TaskItem({
 
           {noteExists && !editing && (
             <div
-              className="mt-1 text-xs text-gray-600 whitespace-pre-wrap break-words"
+              className="mt-1 text-xs text-gray-600 dark:text-gray-400 whitespace-pre-wrap break-words"
               dir="auto"
               style={{ unicodeBidi: "plaintext" }}
             >
@@ -337,7 +342,7 @@ export function TaskItem({
                   "text-sm min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border",
                   task.dueAt
                     ? "bg-amber-100 border-amber-300 text-amber-700 dark:bg-amber-900/40 dark:border-amber-700 dark:text-amber-300"
-                    : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300",
+                    : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-500 text-gray-700 dark:text-gray-200",
                 ].join(" ")}
               >
                 ⏱
@@ -353,7 +358,7 @@ export function TaskItem({
                 e.stopPropagation();
                 setEditing((v) => !v);
               }}
-              className="text-sm min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300"
+              className="text-sm min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-500 text-gray-700 dark:text-gray-200"
             >
               ✎
             </button>
@@ -368,7 +373,7 @@ export function TaskItem({
                   e.stopPropagation();
                   dispatch({ type: "DELETE_TASK", patientId, taskId: task.id });
                 }}
-                className="text-sm min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-red-400 dark:text-red-500 active:bg-red-50"
+                className="text-sm min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-500 text-red-400 dark:text-red-400 active:bg-red-50"
               >
                 🗑
               </button>
