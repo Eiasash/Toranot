@@ -476,7 +476,17 @@ function AppInner() {
   const { patients, activeSection } = usePatientsState();
   const dispatch = usePatientsDispatch();
 
-  useEffect(() => { requestNotificationPermission(); }, []);
+  useEffect(() => {
+    requestNotificationPermission().then(({ showCaveat }) => {
+      if (showCaveat) {
+        // One-time warning: Android PWA kills setTimeout when app is suspended
+        showStorageToastRef.current(
+          "⚠️ תזכורות פעילות רק כשהאפליקציה פתוחה (מגבלת PWA באנדרואיד)",
+          "error",
+        );
+      }
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { syncReminders(patients); }, [patients]);
   // Cancel all reminder timers when the patient list is cleared
   useEffect(() => { if (patients.length === 0) cancelAllReminders(); }, [patients.length]);

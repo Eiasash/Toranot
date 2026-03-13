@@ -6,14 +6,15 @@
  * can override if clinical judgment disagrees.
  *
  * Scoring weights (tuned for geriatric on-call priorities):
- *   - Open STAT tasks          × 5
- *   - Open urgent tasks        × 3
- *   - Active drug interactions  × 4 (critical) / 2 (major)
- *   - Critical lab deltas       × 4
- *   - Warning lab deltas        × 2
- *   - DNR/DNI flags             × 0 (doesn't make them sicker, just changes goals)
- *   - Active scenarios          × 1
- *   - Tasks with approaching deadlines (<30min) × 3
+ *   - Open STAT tasks                        × 5
+ *   - Open urgent tasks                      × 3
+ *   - Active drug interactions               × 4 (critical) / 2 (major)
+ *   - Overdue tasks (past dueAt)             × 4
+ *   - Tasks approaching deadline (<30 min)   × 3
+ *   - Critical lab deltas                    × 4
+ *   - Warning lab deltas                     × 2
+ *   - Active generated scenarios             × 1
+ *   - DNR/DNI flags                          × 0 (doesn't make them sicker, just changes goals)
  */
 
 import type { PatientEntry } from "../types";

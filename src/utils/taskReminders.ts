@@ -1,9 +1,16 @@
 /**
  * Task Reminders via Notification API
- * 
+ *
  * Schedules browser/PWA notifications for tasks with dueAt times.
  * Falls back to in-app toast if Notification permission denied.
+ *
+ * ⚠️  Android PWA limitation: setTimeout-based reminders are cancelled
+ * when the OS suspends or kills the app process. Reminders are reliable
+ * only while the app is open in the foreground or recent background.
+ * Users are warned via REMINDER_CAVEAT_KEY (shown once after permission granted).
  */
+
+const REMINDER_CAVEAT_KEY = "toranot-reminder-caveat-shown";
 
 type ScheduledReminder = {
   taskId: string;
@@ -15,13 +22,29 @@ type ScheduledReminder = {
 
 const activeReminders = new Map<string, ScheduledReminder>();
 
-/** Request notification permission (call once on app init) */
-export async function requestNotificationPermission(): Promise<boolean> {
-  if (!("Notification" in window)) return false;
-  if (Notification.permission === "granted") return true;
-  if (Notification.permission === "denied") return false;
-  const result = await Notification.requestPermission();
-  return result === "granted";
+/** Request notification permission (call once on app init).
+ *  Returns { granted, showCaveat } — showCaveat is true the first time
+ *  permission is granted, so the caller can show a one-time warning that
+ *  reminders only fire while the app is open (Android PWA limitation).
+ */
+export async function requestNotificationPermission(): Promise<{ granted: boolean; showCaveat: boolean }> {
+  if (!("Notification" in window)) return { granted: false, showCaveat: false };
+  if (Notification.permission === "denied") return { granted: false, showCaveat: false };
+
+  let justGranted = false;
+  if (Notification.permission !== "granted") {
+    const result = await Notification.requestPermission();
+    if (result !== "granted") return { granted: false, showCaveat: false };
+    justGranted = true;
+  }
+
+  // Show the caveat once — either on first grant, or if it was never shown before
+  const alreadyShown = localStorage.getItem(REMINDER_CAVEAT_KEY) === "1";
+  const showCaveat = justGranted || !alreadyShown;
+  if (showCaveat) {
+    localStorage.setItem(REMINDER_CAVEAT_KEY, "1");
+  }
+  return { granted: true, showCaveat };
 }
 
 /** Schedule a reminder for a task */
