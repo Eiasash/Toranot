@@ -57,8 +57,10 @@ function classifyAKI(
   baselineTime: Date,
   peakTime: Date,
 ): { severity: LabDelta["severity"]; stage: 1 | 2 | 3; message: string } | null {
-  // Guard against division by zero (medically impossible but possible via data corruption)
-  if (baseline <= 0) return null;
+  // Guard against invalid inputs (medically impossible but possible via data corruption)
+  if (baseline <= 0 || peakCr < 0) return null;
+  // Guard against reversed timestamps (peakTime before baselineTime)
+  if (peakTime.getTime() < baselineTime.getTime()) return null;
   const ratio = peakCr / baseline;
   const absoluteRise = peakCr - baseline;
   const hoursElapsed = (peakTime.getTime() - baselineTime.getTime()) / 3.6e6;

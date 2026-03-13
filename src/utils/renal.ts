@@ -41,6 +41,9 @@ export function cockcroft(
   sexFemale: boolean,
   serumCrMgDl: number,
 ): number {
+  // Guard against nonsensical inputs that would make the formula meaningless
+  if (weightKg <= 0 || serumCrMgDl <= 0) return 0;
+
   // Apply creatinine floor for frail elderly (≥75yo) — prevents CrCl overestimation
   const cr = ageYears >= 75 && serumCrMgDl < 1.0 ? 1.0 : serumCrMgDl;
   const crcl = ((140 - ageYears) * weightKg) / (72 * cr) * (sexFemale ? 0.85 : 1.0);

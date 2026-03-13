@@ -39,121 +39,121 @@ describe("generateHints", () => {
   it("generates PE hint", () => {
     const p = makePatient({ diagnosis: "PE" });
     const hints = generateHints(p);
-    expect(hints.some((h) => h.title.includes("PE"))).toBe(true);
+    expect(hints.filter((h) => h.title.includes("PE"))).toHaveLength(1);
   });
 
   it("generates DVT hint", () => {
     const p = makePatient({ diagnosis: "DVT" });
     const hints = generateHints(p);
-    expect(hints.some((h) => h.title.includes("DVT"))).toBe(true);
+    expect(hints.filter((h) => h.title.includes("DVT"))).toHaveLength(1);
   });
 
   it("generates CHF hint", () => {
     const p = makePatient({ diagnosis: "CHF" });
     const hints = generateHints(p);
-    expect(hints.some((h) => h.title.includes("אי-ספיקת לב"))).toBe(true);
+    expect(hints.filter((h) => h.title.includes("אי-ספיקת לב"))).toHaveLength(1);
   });
 
   it("generates CHF hint from Hebrew diagnosis", () => {
     const p = makePatient({ diagnosis: "אי ספיקת לב" });
     const hints = generateHints(p);
-    expect(hints.some((h) => h.title.includes("אי-ספיקת לב"))).toBe(true);
+    expect(hints.filter((h) => h.title.includes("אי-ספיקת לב"))).toHaveLength(1);
   });
 
   it("generates CAD/ACS hint", () => {
     const p = makePatient({ diagnosis: "NSTEMI" });
     const hints = generateHints(p);
-    expect(hints.some((h) => h.title.includes("CAD"))).toBe(true);
+    expect(hints.filter((h) => h.title.includes("CAD"))).toHaveLength(1);
   });
 
   it("generates AF hint", () => {
     const p = makePatient({ diagnosis: "AF" });
     const hints = generateHints(p);
-    expect(hints.some((h) => h.title.includes("AF"))).toBe(true);
+    expect(hints.filter((h) => h.title.includes("AF"))).toHaveLength(1);
   });
 
   it("generates stroke/CVA hint", () => {
     const p = makePatient({ diagnosis: "CVA" });
     const hints = generateHints(p);
-    expect(hints.some((h) => h.title.includes("שבץ"))).toBe(true);
+    expect(hints.filter((h) => h.title.includes("שבץ"))).toHaveLength(1);
   });
 
   it("generates diabetes hint", () => {
     const p = makePatient({ diagnosis: "DM2" });
     const hints = generateHints(p);
-    expect(hints.some((h) => h.title.includes("סוכרת"))).toBe(true);
+    expect(hints.filter((h) => h.title.includes("סוכרת"))).toHaveLength(1);
   });
 
   it("generates CKD hint", () => {
     const p = makePatient({ diagnosis: "CKD stage 4" });
     const hints = generateHints(p);
-    expect(hints.some((h) => h.title.includes("CKD"))).toBe(true);
+    expect(hints.filter((h) => h.title.includes("CKD"))).toHaveLength(1);
   });
 
   it("generates CKD hint for dialysis patients", () => {
     const p = makePatient({ status: ["dialysis 3x/week"] });
     const hints = generateHints(p);
-    expect(hints.some((h) => h.title.includes("CKD"))).toBe(true);
+    expect(hints.filter((h) => h.title.includes("CKD"))).toHaveLength(1);
   });
 
   it("generates COPD hint", () => {
     const p = makePatient({ diagnosis: "COPD" });
     const hints = generateHints(p);
-    expect(hints.some((h) => h.title.includes("COPD"))).toBe(true);
+    expect(hints.filter((h) => h.title.includes("COPD"))).toHaveLength(1);
   });
 
   it("generates dementia hint", () => {
     const p = makePatient({ diagnosis: "דמנציה" });
     const hints = generateHints(p);
-    expect(hints.some((h) => h.title.includes("דמנציה"))).toBe(true);
+    expect(hints.filter((h) => h.title.includes("דמנציה"))).toHaveLength(1);
   });
 
   it("generates endocarditis hint", () => {
     const p = makePatient({ diagnosis: "endocarditis" });
     const hints = generateHints(p);
-    expect(hints.some((h) => h.title.includes("אנדוקרדיטיס"))).toBe(true);
+    expect(hints.filter((h) => h.title.includes("אנדוקרדיטיס"))).toHaveLength(1);
   });
 
   it("generates liver disease hint", () => {
     const p = makePatient({ diagnosis: "cirrhosis" });
     const hints = generateHints(p);
-    expect(hints.some((h) => h.title.includes("מחלת כבד"))).toBe(true);
+    expect(hints.filter((h) => h.title.includes("מחלת כבד"))).toHaveLength(1);
   });
 
   it("generates anticoagulation hint", () => {
     const p = makePatient({ flags: ["warfarin"] });
     const hints = generateHints(p);
-    expect(hints.some((h) => h.title.includes("אנטיקואגולציה"))).toBe(true);
+    expect(hints.filter((h) => h.title.includes("אנטיקואגולציה"))).toHaveLength(1);
   });
 
   it("generates Parkinson's hint", () => {
     const p = makePatient({ diagnosis: "פרקינסון" });
     const hints = generateHints(p);
-    expect(hints.some((h) => h.title.includes("פרקינסון"))).toBe(true);
+    expect(hints.filter((h) => h.title.includes("פרקינסון"))).toHaveLength(1);
   });
 
   it("generates hip fracture hint", () => {
     const p = makePatient({ diagnosis: "שבר ירך" });
     const hints = generateHints(p);
-    expect(hints.some((h) => h.title.includes("שבר ירך"))).toBe(true);
+    expect(hints.filter((h) => h.title.includes("שבר ירך"))).toHaveLength(1);
   });
 
   it("generates pressure ulcer hint", () => {
     const p = makePatient({ status: ["פצע לחץ stage 2"] });
     const hints = generateHints(p);
-    expect(hints.some((h) => h.title.includes("פצעי לחץ"))).toBe(true);
+    expect(hints.filter((h) => h.title.includes("פצעי לחץ"))).toHaveLength(1);
   });
 
   it("generates tube feeding hint", () => {
     const p = makePatient({ status: ["PEG feeding"] });
     const hints = generateHints(p);
-    expect(hints.some((h) => h.title.includes("הזנה צינורית"))).toBe(true);
+    expect(hints.filter((h) => h.title.includes("הזנה צינורית"))).toHaveLength(1);
   });
 
   it("generates ascites hint", () => {
     const p = makePatient({ diagnosis: "ascites" });
     const hints = generateHints(p);
-    expect(hints.some((h) => h.title.includes("מיימת"))).toBe(true);
+    expect(hints.filter((h) => h.title.includes("מיימת"))).toHaveLength(1);
   });
 
   // ── Deduplication ──
@@ -201,170 +201,172 @@ describe("generateHints", () => {
 
   it("generates sepsis hint", () => {
     const p = makePatient({ diagnosis: "sepsis" });
-    expect(generateHints(p).some(h => h.title.includes("ספסיס"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("ספסיס"))).toHaveLength(1);
   });
 
   it("generates pneumonia hint", () => {
     const p = makePatient({ diagnosis: "PNEUMONIA" });
-    expect(generateHints(p).some(h => h.title.includes("דלקת ריאות"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("דלקת ריאות"))).toHaveLength(1);
   });
 
   it("generates UTI hint", () => {
     const p = makePatient({ diagnosis: "UTI" });
-    expect(generateHints(p).some(h => h.title.includes("UTI"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("UTI"))).toHaveLength(1);
   });
 
   it("generates AKI hint", () => {
     const p = makePatient({ diagnosis: "AKI" });
-    expect(generateHints(p).some(h => h.title.includes("AKI"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("AKI"))).toHaveLength(1);
   });
 
   it("generates delirium hint", () => {
     const p = makePatient({ status: ["דליריום"] });
-    expect(generateHints(p).some(h => h.title.includes("דליריום"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("דליריום"))).toHaveLength(1);
   });
 
   it("generates falls hint", () => {
     const p = makePatient({ diagnosis: "fall risk" });
-    expect(generateHints(p).some(h => h.title.includes("נפילות"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("נפילות"))).toHaveLength(1);
   });
 
   it("generates GI bleed hint", () => {
     const p = makePatient({ diagnosis: "GI bleed" });
-    expect(generateHints(p).some(h => h.title.includes("דימום GI"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("דימום GI"))).toHaveLength(1);
   });
 
   it("generates DKA hint", () => {
     const p = makePatient({ diagnosis: "DKA" });
-    expect(generateHints(p).some(h => h.title.includes("DKA"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("DKA"))).toHaveLength(1);
   });
 
   it("generates digoxin toxicity hint", () => {
     const p = makePatient({ diagnosis: "digoxin toxicity" });
-    expect(generateHints(p).some(h => h.title.includes("דיגוקסין"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("דיגוקסין"))).toHaveLength(1);
   });
 
   it("generates NIV/BiPAP hint", () => {
     const p = makePatient({ status: ["on BiPAP"] });
-    expect(generateHints(p).some(h => h.title.includes("BiPAP"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("BiPAP"))).toHaveLength(1);
   });
 
   it("generates dialysis hint", () => {
     const p = makePatient({ diagnosis: "ESRD on dialysis" });
-    expect(generateHints(p).some(h => h.title.includes("דיאליזה"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("דיאליזה"))).toHaveLength(1);
   });
 
   it("generates neutropenic fever hint", () => {
     const p = makePatient({ diagnosis: "neutropenic fever" });
-    expect(generateHints(p).some(h => h.title.includes("חום נויטרופני"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("חום נויטרופני"))).toHaveLength(1);
   });
 
   it("generates NMS hint", () => {
     const p = makePatient({ diagnosis: "NMS suspected" });
-    expect(generateHints(p).some(h => h.title.includes("NMS"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("NMS"))).toHaveLength(1);
   });
 
   it("generates serotonin syndrome hint", () => {
     const p = makePatient({ diagnosis: "serotonin syndrome" });
-    expect(generateHints(p).some(h => h.title.includes("סרוטונין"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("סרוטונין"))).toHaveLength(1);
   });
 
   it("generates palliative care hint", () => {
     const p = makePatient({ flags: ["טיפול מנחם"] });
-    expect(generateHints(p).some(h => h.title.includes("טיפול מנחם"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("טיפול מנחם"))).toHaveLength(1);
   });
 
   it("generates alcohol withdrawal hint", () => {
     const p = makePatient({ diagnosis: "alcohol withdrawal" });
-    expect(generateHints(p).some(h => h.title.includes("גמילה מאלכוהול"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("גמילה מאלכוהול"))).toHaveLength(1);
   });
 
   it("generates seizure hint", () => {
     const p = makePatient({ diagnosis: "seizure disorder" });
-    expect(generateHints(p).some(h => h.title.includes("פרכוס"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("פרכוס"))).toHaveLength(1);
   });
 
   it("generates pleural effusion hint", () => {
     const p = makePatient({ diagnosis: "pleural effusion" });
-    expect(generateHints(p).some(h => h.title.includes("תפליט"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("תפליט"))).toHaveLength(1);
   });
 
   it("generates post-operative hint", () => {
     const p = makePatient({ status: ["post-op day 1"] });
-    expect(generateHints(p).some(h => h.title.includes("פוסט-ניתוחי"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("פוסט-ניתוחי"))).toHaveLength(1);
   });
 
   it("generates hyponatremia hint", () => {
     const p = makePatient({ diagnosis: "hyponatremia" });
-    expect(generateHints(p).some(h => h.title.includes("היפונתרמיה"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("היפונתרמיה"))).toHaveLength(1);
   });
 
   it("generates hyperkalemia hint", () => {
     const p = makePatient({ diagnosis: "hyperkalemia" });
-    expect(generateHints(p).some(h => h.title.includes("היפרקלמיה"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("היפרקלמיה"))).toHaveLength(1);
   });
 
   it("generates pacemaker hint", () => {
     const p = makePatient({ status: ["permanent pacemaker"] });
-    expect(generateHints(p).some(h => h.title.includes("קוצב"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("קוצב"))).toHaveLength(1);
   });
 
   it("generates aortic stenosis hint", () => {
     const p = makePatient({ diagnosis: "aortic stenosis severe" });
-    expect(generateHints(p).some(h => h.title.includes("היצרות אאורטלית"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("היצרות אאורטלית"))).toHaveLength(1);
   });
 
   it("generates COPD CO2 retention hint", () => {
     const p = makePatient({ diagnosis: "COPD CO2 retention" });
-    expect(generateHints(p).some(h => h.title.includes("CO2"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("CO2"))).toHaveLength(1);
   });
 
   it("generates C.diff hint", () => {
     const p = makePatient({ diagnosis: "C.diff colitis" });
-    expect(generateHints(p).some(h => h.title.toLowerCase().includes("diff"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.toLowerCase().includes("diff"))).toHaveLength(1);
   });
 
   it("generates isolation hint for MRSA", () => {
     const p = makePatient({ flags: ["MRSA"] });
-    expect(generateHints(p).some(h => h.title.includes("בידוד"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("בידוד"))).toHaveLength(1);
   });
 
   it("generates tracheostomy hint", () => {
     const p = makePatient({ status: ["tracheostomy in situ"] });
-    expect(generateHints(p).some(h => h.title.includes("טרכיאוסטומיה"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("טרכיאוסטומיה"))).toHaveLength(1);
   });
 
   it("generates osteoporosis hint", () => {
     const p = makePatient({ diagnosis: "osteoporosis, vertebral fracture" });
-    expect(generateHints(p).some(h => h.title.includes("אוסטאופורוזיס"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("אוסטאופורוזיס"))).toHaveLength(1);
   });
 
   it("generates rhabdomyolysis hint", () => {
     const p = makePatient({ diagnosis: "rhabdomyolysis" });
-    expect(generateHints(p).some(h => h.title.includes("רבדומיוליזיס"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("רבדומיוליזיס"))).toHaveLength(1);
   });
 
   it("generates pancreatitis hint", () => {
     const p = makePatient({ diagnosis: "pancreatitis" });
-    expect(generateHints(p).some(h => h.title.includes("לבלב"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("לבלב"))).toHaveLength(1);
   });
 
   it("generates hypernatremia hint", () => {
     const p = makePatient({ diagnosis: "hypernatremia" });
-    expect(generateHints(p).some(h => h.title.includes("היפרנתרמיה"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("היפרנתרמיה"))).toHaveLength(1);
   });
 
   it("generates hypercalcemia hint", () => {
     const p = makePatient({ diagnosis: "hypercalcemia" });
-    expect(generateHints(p).some(h => h.title.includes("היפרקלצמיה"))).toBe(true);
+    expect(generateHints(p).filter(h => h.title.includes("היפרקלצמיה"))).toHaveLength(1);
   });
 
   it("each hint has emoji, title, and non-empty tips", () => {
     const p = makePatient({ diagnosis: "CHF, PE, DVT, COPD" });
     const hints = generateHints(p);
     for (const h of hints) {
-      expect(h.emoji).toBeTruthy();
-      expect(h.title).toBeTruthy();
+      expect(typeof h.emoji).toBe("string");
+      expect(h.emoji.length).toBeGreaterThan(0);
+      expect(typeof h.title).toBe("string");
+      expect(h.title.length).toBeGreaterThan(0);
       expect(h.tips.length).toBeGreaterThan(0);
     }
   });

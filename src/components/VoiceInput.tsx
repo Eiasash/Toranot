@@ -107,7 +107,8 @@ function parseCommand(transcript: string): VoiceParsedCommand {
     const temp = tempMatch[1].replace(",", ".");
     taskParts.push(`חום ${temp}°`);
     confidence += 0.3;
-    if (parseFloat(temp) >= 38.0 && urgency === "routine") urgency = "urgent";
+    const tempVal = parseFloat(temp);
+    if (!isNaN(tempVal) && tempVal >= 38.0 && urgency === "routine") urgency = "urgent";
   }
 
   const glucoseMatch = transcript.match(GLUCOSE_PATTERN);
@@ -115,7 +116,7 @@ function parseCommand(transcript: string): VoiceParsedCommand {
     taskParts.push(`סוכר ${glucoseMatch[1]}`);
     confidence += 0.3;
     const val = parseInt(glucoseMatch[1]);
-    if ((val < 70 || val > 400) && urgency === "routine") urgency = "stat";
+    if (!isNaN(val) && (val < 70 || val > 400) && urgency === "routine") urgency = "stat";
   }
 
   const bpMatch = transcript.match(BP_PATTERN);
@@ -123,7 +124,7 @@ function parseCommand(transcript: string): VoiceParsedCommand {
     taskParts.push(`לחץ דם ${bpMatch[1]}/${bpMatch[2]}`);
     confidence += 0.3;
     const sys = parseInt(bpMatch[1]);
-    if ((sys < 90 || sys > 180) && urgency === "routine") urgency = "urgent";
+    if (!isNaN(sys) && (sys < 90 || sys > 180) && urgency === "routine") urgency = "urgent";
   }
 
   for (const { pattern, task } of KEYWORD_MAP) {
