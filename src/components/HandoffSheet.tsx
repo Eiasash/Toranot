@@ -480,6 +480,105 @@ function SectionBlock({ label, patients, newIds, dispatch }: { label: string; pa
   );
 }
 
+// ─── Kabalah AI Summary helper ───────────────────────────────────────────────
+
+function buildKabalahPrompt(p: PatientEntry): string {
+  const allTasks = [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)];
+  const done = allTasks.filter(t => t.done).map(t => t.text).join(", ");
+  const pending = allTasks.filter(t => !t.done).map(t => t.text).join(", ");
+  const labs = (p.labs ?? []).slice(-6).map(l => `${l.label} ${l.value}${l.unit ?? ""}`).join(", ");
+  return [
+    `חולה: ${p.name ?? "?"}, ${p.age ?? "?"}, חדר ${p.room ?? "?"}`,
+    `אבחנה: ${p.diagnosis ?? "לא ידוע"}`,
+
+    labs ? `מעבדות: ${labs}` : "",
+    done ? `בוצע: ${done}` : "",
+    pending ? `ממתין: ${pending}` : "",
+    p.handoverNote ? `הערת מסירה: ${p.handoverNote}` : "",
+    (p.notes ?? []).length ? `הערות: ${(p.notes ?? []).join("; ")}` : "",
+  ].filter(Boolean).join("\n");
+}
+
+async function generateKabalahSummary(p: PatientEntry): Promise<string> {
+  const res = await fetch("/api/claude", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "haiku",
+      max_tokens: 300,
+      system: "אתה רופא גריאטרי בשיבא. כתוב סיכום קצר (2-3 שורות בעברית) לדיווח בוקר על קבלה חדשה. כלול: מי החולה, מה הבעיה העיקרית, מה נעשה, מה ממתין. ללא כותרות. ישיר וממוקד.",
+      messages: [{ role: "user", content: buildKabalahPrompt(p) }],
+    }),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  const text = (data.content as { type: string; text?: string }[])
+    ?.find(b => b.type === "text")?.text ?? "";
+  return text.trim();
+}
+
+function KabalahSummaryBlock({ patient }: { patient: PatientEntry | undefined }) {
+  const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [summary, setSummary] = useState("");
+  const [expanded, setExpanded] = useState(false);
+
+  if (!patient) return null;
+
+  const generate = async () => {
+    setState("loading");
+    setExpanded(true);
+    try {
+      const text = await generateKabalahSummary(patient);
+      setSummary(text);
+      setState("done");
+    } catch {
+      setState("error");
+    }
+  };
+
+  return (
+    <div className="mt-1">
+      {state === "idle" && (
+        <button
+          onClick={generate}
+          className="text-[10px] text-teal-400 active:text-teal-300 py-0.5"
+        >
+          ✨ סכם לבוקר
+        </button>
+      )}
+      {state === "loading" && (
+        <span className="text-[10px] text-gray-500 animate-pulse">מסכם...</span>
+      )}
+      {state === "error" && (
+        <button onClick={generate} className="text-[10px] text-red-400">
+          ⚠️ שגיאה — נסה שוב
+        </button>
+      )}
+      {state === "done" && (
+        <div className="mt-0.5">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <span className="text-[10px] font-semibold text-teal-400">✨ סיכום בוקר</span>
+            <button
+              onClick={() => setExpanded(v => !v)}
+              className="text-[10px] text-gray-500"
+            >
+              {expanded ? "▲" : "▼"}
+            </button>
+            <button onClick={generate} className="text-[10px] text-gray-600 mr-auto active:text-gray-400">
+              🔄
+            </button>
+          </div>
+          {expanded && (
+            <p className="text-[11px] text-teal-200 leading-relaxed whitespace-pre-wrap bg-teal-900/20 border border-teal-800/40 rounded-lg p-2" dir="rtl">
+              {summary}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Tube colour ordering for phlebotomy display ────────────────────────────
 const TUBE_ORDER: TubeColour[] = ["red", "purple", "blue", "green", "yellow", "black"];
 
@@ -723,17 +822,25 @@ export function HandoffSheet({ onClose, initialTab }: { onClose: () => void; ini
 
               {/* Admissions */}
               {admissionEvents.length > 0 && (
-                <div className="bg-teal-900/20 border border-teal-700/50 rounded-xl p-3 space-y-1.5">
+                <div className="bg-teal-900/20 border border-teal-700/50 rounded-xl p-3 space-y-2.5">
                   <p className="text-xs font-bold text-teal-300">🏥 קבלות 24 שעות ({admissionEvents.length})</p>
                   {admissionEvents.map(e => {
                     if (e.type !== "ADMISSION") return null;
+                    const admPatient = filteredPatients.find(p => p.id === e.patientId)
+                      ?? patients.find(p => p.id === e.patientId);
                     return (
-                      <div key={e.id} className="text-xs flex gap-2 items-center">
-                        <span className="text-gray-400 font-mono shrink-0">חד׳ {e.room ?? "?"}</span>
-                        <span className="text-gray-200">{e.patientName ?? "?"}</span>
-                        <span className="text-gray-500 mr-auto shrink-0">
-                          {new Date(e.at).toLocaleString("he-IL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                        </span>
+                      <div key={e.id} className="border-t border-teal-800/30 pt-2 first:border-0 first:pt-0">
+                        <div className="text-xs flex gap-2 items-center">
+                          <span className="text-gray-400 font-mono shrink-0">חד׳ {e.room ?? "?"}</span>
+                          <span className="text-gray-200 font-medium">{e.patientName ?? "?"}</span>
+                          {admPatient?.diagnosis && (
+                            <span className="text-gray-500 truncate text-[11px]">— {admPatient.diagnosis}</span>
+                          )}
+                          <span className="text-gray-500 mr-auto shrink-0 text-[10px]">
+                            {new Date(e.at).toLocaleString("he-IL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        </div>
+                        <KabalahSummaryBlock patient={admPatient} />
                       </div>
                     );
                   })}

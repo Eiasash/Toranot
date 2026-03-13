@@ -101,7 +101,8 @@ export default async (req: Request, _context: Context) => {
     Array.isArray(m.content) &&
     (m.content as {type:string}[]).some(b => b.type === "image" || b.type === "document")
   );
-  const timeoutMs = hasFileBlocks ? UPSTREAM_TIMEOUT_LONG_MS : undefined;
+  const isLongGeneration = maxTokens >= 2000; // clinical reasoning uses 3000 — needs more time
+  const timeoutMs = (hasFileBlocks || isLongGeneration) ? UPSTREAM_TIMEOUT_LONG_MS : undefined;
 
   let upstream: Response;
   try {

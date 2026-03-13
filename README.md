@@ -6,6 +6,8 @@ Live: **[toranot.netlify.app](https://toranot.netlify.app)**
 
 ## Recent Changes
 
+- **fix(proxy): raise AI timeout** — Default upstream timeout raised 9s → 20s; clinical reasoning requests (max_tokens ≥ 2000) now use 23s long-timeout, fixing "תם הזמן המוקצב" errors in AIClinicalReasoning.
+- **feat(handoff): kabalah morning summary** — Each admission in דוח משמרת now has ✨ סכם לבוקר AI button generating a 2-3 line Hebrew morning report summary.
 - **fix(rules): remove nursing-scope rules** — Deleted aspiration_risk (3 tasks), pressure_ulcer (3 tasks), and delirium_nonpharm_bundle (5 tasks). These are nursing standing orders, not on-call doctor tasks. Delirium main rule collapsed from 15 → 6 actionable tasks; medication ladder consolidated into single reference line.
 - **feat(sort): pending tasks sort** — New "⏳ לפי משימות" sort option. Patients with the most pending undone tasks float to top.
 - **fix(handoff): new admissions first** — Admissions sort to top within each section in card view.

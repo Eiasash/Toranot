@@ -6,7 +6,7 @@
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 export const MAX_BODY_BYTES = 5_000_000; // 5MB — supports base64-encoded admission letter files
-export const UPSTREAM_TIMEOUT_MS = 9_000;
+export const UPSTREAM_TIMEOUT_MS = 20_000;       // raised from 9s — complex clinical prompts need more time
 export const UPSTREAM_TIMEOUT_LONG_MS = 23_000; // for file/vision requests — leaves 3s buffer before Netlify's 26s function timeout
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
