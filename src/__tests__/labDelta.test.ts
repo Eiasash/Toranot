@@ -363,4 +363,118 @@ describe("calculateLabDeltas", () => {
       expect(Array.isArray(deltas)).toBe(true);
     });
   });
+
+  // ── Boundary value tests ──
+
+  describe("KDIGO AKI boundaries", () => {
+    it("Cr exactly 1.5x baseline triggers AKI Stage 1", () => {
+      const p = makePatient([
+        makeLab("Cr", 1.0, 48),
+        makeLab("Cr", 1.5, 1),  // exactly 1.5x
+      ]);
+      const deltas = calculateLabDeltas(p);
+      const crDelta = deltas.find((d) => d.label === "Cr");
+      expect(crDelta).toBeDefined();
+      expect(crDelta!.akiStage).toBe(1);
+    });
+
+    it("Cr just under 1.5x does not trigger AKI (outside 48h window)", () => {
+      const p = makePatient([
+        makeLab("Cr", 1.0, 72),  // baseline >48h ago
+        makeLab("Cr", 1.49, 1),  // just below 1.5x
+      ]);
+      const deltas = calculateLabDeltas(p);
+      const crDelta = deltas.find((d) => d.label === "Cr");
+      expect(crDelta).toBeUndefined();
+    });
+
+    it("Cr exactly 2.0x baseline triggers AKI Stage 2", () => {
+      const p = makePatient([
+        makeLab("Cr", 1.0, 72),
+        makeLab("Cr", 2.0, 1),
+      ]);
+      const deltas = calculateLabDeltas(p);
+      const crDelta = deltas.find((d) => d.label === "Cr");
+      expect(crDelta).toBeDefined();
+      expect(crDelta!.akiStage).toBe(2);
+      expect(crDelta!.severity).toBe("critical");
+    });
+
+    it("Cr exactly 3.0x baseline triggers AKI Stage 3", () => {
+      const p = makePatient([
+        makeLab("Cr", 1.0, 96),
+        makeLab("Cr", 3.0, 1),
+      ]);
+      const deltas = calculateLabDeltas(p);
+      const crDelta = deltas.find((d) => d.label === "Cr");
+      expect(crDelta).toBeDefined();
+      expect(crDelta!.akiStage).toBe(3);
+    });
+
+    it("Cr exactly 4.0 triggers AKI Stage 3 regardless of ratio", () => {
+      const p = makePatient([
+        makeLab("Cr", 3.5, 96),
+        makeLab("Cr", 4.0, 1),  // ratio 1.14x (below stage 1) but absolute >= 4.0
+      ]);
+      const deltas = calculateLabDeltas(p);
+      const crDelta = deltas.find((d) => d.label === "Cr");
+      expect(crDelta).toBeDefined();
+      expect(crDelta!.akiStage).toBe(3);
+    });
+
+    it("0.3 rise within 48h triggers Stage 1 even with low ratio", () => {
+      const p = makePatient([
+        makeLab("Cr", 0.8, 24),  // 24h ago (within 48h)
+        makeLab("Cr", 1.1, 1),   // rise of 0.3, ratio only 1.375
+      ]);
+      const deltas = calculateLabDeltas(p);
+      const crDelta = deltas.find((d) => d.label === "Cr");
+      expect(crDelta).toBeDefined();
+      expect(crDelta!.akiStage).toBe(1);
+    });
+
+    it("0.3 rise outside 48h does not trigger Stage 1 (48h criterion)", () => {
+      const p = makePatient([
+        makeLab("Cr", 0.8, 72),  // 72h ago (>48h)
+        makeLab("Cr", 1.1, 1),   // rise of 0.3, ratio 1.375 (<1.5)
+      ]);
+      const deltas = calculateLabDeltas(p);
+      const crDelta = deltas.find((d) => d.label === "Cr");
+      expect(crDelta).toBeUndefined();
+    });
+  });
+
+  describe("K+ threshold boundaries", () => {
+    it("K+ rise of exactly 0.5 triggers warning", () => {
+      const p = makePatient([
+        makeLab("K+", 4.0, 12),
+        makeLab("K+", 4.5, 1),
+      ]);
+      const deltas = calculateLabDeltas(p);
+      const kDelta = deltas.find((d) => d.label === "K+");
+      expect(kDelta).toBeDefined();
+      expect(kDelta!.severity).toBe("warning");
+    });
+
+    it("K+ rise of 0.49 does not trigger alert", () => {
+      const p = makePatient([
+        makeLab("K+", 4.0, 12),
+        makeLab("K+", 4.49, 1),
+      ]);
+      const deltas = calculateLabDeltas(p);
+      const kDelta = deltas.find((d) => d.label === "K+");
+      expect(kDelta).toBeUndefined();
+    });
+
+    it("K+ rise of exactly 1.0 triggers critical", () => {
+      const p = makePatient([
+        makeLab("K+", 4.0, 12),
+        makeLab("K+", 5.0, 1),
+      ]);
+      const deltas = calculateLabDeltas(p);
+      const kDelta = deltas.find((d) => d.label === "K+");
+      expect(kDelta).toBeDefined();
+      expect(kDelta!.severity).toBe("critical");
+    });
+  });
 });

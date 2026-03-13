@@ -109,3 +109,30 @@ describe("patientCrClBucket — integration", () => {
     expect(patientCrClBucket(85, 50, false, 0.4)).toBe("10_50");
   });
 });
+
+describe("cockcroft — invalid input guards", () => {
+  it("returns 0 for zero weight", () => {
+    expect(cockcroft(70, 0, false, 1.0)).toBe(0);
+  });
+
+  it("returns 0 for negative weight", () => {
+    expect(cockcroft(70, -10, false, 1.0)).toBe(0);
+  });
+
+  it("returns 0 for zero creatinine", () => {
+    expect(cockcroft(70, 70, false, 0)).toBe(0);
+  });
+
+  it("returns 0 for negative creatinine", () => {
+    expect(cockcroft(70, 70, false, -0.5)).toBe(0);
+  });
+
+  it("CrCl boundary: exactly 50.01 → gt50", () => {
+    // Verify the boundary at exactly the gt50 threshold
+    expect(crclToBucket(50.001)).toBe("gt50");
+  });
+
+  it("CrCl boundary: exactly 9.999 → lt10", () => {
+    expect(crclToBucket(9.999)).toBe("lt10");
+  });
+});

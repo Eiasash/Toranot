@@ -9,9 +9,12 @@ import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 // ─── Supabase mock ────────────────────────────────────────────────────────────
 
 const mockFrom = vi.fn();
-const mockAuth = {
+const mockAuth: Record<string, ReturnType<typeof vi.fn>> = {
   getSession: vi.fn(),
   signOut: vi.fn(),
+  signInWithPassword: vi.fn(),
+  signUp: vi.fn(),
+  onAuthStateChange: vi.fn().mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } }),
 };
 
 vi.mock("@supabase/supabase-js", () => ({
@@ -225,7 +228,7 @@ describe("createSharedShift", () => {
 
   it("throws when no session", async () => {
     sessionNone();
-    await expect(mod.createSharedShift(state)).rejects.toBeDefined();
+    await expect(mod.createSharedShift(state)).rejects.toThrow(/expired|log in/i);
   });
 
   it("throws on DB error", async () => {
@@ -235,7 +238,7 @@ describe("createSharedShift", () => {
     for (const m of ms) c[m] = vi.fn().mockReturnValue(c);
     c["insert"] = vi.fn().mockResolvedValue({ error: { message: "dup", details: "" } });
     mockFrom.mockReturnValue(c);
-    await expect(mod.createSharedShift(state)).rejects.toBeDefined();
+    await expect(mod.createSharedShift(state)).rejects.toHaveProperty("message", "dup");
   });
 });
 
@@ -324,11 +327,18 @@ describe("updateSharedShift", () => {
     const c: Record<string, unknown> = {};
     const ms = ["select", "insert", "upsert", "delete", "gt", "maybeSingle", "single"];
     for (const m of ms) c[m] = vi.fn().mockReturnValue(c);
-    // Terminal eq returns error
-    c["eq"]     = vi.fn().mockReturnValue({ error: { message: "RLS denied" } });
+    // updateSharedShift chains .update().eq("code").eq("creator_id"),
+    // so eq must be chainable but the final result needs { error }
+    const errorResult = { error: { message: "RLS denied" } };
+    let eqCallCount = 0;
+    c["eq"] = vi.fn().mockImplementation(() => {
+      eqCallCount++;
+      // Second .eq() is terminal — return error result
+      return eqCallCount >= 2 ? errorResult : c;
+    });
     c["update"] = vi.fn().mockReturnValue(c);
     mockFrom.mockReturnValue(c);
-    await expect(mod.updateSharedShift("CODE", state)).rejects.toBeDefined();
+    await expect(mod.updateSharedShift("CODE", state)).rejects.toHaveProperty("message", "RLS denied");
   });
 });
 
@@ -382,6 +392,63 @@ describe("signOut", () => {
     mockAuth.signOut.mockResolvedValue({ error: null });
     await mod.signOut();
     expect(mockAuth.signOut).toHaveBeenCalledOnce();
+  });
+
+  it("throws when signOut fails", async () => {
+    mockAuth.signOut.mockResolvedValue({ error: { message: "signout failed" } });
+    await expect(mod.signOut()).rejects.toHaveProperty("message", "signout failed");
+  });
+});
+
+// ─── 9b. Error path tests ────────────────────────────────────────────────────
+
+describe("error paths", () => {
+  it("signInWithPassword throws on auth failure", async () => {
+    mockAuth.signInWithPassword = vi.fn().mockResolvedValue({
+      data: null,
+      error: { message: "Invalid login credentials" },
+    });
+    await expect(mod.signInWithPassword("bad@email.com", "wrong")).rejects.toHaveProperty(
+      "message",
+      "Invalid login credentials"
+    );
+  });
+
+  it("signUpWithPassword throws on auth failure", async () => {
+    mockAuth.signUp = vi.fn().mockResolvedValue({
+      data: null,
+      error: { message: "User already registered" },
+    });
+    await expect(mod.signUpWithPassword("dup@email.com", "pass")).rejects.toHaveProperty(
+      "message",
+      "User already registered"
+    );
+  });
+
+  it("signInWithEmailOtp rejects with migration message", async () => {
+    await expect(mod.signInWithEmailOtp("any@email.com")).rejects.toThrow(
+      /signInWithPassword/
+    );
+  });
+
+  it("pullHandoff handles DB error gracefully", async () => {
+    sessionOk();
+    const c = makeChainFor("maybeSingle", { data: null, error: { message: "DB error" } });
+    mockFrom.mockReturnValue(c);
+    // Should return null (not throw) — pullHandoff catches errors
+    expect(await mod.pullHandoff("ERR")).toBeNull();
+  });
+
+  it("createHandoff returns null when first getSession passes but second fails", async () => {
+    let callCount = 0;
+    mockAuth.getSession.mockImplementation(() => {
+      callCount++;
+      // First call returns valid session (for getUserId), second returns null (re-validation)
+      if (callCount === 1) return Promise.resolve({ data: { session: mockSession } });
+      return Promise.resolve({ data: { session: null } });
+    });
+    const state = { patients: [], shiftHistory: [], unassignedTasks: [], events: [] };
+    expect(await mod.createHandoff(state)).toBeNull();
   });
 });
 

@@ -136,8 +136,15 @@ async function pullCloud(): Promise<{
 
   if (error) throw error;
 
+  const raw = data?.state;
+  // Validate that the cloud state has the expected structure before casting
+  const state: ToranotCloudState | null =
+    raw && typeof raw === "object" && !Array.isArray(raw) && Array.isArray((raw as Record<string, unknown>).patients)
+      ? raw as ToranotCloudState
+      : null;
+
   return {
-    state: (data?.state as ToranotCloudState) ?? null,
+    state,
     updatedAt: (data?.updated_at as string) ?? null,
   };
 }

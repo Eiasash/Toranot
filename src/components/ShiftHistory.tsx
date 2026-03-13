@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
 import type { PatientEntry } from "../types";
+import { normalizePatient } from "../context/reducer";
 
 export function ShiftHistory({ onClose }: { onClose: () => void }) {
   const { shiftHistory } = usePatientsState();
@@ -21,8 +22,9 @@ export function ShiftHistory({ onClose }: { onClose: () => void }) {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const data = JSON.parse(e.target?.result as string) as PatientEntry[];
-        if (!Array.isArray(data)) throw new Error("Invalid format");
+        const parsed = JSON.parse(e.target?.result as string);
+        if (!Array.isArray(parsed)) throw new Error("Invalid format");
+        const data = (parsed as Record<string, unknown>[]).map(normalizePatient);
         setPendingAction({ type: "import", data, count: data.length });
       } catch (err) {
         console.warn("[Toranot] shift import parse failed:", err);
