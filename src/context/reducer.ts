@@ -662,8 +662,11 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
 
     case "NEW_ADMISSION": {
       const admittedBase = normalizePatient(action.patient as RawPatient);
-      // Apply rules immediately so on-call doctor sees generated tasks right after admission
-      const admitted = { ...admittedBase, isAdmission: true, generatedTasks: applyRules(admittedBase) };
+      // Do NOT auto-apply rules on admission — on-call doctors should add tasks
+      // explicitly. Auto-generated tasks from diagnosis create noise and are
+      // better suited for morning staff review. The user can manually trigger
+      // REAPPLY_RULES from the patient card if they want generated tasks.
+      const admitted = { ...admittedBase, isAdmission: true };
       if (
         admitted.room &&
         bedOccupiedBy(state.patients, admitted.room, admitted.section, admitted.id)

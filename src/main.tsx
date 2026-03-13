@@ -2,6 +2,10 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import "./index.css";
+import { installDebugInterceptors } from "./components/DebugConsole";
+
+// Install debug log interceptors before anything else
+installDebugInterceptors();
 
 const rootEl = document.getElementById("root");
 if (!rootEl) throw new Error("Root element #root not found");
