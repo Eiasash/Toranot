@@ -1,5 +1,34 @@
 import { useState, useEffect } from "react";
 import { signInWithPassword, signUpWithPassword, signOut, supabase } from "../cloudSync";
+import { safeGetItem, safeSetItem } from "../utils/storage";
+
+const API_KEY_STORAGE = "toranot-anthropic-key";
+const API_KEY_CLOUD_META = "anthropic_api_key";
+
+/** Save the locally-stored API key to Supabase user metadata so it persists across devices/logins. */
+async function syncApiKeyToCloud() {
+  if (!supabase) return;
+  const localKey = safeGetItem(API_KEY_STORAGE);
+  if (!localKey) return;
+  try {
+    await supabase.auth.updateUser({ data: { [API_KEY_CLOUD_META]: localKey } });
+  } catch { /* best effort */ }
+}
+
+/** Restore API key from Supabase user metadata into localStorage (only if local is empty). */
+async function restoreApiKeyFromCloud() {
+  if (!supabase) return;
+  try {
+    const { data } = await supabase.auth.getUser();
+    const cloudKey = data.user?.user_metadata?.[API_KEY_CLOUD_META];
+    if (typeof cloudKey === "string" && cloudKey.startsWith("sk-ant-")) {
+      const local = safeGetItem(API_KEY_STORAGE);
+      if (!local) {
+        safeSetItem(API_KEY_STORAGE, cloudKey);
+      }
+    }
+  } catch { /* ignore */ }
+}
 
 export function CloudAuthPanel() {
   const [email, setEmail] = useState("");
@@ -12,10 +41,17 @@ export function CloudAuthPanel() {
   useEffect(() => {
     if (!supabase) return;
     supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
+      const u = data.session?.user ?? null;
+      setUser(u);
+      if (u) restoreApiKeyFromCloud();
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      setUser(session?.user ?? null);
+      const u = session?.user ?? null;
+      setUser(u);
+      if (u) {
+        // On login: restore cloud key then push local key up
+        restoreApiKeyFromCloud().then(() => syncApiKeyToCloud());
+      }
     });
     return () => sub.subscription.unsubscribe();
   }, []);

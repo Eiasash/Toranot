@@ -22,6 +22,7 @@ import { formatScanDiffSummary } from "./engine/smartOCR";
 import { OverflowMenu } from "./components/OverflowMenu";
 const ShiftHandoffModal = lazy(() => import("./components/ShiftHandoffModal").then(m => ({ default: m.ShiftHandoffModal })));
 const SharedShiftPanel  = lazy(() => import("./components/SharedShiftPanel").then(m => ({ default: m.SharedShiftPanel })));
+const DebugConsole      = lazy(() => import("./components/DebugConsole").then(m => ({ default: m.DebugConsole })));
 import { SECTION_LABEL } from "./types";
 import { useSimpleToast, SimpleToast } from "./components/SimpleConfirm";
 
@@ -273,7 +274,8 @@ export type Modal =
   | "morning"
   | "ivprotocols"
   | "handoff_cloud"
-  | "shared_shift";
+  | "shared_shift"
+  | "debug_console";
 
 // ─── Bottom Navigation Bar ─────────────────────────────────
 // Primary actions at thumb-reach. 56px height + safe area inset.
@@ -583,6 +585,7 @@ function AppInner() {
           {modal === "ivprotocols" && <IVProtocols    onClose={() => setModal("none")} />}
           {modal === "handoff_cloud" && <ShiftHandoffModal onClose={() => setModal("none")} />}
           {modal === "shared_shift" && <SharedShiftPanel onClose={() => setModal("none")} />}
+          {modal === "debug_console" && <DebugConsole onClose={() => setModal("none")} />}
         </Suspense>
       </ModalErrorBoundary>
 

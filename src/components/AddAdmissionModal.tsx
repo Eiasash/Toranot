@@ -101,7 +101,10 @@ function parseFreestyle(text: string): Partial<{
   }
 
   if (remaining.trim()) {
-    result.diagnosis = remaining.trim();
+    // Normalize multiple diagnoses: accept comma, semicolon, plus as separators
+    // and join with " + " for consistent internal representation
+    const dxParts = remaining.split(/\s*[,;]\s*|\s*\+\s*/).map(s => s.trim()).filter(Boolean);
+    result.diagnosis = dxParts.length > 1 ? dxParts.join(" + ") : remaining.trim();
   }
 
   return result;
@@ -347,16 +350,36 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
   const [activeDxCat, setActiveDxCat] = useState(0);
   const [showDxPicker, setShowDxPicker] = useState(false);
 
+  // Split diagnosis string into parts — supports " + ", ",", ";" as separators
+  const splitDxParts = (dx: string): string[] =>
+    dx.split(/\s*[+,;]\s*|\s*\+\s*/).map(s => s.trim()).filter(Boolean);
+
   // Toggle a single diagnosis item in/out of the diagnosis string
   const toggleDx = (item: string) => {
     setDiagnosis(prev => {
-      const parts = prev.split(" + ").map(s => s.trim()).filter(Boolean);
+      const parts = splitDxParts(prev);
       if (parts.includes(item)) return parts.filter(p => p !== item).join(" + ");
       return [...parts, item].join(" + ");
     });
   };
 
-  const activeDxParts = diagnosis.split(" + ").map(s => s.trim()).filter(Boolean);
+  // Add multiple free-text diagnoses at once (handles "pneumonia, AKI, delirium")
+  const addFreeTextDx = (text: string) => {
+    const newItems = splitDxParts(text).filter(Boolean);
+    if (newItems.length === 0) return;
+    setDiagnosis(prev => {
+      const existing = splitDxParts(prev);
+      const merged = [...existing];
+      for (const item of newItems) {
+        if (!merged.some(m => m.toLowerCase() === item.toLowerCase())) {
+          merged.push(item);
+        }
+      }
+      return merged.join(" + ");
+    });
+  };
+
+  const activeDxParts = splitDxParts(diagnosis);
 
   // ── Letter extraction state ──
   const [letterFile, setLetterFile] = useState<File | null>(null);
@@ -693,7 +716,9 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
                   onKeyDown={e => {
                     if ((e.key === "Enter" || e.key === ",") && dxSearch.trim()) {
                       e.preventDefault();
-                      toggleDx(dxSearch.trim().replace(/,+$/, ""));
+                      // Support typing multiple comma-separated diagnoses at once
+                      const input = dxSearch.trim().replace(/[,;+]+$/, "");
+                      addFreeTextDx(input);
                       setDxSearch("");
                     } else if (e.key === "Backspace" && !dxSearch && activeDxParts.length > 0) {
                       toggleDx(activeDxParts[activeDxParts.length - 1]);
@@ -702,12 +727,13 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
                   onBlur={() => {
                     // Auto-commit free text when user taps away — don't lose what they typed
                     if (dxSearch.trim()) {
-                      toggleDx(dxSearch.trim().replace(/,+$/, ""));
+                      const input = dxSearch.trim().replace(/[,;+]+$/, "");
+                      addFreeTextDx(input);
                       setDxSearch("");
                     }
                     setTimeout(() => setShowDxPicker(false), 150);
                   }}
-                  placeholder={activeDxParts.length === 0 ? "הקלד חופשי או חפש רשימה" : "+ הוסף אבחנה"}
+                  placeholder={activeDxParts.length === 0 ? "הקלד חופשי (pneumonia, AKI, delirium...)" : "+ הוסף אבחנות"}
                   className="flex-1 min-w-[80px] bg-transparent outline-none text-sm placeholder:text-gray-400"
                   dir="auto"
                 />
@@ -737,7 +763,7 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
               {dxSearch.trim() && (
                 <button
                   type="button"
-                  onMouseDown={e => { e.preventDefault(); toggleDx(dxSearch.trim()); setDxSearch(""); setShowDxPicker(false); }}
+                  onMouseDown={e => { e.preventDefault(); addFreeTextDx(dxSearch.trim()); setDxSearch(""); setShowDxPicker(false); }}
                   className="mt-1.5 w-full text-right px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/40 border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 text-sm font-medium active:bg-blue-100"
                 >
                   ＋ הוסף &ldquo;{dxSearch.trim()}&rdquo;
