@@ -17,7 +17,6 @@ import { ShiftTimer } from "./components/ShiftTimer";
 import { usePatientsDispatch, usePatientsState, useCloudSync } from "./context/PatientsContext";
 const QRSync            = lazy(() => import("./components/QRSync").then(m => ({ default: m.QRSync })));
 const QuickCaptureSheet = lazy(() => import("./components/QuickCaptureSheet").then(m => ({ default: m.QuickCaptureSheet })));
-const MorningReport     = lazy(() => import("./components/MorningReport").then(m => ({ default: m.MorningReport })));
 import { requestNotificationPermission, syncReminders, cancelAllReminders } from "./utils/taskReminders";
 import { formatScanDiffSummary } from "./engine/smartOCR";
 import { OverflowMenu } from "./components/OverflowMenu";
@@ -580,7 +579,7 @@ function AppInner() {
           {modal === "search"     && <GlobalSearch    onClose={() => setModal("none")} />}
           {modal === "qrsync"     && <QRSync          onClose={() => setModal("none")} />}
           {modal === "capture"    && <QuickCaptureSheet onClose={() => setModal("none")} />}
-          {modal === "morning"    && <MorningReport   onClose={() => setModal("none")} />}
+          {modal === "morning"    && <HandoffSheet    onClose={() => setModal("none")} initialTab="report" />}
           {modal === "ivprotocols" && <IVProtocols    onClose={() => setModal("none")} />}
           {modal === "handoff_cloud" && <ShiftHandoffModal onClose={() => setModal("none")} />}
           {modal === "shared_shift" && <SharedShiftPanel onClose={() => setModal("none")} />}

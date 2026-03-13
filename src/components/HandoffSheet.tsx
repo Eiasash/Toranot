@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useSimpleToast, SimpleToast } from "./SimpleConfirm";
-import { usePatientsState } from "../context/PatientsContext";
+import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
 import { SECTION_LABEL, type PatientEntry, type Task } from "../types";
 import { formatLabsForHandoff } from "./LabChart";
 import {
@@ -10,6 +10,7 @@ import {
   checkAllergyConflicts,
 } from "../engine/drugSafety";
 import { calculateLabDeltas } from "../engine/labDelta";
+import { buildPhlebotomyList, buildPhlebotomyText, TUBE_EMOJI, TUBE_LABEL, type TubeColour } from "../utils/phlebotomy";
 
 // ─── Text generation (copy/WhatsApp — unchanged) ────────────────────────────
 
@@ -253,8 +254,10 @@ function urgencyDot(u: Task["urgency"]) {
   return <span className="inline-block w-2 h-2 rounded-full bg-gray-500 mr-1.5 flex-shrink-0" />;
 }
 
-function PatientCard({ p, isNew }: { p: PatientEntry; isNew: boolean }) {
+function PatientCard({ p, isNew, dispatch }: { p: PatientEntry; isNew: boolean; dispatch?: ReturnType<typeof usePatientsDispatch> }) {
   const [morningExpanded, setMorningExpanded] = useState(false);
+  const [editingSummary, setEditingSummary] = useState(false);
+  const [summaryDraft, setSummaryDraft] = useState(p.handoverNote ?? "");
   const allTasks = [...p.tasks, ...p.generatedTasks].filter(t => !t.dismissed);
   const pending = allTasks.filter(t => !t.done);
   const done = allTasks.filter(t => t.done);
@@ -265,6 +268,13 @@ function PatientCard({ p, isNew }: { p: PatientEntry; isNew: boolean }) {
   // Alerts are available in the patient detail DrugSafetyAlerts view.
 
   const statCount = pending.filter(t => t.urgency === "stat").length;
+
+  const saveSummary = () => {
+    if (dispatch) {
+      dispatch({ type: "SET_HANDOVER_NOTE", patientId: p.id, note: summaryDraft.trim() });
+    }
+    setEditingSummary(false);
+  };
 
   return (
     <div className={`rounded-xl border mb-3 overflow-hidden ${
@@ -314,6 +324,44 @@ function PatientCard({ p, isNew }: { p: PatientEntry; isNew: boolean }) {
       </div>
 
       <div className="px-3 py-2 space-y-2">
+        {/* Inline editable summary for new admissions */}
+        {isNew && dispatch && (
+          <div className="bg-teal-900/20 border border-teal-700/40 rounded-lg p-2">
+            {editingSummary ? (
+              <div className="space-y-1.5">
+                <textarea
+                  value={summaryDraft}
+                  onChange={e => setSummaryDraft(e.target.value)}
+                  placeholder="סיכום קבלה למסירה (אבחנה, מה עשית, מה נשאר)..."
+                  dir="auto"
+                  rows={3}
+                  autoFocus
+                  className="w-full px-2.5 py-1.5 text-xs border border-teal-600 rounded-lg bg-gray-900 text-gray-200 resize-none placeholder:text-gray-500"
+                />
+                <div className="flex gap-1.5">
+                  <button onClick={saveSummary} className="text-xs px-2.5 py-1 rounded-lg bg-teal-600 text-white active:bg-teal-700">שמור</button>
+                  <button onClick={() => { setSummaryDraft(p.handoverNote ?? ""); setEditingSummary(false); }} className="text-xs px-2.5 py-1 rounded-lg border border-gray-600 text-gray-400">ביטול</button>
+                </div>
+              </div>
+            ) : p.handoverNote ? (
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-semibold text-teal-400 uppercase tracking-wide">📌 סיכום למסירה</span>
+                  <button onClick={() => { setSummaryDraft(p.handoverNote ?? ""); setEditingSummary(true); }} className="text-[10px] text-teal-400 active:text-teal-300">✏️ ערוך</button>
+                </div>
+                <p className="text-xs text-teal-200 leading-relaxed whitespace-pre-wrap" dir="auto">{p.handoverNote}</p>
+              </div>
+            ) : (
+              <button
+                onClick={() => { setSummaryDraft(""); setEditingSummary(true); }}
+                className="w-full text-xs text-teal-400 py-1 active:text-teal-300"
+              >
+                + הוסף סיכום קבלה למסירה
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Status chips */}
         {p.status.length > 0 && (
           <div className="flex flex-wrap gap-1">
@@ -330,8 +378,8 @@ function PatientCard({ p, isNew }: { p: PatientEntry; isNew: boolean }) {
           </p>
         )}
 
-        {/* Morning presentation / handover note */}
-        {p.handoverNote && (
+        {/* Morning presentation / handover note (for non-new patients) */}
+        {!isNew && p.handoverNote && (
           <div className="border border-blue-700/40 rounded overflow-hidden">
             <button
               onClick={() => setMorningExpanded(v => !v)}
@@ -411,7 +459,7 @@ function PatientCard({ p, isNew }: { p: PatientEntry; isNew: boolean }) {
   );
 }
 
-function SectionBlock({ label, patients, newIds }: { label: string; patients: PatientEntry[]; newIds: Set<string> }) {
+function SectionBlock({ label, patients, newIds, dispatch }: { label: string; patients: PatientEntry[]; newIds: Set<string>; dispatch: ReturnType<typeof usePatientsDispatch> }) {
   const pendingCount = patients.flatMap(p => [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)]).filter(t => !t.done).length;
   const statCount = patients.flatMap(p => [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)]).filter(t => !t.done && t.urgency === "stat").length;
 
@@ -427,18 +475,24 @@ function SectionBlock({ label, patients, newIds }: { label: string; patients: Pa
         </div>
         <div className="flex-1 h-px bg-gray-700" />
       </div>
-      {patients.map(p => <PatientCard key={p.id} p={p} isNew={newIds.has(p.id)} />)}
+      {patients.map(p => <PatientCard key={p.id} p={p} isNew={newIds.has(p.id)} dispatch={dispatch} />)}
     </div>
   );
 }
 
+// ─── Tube colour ordering for phlebotomy display ────────────────────────────
+const TUBE_ORDER: TubeColour[] = ["red", "purple", "blue", "green", "yellow", "black"];
+
 // ─── Main component ──────────────────────────────────────────────────────────
 
-export function HandoffSheet({ onClose }: { onClose: () => void }) {
+export type HandoffTab = "visual" | "text" | "isbar" | "report" | "phlebotomy";
+
+export function HandoffSheet({ onClose, initialTab }: { onClose: () => void; initialTab?: HandoffTab }) {
   const { toast, showToast } = useSimpleToast();
-  const { patients } = usePatientsState();
+  const { patients, events } = usePatientsState();
+  const dispatch = usePatientsDispatch();
   const [oncallOnly, setOncallOnly] = useState(true);
-  const [view, setView] = useState<"visual" | "text" | "isbar">("visual");
+  const [view, setView] = useState<HandoffTab>(initialTab ?? "visual");
 
 
   const shiftStart = useMemo(() => getShiftStart(), []);
@@ -479,6 +533,46 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
     [patients, filteredPatients, shiftStart]
   );
 
+  // ── Phlebotomy list (merged from MorningReport) ──
+  const phlebList = useMemo(() => buildPhlebotomyList(patients), [patients]);
+  const byTube = useMemo(() => {
+    const map = new Map<TubeColour, typeof phlebList>();
+    for (const e of phlebList) {
+      for (const tube of e.tubes) {
+        const arr = map.get(tube) ?? [];
+        arr.push(e);
+        map.set(tube, arr);
+      }
+    }
+    return map;
+  }, [phlebList]);
+
+  // ── Shift report data (merged from MorningReport) ──
+  const h24ago = useMemo(() => new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), []);
+  const shiftStartISO = shiftStart.toISOString();
+  const admissionEvents = useMemo(() =>
+    events.filter(e => e.type === "ADMISSION" && e.at >= h24ago), [events, h24ago]);
+  const moveEvents = useMemo(() =>
+    events.filter(e => e.type === "MOVE" && e.at >= h24ago), [events, h24ago]);
+  const openUrgent = useMemo(() =>
+    patients.flatMap(p =>
+      [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)]
+        .filter(t => !t.done && (t.urgency === "stat" || t.urgency === "urgent"))
+        .map(t => ({ task: t, patient: p }))
+    ).sort((a, b) => (a.task.urgency === "stat" ? -1 : 1) - (b.task.urgency === "stat" ? -1 : 1)),
+    [patients]);
+  const actedon = useMemo(() => {
+    const admissionIdSet = new Set(admissionEvents.map(e => e.patientId));
+    return patients.filter(p => {
+      if (admissionIdSet.has(p.id)) return false;
+      const allT = [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)];
+      return allT.some(t => t.done && t.doneTime && t.doneTime >= shiftStartISO)
+        || p.tasks.some(t => t.source === "manual")
+        || (p.notes ?? []).length > 0
+        || !!p.handoverNote;
+    });
+  }, [patients, admissionEvents, shiftStartISO]);
+
   // Summary stats
   const allTasks = filteredPatients.flatMap(p => [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)]);
   const pendingCount = allTasks.filter(t => !t.done).length;
@@ -487,12 +581,18 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
   const newCount = newAdmissionIds.size;
 
   const handleCopy = async () => {
-    const content = view === "isbar" ? isbarText : text;
+    let content: string;
+    if (view === "isbar") content = isbarText;
+    else if (view === "phlebotomy") content = buildPhlebotomyText(phlebList);
+    else content = text;
     try { await navigator.clipboard.writeText(content); showToast("✓ הועתק ללוח"); }
     catch { showToast("לא ניתן להעתיק אוטומטית", "error"); }
   };
   const handleWhatsApp = () => {
-    const content = view === "isbar" ? isbarText : text;
+    let content: string;
+    if (view === "isbar") content = isbarText;
+    else if (view === "phlebotomy") content = buildPhlebotomyText(phlebList);
+    else content = text;
     window.open(`https://wa.me/?text=${encodeURIComponent(content)}`, "_blank");
   };
   const handleNativeShare = async () => {
@@ -543,54 +643,30 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
-        {/* View toggle */}
-        <div className="flex border-b border-gray-800 shrink-0 bg-gray-900">
-          <button
-            onClick={() => setView("visual")}
-            className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${view === "visual" ? "text-emerald-400 border-b-2 border-emerald-400" : "text-gray-500"}`}
-          >
-            🗂️ תצוגת כרטיסיות
-          </button>
-          <button
-            onClick={() => setView("text")}
-            className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${view === "text" ? "text-emerald-400 border-b-2 border-emerald-400" : "text-gray-500"}`}
-          >
-            📄 טקסט
-          </button>
-          <button
-            onClick={() => setView("isbar")}
-            className={`flex-1 py-2.5 text-xs font-semibold transition-colors ${view === "isbar" ? "text-emerald-400 border-b-2 border-emerald-400" : "text-gray-500"}`}
-          >
-            🩺 ISBAR
-          </button>
+        {/* View toggle — scrollable on narrow screens */}
+        <div className="flex border-b border-gray-800 shrink-0 bg-gray-900 overflow-x-auto scrollbar-hide">
+          {([
+            ["visual", "🗂️ כרטיסיות"],
+            ["report", "☀️ דוח משמרת"],
+            ["phlebotomy", "🩸 שלילות"],
+            ["text", "📄 טקסט"],
+            ["isbar", "🩺 ISBAR"],
+          ] as const).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setView(key as HandoffTab)}
+              className={`shrink-0 px-3 py-2.5 text-xs font-semibold transition-colors whitespace-nowrap ${view === key ? "text-emerald-400 border-b-2 border-emerald-400" : "text-gray-500"}`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
           {view === "visual" ? (
             <div className="p-3">
-              {/* New admissions banner */}
-              {newCount > 0 && (
-                <div className="mb-4 bg-teal-900/30 border border-teal-700/50 rounded-xl p-3">
-                  <p className="text-xs font-bold text-teal-300 mb-2">🆕 קבלות תורן ({newCount})</p>
-                  {filteredPatients
-                    .filter(p => newAdmissionIds.has(p.id))
-                    .map(p => (
-                      <div key={p.id} className="flex items-baseline gap-2 py-1 border-t border-teal-800/40">
-                        <span className="text-xs text-gray-400 shrink-0">{p.room}</span>
-                        <span className="text-sm font-semibold text-white">{p.name}</span>
-                        {p.age && <span className="text-xs text-gray-400">({p.age})</span>}
-                        {p.diagnosis && <span className="text-xs text-teal-300 truncate">{p.diagnosis}</span>}
-                        {p.scannedAt && (
-                          <span className="text-xs text-gray-500 mr-auto shrink-0">
-                            {new Date(p.scannedAt).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })}
-                          </span>
-                        )}
-                      </div>
-                    ))
-                  }
-                </div>
-              )}
+              {/* New admissions banner — removed compact list, now shown in section cards with editable summary */}
 
               {/* Section blocks */}
               {[...sections.entries()].map(([section, pts]) => (
@@ -599,6 +675,7 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
                   label={SECTION_LABEL[section as keyof typeof SECTION_LABEL] ?? section}
                   patients={pts}
                   newIds={newAdmissionIds}
+                  dispatch={dispatch}
                 />
               ))}
 
@@ -607,6 +684,145 @@ export function HandoffSheet({ onClose }: { onClose: () => void }) {
                   <p className="text-4xl mb-3">🏥</p>
                   <p className="text-sm">אין חולים להצגה</p>
                 </div>
+              )}
+            </div>
+          ) : view === "report" ? (
+            /* ── Shift Report tab (merged from MorningReport) ── */
+            <div className="p-3 space-y-3">
+              {/* Open urgent tasks */}
+              {openUrgent.length > 0 && (
+                <div className="bg-red-900/20 border border-red-700/50 rounded-xl p-3 space-y-1.5">
+                  <p className="text-xs font-bold text-red-300">⚠️ משימות דחופות פתוחות ({openUrgent.length})</p>
+                  {openUrgent.map(({ task, patient }) => (
+                    <div key={task.id} className="text-xs flex gap-2 items-center">
+                      <span className={`shrink-0 font-bold ${task.urgency === "stat" ? "text-red-400" : "text-yellow-400"}`}>
+                        {task.urgency === "stat" ? "🔴" : "🟡"}
+                      </span>
+                      <span className="text-gray-400 font-mono shrink-0">חד׳ {patient.room ?? "?"}</span>
+                      <span className="text-gray-200">{patient.name ?? "?"}</span>
+                      <span className="text-gray-400 truncate">— {task.text}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {openUrgent.length === 0 && (
+                <div className="bg-green-900/20 border border-green-700/50 rounded-xl p-3">
+                  <p className="text-xs font-bold text-green-300">✅ אין משימות דחופות פתוחות</p>
+                </div>
+              )}
+
+              {/* Admissions */}
+              {admissionEvents.length > 0 && (
+                <div className="bg-teal-900/20 border border-teal-700/50 rounded-xl p-3 space-y-1.5">
+                  <p className="text-xs font-bold text-teal-300">🏥 קבלות 24 שעות ({admissionEvents.length})</p>
+                  {admissionEvents.map(e => {
+                    if (e.type !== "ADMISSION") return null;
+                    return (
+                      <div key={e.id} className="text-xs flex gap-2 items-center">
+                        <span className="text-gray-400 font-mono shrink-0">חד׳ {e.room ?? "?"}</span>
+                        <span className="text-gray-200">{e.patientName ?? "?"}</span>
+                        <span className="text-gray-500 mr-auto shrink-0">
+                          {new Date(e.at).toLocaleString("he-IL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Moves */}
+              {moveEvents.length > 0 && (
+                <div className="bg-blue-900/20 border border-blue-700/50 rounded-xl p-3 space-y-1.5">
+                  <p className="text-xs font-bold text-blue-300">🔄 מעברים ({moveEvents.length})</p>
+                  {moveEvents.map(e => {
+                    if (e.type !== "MOVE") return null;
+                    return (
+                      <div key={e.id} className="text-xs flex gap-2 items-center">
+                        <span className="text-gray-200">{e.patientName ?? "?"}</span>
+                        <span className="text-gray-400">{e.from ?? "?"} → {e.to}</span>
+                        <span className="text-gray-500 mr-auto shrink-0">
+                          {new Date(e.at).toLocaleString("he-IL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Patients acted on */}
+              {actedon.length > 0 && (
+                <div className="bg-purple-900/20 border border-purple-700/50 rounded-xl p-3 space-y-2">
+                  <p className="text-xs font-bold text-purple-300">🩺 חולים שטיפלת בהם ({actedon.length})</p>
+                  {actedon.map(p => {
+                    const doneTasks = [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)].filter(t => t.done);
+                    const notes = p.notes ?? [];
+                    return (
+                      <div key={p.id} className="space-y-1 border-t border-purple-800/40 pt-1.5 first:border-0 first:pt-0">
+                        <div className="flex items-baseline gap-2 flex-wrap text-xs">
+                          <span className="font-mono text-blue-400 shrink-0">חד׳ {p.room ?? "?"}</span>
+                          <span className="font-medium text-gray-100">{p.name ?? "?"}</span>
+                          {p.diagnosis && <span className="text-gray-500 truncate">— {p.diagnosis}</span>}
+                        </div>
+                        {doneTasks.map(t => (
+                          <div key={t.id} className="flex items-start gap-1 text-[11px] text-gray-400">
+                            <span className="text-green-500 shrink-0">✓</span>
+                            <span>{t.text}</span>
+                            {t.note && <span className="text-green-400">→ {t.note}</span>}
+                          </div>
+                        ))}
+                        {notes.length > 0 && notes.map((n, i) => (
+                          <div key={i} className="text-[11px] text-amber-300">📝 {n}</div>
+                        ))}
+                        {p.handoverNote && (
+                          <div className="text-[11px] text-blue-300">📌 {p.handoverNote}</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : view === "phlebotomy" ? (
+            /* ── Phlebotomy tab (merged from MorningReport) ── */
+            <div className="p-3 space-y-3">
+              {phlebList.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-3xl mb-2">✅</p>
+                  <p className="text-sm text-gray-400">אין בדיקות דם מתוכננות לבוקר</p>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-gray-400">
+                      {phlebList.length} חולים · {phlebList.filter(e => e.isUrgent).length} דחוף
+                    </p>
+                  </div>
+                  {TUBE_ORDER.map(tube => {
+                    const pts = byTube.get(tube);
+                    if (!pts || pts.length === 0) return null;
+                    return (
+                      <div key={tube} className="rounded-xl border border-gray-700 overflow-hidden">
+                        <div className="bg-gray-800 px-3 py-2 flex items-center gap-2">
+                          <span className="text-base">{TUBE_EMOJI[tube]}</span>
+                          <span className="text-xs font-bold text-gray-300">{TUBE_LABEL[tube]}</span>
+                          <span className="mr-auto text-xs text-gray-500">{pts.length}</span>
+                        </div>
+                        <div className="divide-y divide-gray-800">
+                          {pts.map(e => (
+                            <div key={e.patientId + tube} className="px-3 py-2 flex items-center gap-2">
+                              <span className="text-xs font-mono text-blue-400 shrink-0 w-10">{e.room ?? "?"}</span>
+                              <span className="text-xs font-medium text-gray-100 truncate">{e.patientName}</span>
+                              {e.isUrgent && <span className="mr-auto text-xs text-red-400 font-bold shrink-0">⚡ דחוף</span>}
+                              <span className="text-xs text-gray-500 truncate mr-auto" title={e.tests.join(", ")}>
+                                {e.tests.slice(0, 3).join(", ")}{e.tests.length > 3 ? ` +${e.tests.length - 3}` : ""}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
               )}
             </div>
           ) : view === "text" ? (

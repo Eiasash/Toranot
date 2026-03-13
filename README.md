@@ -6,13 +6,13 @@ Live: **[toranot.netlify.app](https://toranot.netlify.app)**
 
 ## Recent Changes
 
+- **refactor(handoff): merge MorningReport into HandoffSheet** — Eliminated redundant modal. HandoffSheet now has 5 tabs: כרטיסיות, דוח משמרת, שלילות, טקסט, ISBAR. "דוח בוקר" from overflow menu opens HandoffSheet on the report tab.
+- **feat(handoff): editable admission summary** — New admissions in handoff card view now have an inline "הוסף סיכום קבלה למסירה" editor. Saves directly to handoverNote on the patient, persists across views and shifts.
 - **perf(scroll): content-visibility auto on patient cards** — Browser skips layout/paint for off-screen cards. Massive scroll performance improvement with 40+ patients.
-- **perf(re-renders): granular Zustand selectors for PatientCard** — Replaced broad `usePatientsState()` with `useScanMode()` / `useShowTomorrow()`. Cards no longer re-render when unrelated state (activeSection, events, etc.) changes.
-- **perf(bundle): lazy-load PatientCard sub-panels** — LabChart, QuickScenario, TaskTemplates, NurseTemplates now code-split. Main bundle dropped 146KB → 124KB (−15%). Each panel loads only when the user opens it.
-- **perf(sort): useTransition for sort changes** — Sort/filter changes wrapped in `startTransition` so the UI stays responsive. Pending state shown as subtle opacity fade.
-- **ux(modals): animated transitions** — All modals and confirm dialogs now fade in with backdrop + slide-up animation. Loading skeleton shown while lazy modal chunks load.
+- **perf(re-renders): granular Zustand selectors for PatientCard** — Replaced broad `usePatientsState()` with `useScanMode()` / `useShowTomorrow()`. Cards no longer re-render when unrelated state changes.
+- **perf(bundle): lazy-load PatientCard sub-panels** — LabChart, QuickScenario, TaskTemplates, NurseTemplates now code-split. Main bundle dropped 146KB → 124KB (−15%).
+- **ux(modals): animated transitions** — All modals and confirm dialogs now fade in with backdrop + slide-up animation.
 - **ux(accessibility): prefers-reduced-motion** — All animations and transitions disabled for users with motion sensitivity.
-- **fix(perf): transition-all → transition-[width]** — Progress bar no longer triggers layout on every property, only width.
 
 ---
 
