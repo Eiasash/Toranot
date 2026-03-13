@@ -547,6 +547,39 @@ const RULES: Rule[] = [
     ],
   },
 
+  // ═══ DOAC BLEEDING / REVERSAL ═══
+  {
+    trigger: /rivaroxaban|xarelto|ריבארוקסבן|apixaban|eliquis|אפיקסבן|dabigatran|pradaxa|דביגטרן|DOAC/i,
+    source: "DOAC / נוגד קרישה ישיר",
+    group: "doac_bleeding",
+    triggerField: "tasks",
+    tasks: [
+      { text: "עצור DOAC מיידית", urgency: "stat", category: "meds" },
+      { text: "מעבדה: CBC, CMP, PT/INR, aPTT, Fibrinogen", urgency: "stat", category: "labs" },
+      { text: "דימום על Xa-inhibitor (Xarelto/Eliquis) → Andexanet alfa (אם זמין) | PCC 25-50u/kg", urgency: "stat", category: "meds" },
+      { text: "דימום על Dabigatran → Idarucizumab (Praxbind) 5g IV", urgency: "stat", category: "meds" },
+      { text: "דימום GI → קונסולטציית גסטרו + NPO", urgency: "urgent", category: "consult" },
+      { text: "ICH / דימום תוך-גולגלתי → נוירוכירורגיה STAT + CT ראש", urgency: "stat", category: "consult" },
+      { text: "הערך תפקוד כלייתי — eGFR משפיע על קינטיקת DOAC", urgency: "urgent", category: "labs" },
+    ],
+  },
+
+  // ═══ HEMOPTYSIS ═══
+  {
+    trigger: /hemoptysis|המופטיסיס|כיח דמי|דם.*כיח|כיח.*דם|דם מהריאות|blood.*sputum|coughing.*blood/i,
+    source: "המופטיסיס",
+    group: "hemoptysis",
+    triggerField: "all",
+    tasks: [
+      { text: "CXR דחוף", urgency: "stat", category: "imaging" },
+      { text: "CBC, PT/INR, aPTT — הערך מצב קרישה", urgency: "stat", category: "labs" },
+      { text: "CTPA — שלול PE וגורם וסקולרי / גידול", urgency: "urgent", category: "imaging" },
+      { text: "אם על נוגד קרישה → הערך הפסקה vs המשך לפי מחלת רקע", urgency: "urgent", category: "meds" },
+      { text: "המופטיסיס מסיבי (>200mL/24h) → ברונכוסקופיה + ICU", urgency: "stat", category: "consult" },
+      { text: "ספוטום לתרבית + AFB אם חשד ל-TB", urgency: "routine", category: "labs" },
+    ],
+  },
+
   // ═══ COPD EXACERBATION ═══
   {
     trigger: /COPD.*החמרה|החמרת.*COPD|AECOPD|COPD\s*exacerb/i,

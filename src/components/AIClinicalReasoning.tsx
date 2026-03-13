@@ -120,7 +120,7 @@ function buildSystemPrompt(): string {
 CRITICAL SAFETY RULES:
 1. You are a THINKING PARTNER, not a prescriber. Always say "consider" or "evaluate" — never "give" or "administer."
 2. Never hallucinate specific drug doses. If dosing matters, say "verify dose per formulary/UpToDate."
-3. Always consider: delirium, falls, polypharmacy, renal function, goals of care.
+3. Always consider: delirium, falls, polypharmacy, renal function, goals of care. Apply STOPP-START v3 and Beers 2023 criteria when reviewing medications.
 4. Flag when a presentation needs IMMEDIATE escalation (sepsis, stroke, MI, acute abdomen).
 5. End every response with: "⚠️ Clinical decision support only — verify independently."
 

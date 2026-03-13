@@ -733,7 +733,7 @@ describe("rules engine — cross-cutting behavior", () => {
   });
 
   it("RULES array has expected number of rules", () => {
-    expect(RULES.length).toBe(55); // -3: delirium_nonpharm_bundle, aspiration_risk, pressure_ulcer merged/removed
+    expect(RULES.length).toBe(57); // +2: doac_bleeding, hemoptysis
   });
 
   it("every rule has a unique group", () => {

@@ -6,6 +6,10 @@ Live: **[toranot.netlify.app](https://toranot.netlify.app)**
 
 ## Recent Changes
 
+- **feat(rules): DOAC bleeding/reversal rule** — New rule for rivaroxaban/apixaban/dabigatran: hold, CBC/coags, Andexanet/PCC for Xa-inhibitors, Idarucizumab for dabigatran, GI/ICH escalation paths.
+- **feat(rules): hemoptysis workup rule** — New rule: CXR stat, CBC/coags, CTPA, anticoag review, massive threshold → bronchoscopy + ICU.
+- **feat(ai): STOPP-START v3 in system prompt** — AI clinical reasoning now explicitly applies STOPP-START v3 alongside Beers 2023 for medication review.
+
 - **fix(proxy): raise AI timeout** — Default upstream timeout raised 9s → 20s; clinical reasoning requests (max_tokens ≥ 2000) now use 23s long-timeout, fixing "תם הזמן המוקצב" errors in AIClinicalReasoning.
 - **feat(handoff): kabalah morning summary** — Each admission in דוח משמרת now has ✨ סכם לבוקר AI button generating a 2-3 line Hebrew morning report summary.
 - **fix(rules): remove nursing-scope rules** — Deleted aspiration_risk (3 tasks), pressure_ulcer (3 tasks), and delirium_nonpharm_bundle (5 tasks). These are nursing standing orders, not on-call doctor tasks. Delirium main rule collapsed from 15 → 6 actionable tasks; medication ladder consolidated into single reference line.
