@@ -2,20 +2,21 @@ import React, { useMemo, useState, useCallback, useEffect, memo, lazy, Suspense 
 import type { PatientEntry, Task } from "../types";
 import { SECTIONS, SECTION_LABEL } from "../types";
 import { TaskItem } from "./TaskItem";
-import { usePatientsDispatch, usePatientsState } from "../context/PatientsContext";
+import { usePatientsDispatch } from "../context/PatientsContext";
+import { useScanMode, useShowTomorrow } from "../store/patientsStore";
 import { LabBadges, AddLabForm } from "./LabTracker";
-import { LabChart } from "./LabChart";
 import { DrugSafetyAlerts } from "./DrugSafetyAlerts";
 import { IVProtocolAlerts } from "./IVProtocolAlerts";
 import { PhotoAttachments } from "./PhotoAttachments";
-import { QuickScenario } from "./QuickScenario";
 import { MedFlagBadges } from "./MedFlags";
 import { generateHints } from "../engine/hints";
 import { showUndoToast } from "./UndoToast";
-import { TaskTemplates } from "./TaskTemplates";
-import { NurseTemplates } from "./NurseTemplates";
 import { InlineErrorBoundary } from "./InlineErrorBoundary";
-// Lazy-loaded — pulled in only when the AI panel or mic button is first rendered
+// Lazy-loaded — only fetched when user opens the corresponding panel
+const LabChart = lazy(() => import("./LabChart").then(m => ({ default: m.LabChart })));
+const QuickScenario = lazy(() => import("./QuickScenario").then(m => ({ default: m.QuickScenario })));
+const TaskTemplates = lazy(() => import("./TaskTemplates").then(m => ({ default: m.TaskTemplates })));
+const NurseTemplates = lazy(() => import("./NurseTemplates").then(m => ({ default: m.NurseTemplates })));
 const AIClinicalReasoning = lazy(() => import("./AIClinicalReasoning").then(m => ({ default: m.AIClinicalReasoning })));
 const VoiceButton = lazy(() => import("./VoiceInput").then(m => ({ default: m.VoiceButton })));
 import { hapticSuccess } from "../utils/haptics";
@@ -216,7 +217,8 @@ function HandoverNoteInline({ patient }: { patient: PatientEntry }) {
 
 function PatientCardBase({ patient }: { patient: PatientEntry }) {
   const dispatch = usePatientsDispatch();
-  const { showTomorrow, scanMode } = usePatientsState();
+  const showTomorrow = useShowTomorrow();
+  const scanMode = useScanMode();
 
   const manualNotes = patient.notes ?? [];
 
@@ -812,7 +814,9 @@ function PatientCardBase({ patient }: { patient: PatientEntry }) {
 
       {/* Lab trend charts */}
       {showLabChart && (
-        <LabChart patient={patient} />
+        <Suspense fallback={<div className="p-3 text-center text-xs text-gray-400">טוען תרשים...</div>}>
+          <LabChart patient={patient} />
+        </Suspense>
       )}
 
       {/* Sticky handover note */}
@@ -940,13 +944,19 @@ function PatientCardBase({ patient }: { patient: PatientEntry }) {
       </div>
 
       {showScenario && (
-        <QuickScenario patient={patient} onClose={() => setShowScenario(false)} />
+        <Suspense fallback={null}>
+          <QuickScenario patient={patient} onClose={() => setShowScenario(false)} />
+        </Suspense>
       )}
       {showTemplates && (
-        <TaskTemplates patient={patient} onClose={() => setShowTemplates(false)} />
+        <Suspense fallback={null}>
+          <TaskTemplates patient={patient} onClose={() => setShowTemplates(false)} />
+        </Suspense>
       )}
       {showNurseTemplates && (
-        <NurseTemplates patient={patient} onClose={() => setShowNurseTemplates(false)} />
+        <Suspense fallback={null}>
+          <NurseTemplates patient={patient} onClose={() => setShowNurseTemplates(false)} />
+        </Suspense>
       )}
       {showAI && (
         <InlineErrorBoundary label="ניתוח קליני AI" onDismiss={() => setShowAI(false)}>
@@ -961,7 +971,7 @@ function PatientCardBase({ patient }: { patient: PatientEntry }) {
 
 function PatientRowBase({ patient }: { patient: PatientEntry }) {
   const dispatch = usePatientsDispatch();
-  const { showTomorrow } = usePatientsState();
+  const showTomorrow = useShowTomorrow();
 
   const [expanded, setExpanded] = useState(false);
   const [addOpen, setAddOpen] = useState(false);

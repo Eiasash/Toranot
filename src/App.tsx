@@ -70,7 +70,7 @@ function ShiftProgress() {
       <div className="w-full lg:max-w-6xl lg:mx-auto flex items-center gap-3 text-xs">
         <div className="flex-1 bg-slate-700 rounded-full h-1.5 overflow-hidden">
           <div
-            className="h-full rounded-full transition-all duration-500 bg-emerald-400"
+            className="h-full rounded-full transition-[width] duration-500 bg-emerald-400"
             style={{ width: `${pct}%` }}
           />
         </div>
@@ -112,8 +112,8 @@ export function ConfirmModal({
 
   if (dialog.type === "clear") {
     return (
-      <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center px-4 pb-8 sm:pb-0 bg-black/40">
-        <div className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden">
+      <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center px-4 pb-8 sm:pb-0 bg-black/40 animate-modal-backdrop">
+        <div className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden animate-modal-up">
           <div className="px-5 pt-5 pb-4">
             <div className="text-2xl mb-2">🗑️</div>
             <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">מחיקת כל המטופלים</h3>
@@ -141,8 +141,8 @@ export function ConfirmModal({
   const hasIssues = hasIncomplete || hasNoTasks || hasAbnormalLabs;
   const isEndShift = dialog.mode === "end";
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center px-4 pb-8 sm:pb-0 bg-black/40">
-      <div className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden max-h-[80vh] flex flex-col">
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center px-4 pb-8 sm:pb-0 bg-black/40 animate-modal-backdrop">
+      <div className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden max-h-[80vh] flex flex-col animate-modal-up">
 	        <div className="px-5 pt-5 pb-3 flex-shrink-0">
 	          <div className="text-2xl mb-2">{isEndShift ? "🏁" : "💾"}</div>
 	          <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
@@ -561,7 +561,18 @@ function AppInner() {
 
       {/* ── Modals (lazy-loaded — only fetched when first opened) ── */}
       <ModalErrorBoundary onClose={() => setModal("none")}>
-        <Suspense fallback={null}>
+        <Suspense fallback={
+          modal !== "none" ? (
+            <div className="fixed inset-0 z-50 bg-black/40 animate-modal-backdrop flex items-end sm:items-center justify-center">
+              <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-t-2xl sm:rounded-2xl p-6 animate-modal-up">
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-sm text-gray-500 dark:text-gray-400">טוען...</span>
+                </div>
+              </div>
+            </div>
+          ) : null
+        }>
           {modal === "reference"  && <QuickReference onClose={() => setModal("none")} />}
           {modal === "handoff"    && <HandoffSheet    onClose={() => setModal("none")} />}
           {modal === "dashboard"  && <TaskDashboard   onClose={() => setModal("none")} />}

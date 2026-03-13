@@ -194,3 +194,9 @@ export const useSectionPatients = () =>
 
 /** Stable dispatch reference — never causes re-render. */
 export const useStoreDispatch = () => usePatientsStore((s) => s.dispatch);
+
+/** Granular boolean selectors — components subscribe to ONE field instead of entire state. */
+export const useScanMode = () => usePatientsStore((s) => s.scanMode);
+export const useShowTomorrow = () => usePatientsStore((s) => s.showTomorrow);
+export const useDarkMode = () => usePatientsStore((s) => s.darkMode);
+export const useActiveSection = () => usePatientsStore((s) => s.activeSection);

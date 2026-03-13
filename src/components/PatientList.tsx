@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useMemo, Component } from "react";
+import React, { useCallback, useState, useTransition, useMemo, Component } from "react";
 import type { ErrorInfo } from "react";
 import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
 import { SECTION_LABEL, PATIENT_SECTIONS } from "../types";
@@ -57,6 +57,12 @@ export function PatientList() {
   const { patients, activeSection } = usePatientsState();
   const dispatch = usePatientsDispatch();
   const [sortMode, setSortMode] = useState<"room" | "severity" | "name" | "new" | "activity">("room");
+  const [isPending, startTransition] = useTransition();
+
+  // Wrap sort changes in startTransition so the UI stays responsive
+  const handleSortChange = useCallback((mode: typeof sortMode) => {
+    startTransition(() => setSortMode(mode));
+  }, []);
 
   const filtered = useMemo(() => {
     const sectionPatients = activeSection === "ALL"
@@ -154,7 +160,7 @@ export function PatientList() {
             </span>
             <select
               value={sortMode}
-              onChange={e => setSortMode(e.target.value as "room" | "severity" | "name" | "new" | "activity")}
+              onChange={e => handleSortChange(e.target.value as "room" | "severity" | "name" | "new" | "activity")}
               className="text-xs px-2 py-1 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-none outline-none"
             >
               <option value="room">📋 לפי חדר</option>
@@ -190,7 +196,7 @@ export function PatientList() {
                   return (
                     <button
                       onClick={() => {
-                        setSortMode("new");
+                        handleSortChange("new");
                         const first = newPts[0];
                         setTimeout(() => document.getElementById(`patient-${first.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
                       }}
@@ -220,11 +226,11 @@ export function PatientList() {
       {/* Mobile: full-width cards with pull-to-refresh */}
       <div className="lg:hidden">
         <PullToRefresh onRefresh={handleRefresh}>
-          <div className="space-y-2 p-2 pb-20">
+          <div className={`space-y-2 p-2 pb-20 ${isPending ? "opacity-70" : ""}`} style={isPending ? { transition: "opacity 0.15s" } : undefined}>
             {filtered.map((patient, idx) => {
               const showDivider = activeSection === "ALL" && (idx === 0 || patient.section !== filtered[idx - 1].section);
               return (
-                <div key={patient.id}>
+                <div key={patient.id} className="patient-card-container">
                   {showDivider && (
                     <div className="flex items-center gap-2 py-1.5 px-1 mt-1">
                       <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap">
