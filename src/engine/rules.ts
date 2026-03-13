@@ -397,6 +397,7 @@ const RULES: Rule[] = [
   },
 
   // ═══ DELIRIUM ═══
+  // Golden rule: only on-call actionable tasks. The medication ladder is a reference, NOT 15 separate tasks.
   {
     trigger: /דליריום|delirium|בלבול חריף|agitat|ערפול.*הכרה|acute\s*confusion|חוסר\s*שקט|אי\s*שקט|restless|sundowning/i,
     source: "דליריום",
@@ -408,18 +409,10 @@ const RULES: Rule[] = [
       { text: "מעבדה: CBC, BMP, Ca2+, Mg2+, PO4, גלוקוז, U/A+תרבית, גזים", urgency: "stat", category: "labs" },
       { text: "Bladder Scan — שלילת אצירה (>300ml → קטטר)", urgency: "stat", category: "procedure" },
       { text: "סקור תרופות: STOP anticholinergics, benzos, opioids, steroids", urgency: "stat", category: "meds" },
-      // ── NON-PHARM (always first) ──
-      { text: "🔦 אמצעים לא-תרופתיים: תאורה, שעון, משקפיים, שמיעה, שתייה, משפחה", urgency: "routine", category: "other" },
-      { text: "הימנע מקשירה! (מחמיר אגיטציה + סיכון)", urgency: "routine", category: "other" },
-      // ── PHARMACOTHERAPY LADDER (if agitated + danger) ──
-      { text: "📋 סולם טיפול אגיטציה (מהקל לכבד):", urgency: "routine", category: "meds" },
-      { text: "1️⃣ Quetiapine 12.5-25mg PO (בטוח בפרקינסון/DLB)", urgency: "routine", category: "meds" },
-      { text: "2️⃣ Haloperidol 0.5mg IM (❌ לא בפרקינסון/DLB, בדוק QTc)", urgency: "routine", category: "meds" },
-      { text: "3️⃣ Olanzapine 2.5mg PO/IM (חלופה אם QTc ארוך)", urgency: "routine", category: "meds" },
-      { text: "4️⃣ אגיטציה קשה → Haloperidol 0.5mg IM + חזור q30min (max 3mg/24h)", urgency: "stat", category: "meds" },
-      { text: "5️⃣ רפרקטורי / סכנה מיידית → Lorazepam 1mg IV (חריג! בנזו מחמיר דליריום)", urgency: "stat", category: "meds" },
-      { text: "🌙 לילה: Trazodone 25-50mg PO / Melatonin 3mg (שיקום שינה)", urgency: "routine", category: "meds" },
-      { text: "⚠️ בנזו רק כמוצא אחרון / גמילה מאלכוהול — לא כקו ראשון!", urgency: "stat", category: "meds" },
+      // ── NON-PHARM (always first-line) ──
+      { text: "אמצעים לא-תרופתיים: תאורה, שעון, משקפיים, שמיעה, שתייה, משפחה, הסר קטטרים מיותרים", urgency: "routine", category: "other" },
+      // ── PHARMACOTHERAPY — single reference, pick one based on scenario ──
+      { text: "💊 אגיטציה — בחר לפי מצב: Quetiapine 12.5-25mg PO (קו 1, בטוח בפרקינסון) | Haloperidol 0.5mg IM (❌ לא בDLB, בדוק QTc) | Olanzapine 2.5mg (אם QTc ארוך) | רפרקטורי: Lorazepam 1mg IV (מוצא אחרון!)", urgency: "routine", category: "meds" },
     ],
   },
 
@@ -894,46 +887,16 @@ const RULES: Rule[] = [
     ],
   },
 
-  // ── Aspiration / dysphagia risk ───────────────────────────────────────────────
-  {
-    trigger: /dysphagia|בליעה|הפרעת בליעה|aspiration|שאיפה|NPO|npo|nil by mouth|לא לפה/i,
-    source: "סיכון לאספירציה",
-    group: "aspiration_risk",
-    triggerField: "all",
-    tasks: [
-      { text: "ראש מיטה 30–45° בזמן האכלה ו-30 דקות לאחריה — מניעת אספירציה", urgency: "routine", category: "procedure" },
-      { text: "Swallowing screen לפני כל פומי (מים קודם, זהירות עם טקסטורה)", urgency: "routine", category: "procedure" },
-      { text: "IV access פתוח / NG tube אם NPO ממושך — בדוק מצב תזונתי", urgency: "routine", category: "procedure" },
-    ],
-  },
+  // ── Aspiration / dysphagia risk — REMOVED ──
+  // These are nursing standing orders (head of bed, swallowing screen, NG tube).
+  // On-call doctors don't need these as task checkboxes.
 
-  // ── Pressure ulcer / skin breakdown risk ─────────────────────────────────────
-  {
-    trigger: /pressure|לחץ|פצע לחץ|decubitus|פצע|עור שבור|redness|אדמומיות|skin breakdown|heel|עקב/i,
-    source: "סיכון לפצע לחץ",
-    group: "pressure_ulcer",
-    triggerField: "all",
-    tasks: [
-      { text: "החלפת תנוחה q2h — תיעוד בגיליון סיעודי (מניעת פצע לחץ)", urgency: "routine", category: "procedure" },
-      { text: "בדיקת עקבים + עצמות בולטות בכל משמרת", urgency: "routine", category: "procedure" },
-      { text: "מזרן אנטי-דקוביטוס — בקש אם אין", urgency: "routine", category: "procedure" },
-    ],
-  },
+  // ── Pressure ulcer / skin breakdown risk — REMOVED ──
+  // These are nursing standing orders (position changes, heel checks, mattress).
+  // On-call doctors don't need these as task checkboxes.
 
-  // ── Non-pharmacological delirium bundle (CAM-positive / high-risk) ────────────
-  {
-    trigger: /CAM\+|CAM positive|דליריום|delirium|confusion|בלבול|מבולבל|אגיטציה|agitation|unresponsive/i,
-    source: "חבילת דליריום — לא תרופתית",
-    group: "delirium_nonpharm_bundle",
-    triggerField: "all",
-    tasks: [
-      { text: "Re-orient q1h: שעון גדול + לוח תאריך + שם ורמת הכרה — תיעוד", urgency: "routine", category: "procedure" },
-      { text: "משקפיים + מכשיר שמיעה במקום — הפחתת תחושת חשכה ובלבול", urgency: "routine", category: "procedure" },
-      { text: "הסר קטטרים/עירויים מיותרים ('un-tether') — הפחתת אגיטציה", urgency: "routine", category: "procedure" },
-      { text: "תאורה מתאימה: בהירות ביום, חשכה ב-22:00 — תמיכה בציקל שינה", urgency: "routine", category: "procedure" },
-      { text: "Early mobilization בבוקר אם מצב מאפשר", urgency: "routine", category: "procedure" },
-    ],
-  },
+  // ── Non-pharmacological delirium bundle — MERGED into main delirium rule above ──
+  // (removed: was duplicating keywords and adding 5 more nursing-scope tasks)
 
 ];
 

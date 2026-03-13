@@ -6,13 +6,16 @@ Live: **[toranot.netlify.app](https://toranot.netlify.app)**
 
 ## Recent Changes
 
-- **refactor(handoff): merge MorningReport into HandoffSheet** — Eliminated redundant modal. HandoffSheet now has 5 tabs: כרטיסיות, דוח משמרת, שלילות, טקסט, ISBAR. "דוח בוקר" from overflow menu opens HandoffSheet on the report tab.
-- **feat(handoff): editable admission summary** — New admissions in handoff card view now have an inline "הוסף סיכום קבלה למסירה" editor. Saves directly to handoverNote on the patient, persists across views and shifts.
-- **perf(scroll): content-visibility auto on patient cards** — Browser skips layout/paint for off-screen cards. Massive scroll performance improvement with 40+ patients.
-- **perf(re-renders): granular Zustand selectors for PatientCard** — Replaced broad `usePatientsState()` with `useScanMode()` / `useShowTomorrow()`. Cards no longer re-render when unrelated state changes.
-- **perf(bundle): lazy-load PatientCard sub-panels** — LabChart, QuickScenario, TaskTemplates, NurseTemplates now code-split. Main bundle dropped 146KB → 124KB (−15%).
-- **ux(modals): animated transitions** — All modals and confirm dialogs now fade in with backdrop + slide-up animation.
-- **ux(accessibility): prefers-reduced-motion** — All animations and transitions disabled for users with motion sensitivity.
+- **fix(rules): remove nursing-scope rules** — Deleted aspiration_risk (3 tasks), pressure_ulcer (3 tasks), and delirium_nonpharm_bundle (5 tasks). These are nursing standing orders, not on-call doctor tasks. Delirium main rule collapsed from 15 → 6 actionable tasks; medication ladder consolidated into single reference line.
+- **feat(sort): pending tasks sort** — New "⏳ לפי משימות" sort option. Patients with the most pending undone tasks float to top.
+- **fix(handoff): new admissions first** — Admissions sort to top within each section in card view.
+- **fix(handoff): report tab respects פעלתי filter** — Open urgent tasks and acted-on patients now filter correctly.
+- **refactor(handoff): merge MorningReport into HandoffSheet** — Eliminated redundant modal. 5 tabs: כרטיסיות, דוח משמרת, שלילות, טקסט, ISBAR.
+- **feat(handoff): editable admission summary** — Inline editor on new admissions in card view.
+- **perf(scroll): content-visibility auto on patient cards** — Skip layout/paint for off-screen cards.
+- **perf(re-renders): granular Zustand selectors for PatientCard**
+- **perf(bundle): lazy-load PatientCard sub-panels** — Main bundle −15%.
+- **ux(modals): animated transitions + prefers-reduced-motion**
 
 ---
 

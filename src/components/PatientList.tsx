@@ -56,7 +56,7 @@ class PatientCardErrorBoundary extends Component<
 export function PatientList() {
   const { patients, activeSection } = usePatientsState();
   const dispatch = usePatientsDispatch();
-  const [sortMode, setSortMode] = useState<"room" | "severity" | "name" | "new" | "activity">("room");
+  const [sortMode, setSortMode] = useState<"room" | "severity" | "name" | "new" | "activity" | "pending">("room");
   const [isPending, startTransition] = useTransition();
 
   // Wrap sort changes in startTransition so the UI stays responsive
@@ -78,6 +78,17 @@ export function PatientList() {
         const aN = isNewThisShift(a) ? 0 : 1;
         const bN = isNewThisShift(b) ? 0 : 1;
         if (aN !== bN) return aN - bN;
+        return comparePatientsByRoom(a, b);
+      });
+    } else if (sortMode === "pending") {
+      // Patients with pending on-call tasks float to top, sorted by pending count
+      const pendingCount = (p: typeof sorted[0]) =>
+        [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)].filter(t => !t.done).length;
+      sorted.sort((a, b) => {
+        const dDiff = (a.discharged ? 1 : 0) - (b.discharged ? 1 : 0);
+        if (dDiff !== 0) return dDiff;
+        const diff = pendingCount(b) - pendingCount(a); // most pending first
+        if (diff !== 0) return diff;
         return comparePatientsByRoom(a, b);
       });
     } else if (sortMode === "activity") {
@@ -160,10 +171,11 @@ export function PatientList() {
             </span>
             <select
               value={sortMode}
-              onChange={e => handleSortChange(e.target.value as "room" | "severity" | "name" | "new" | "activity")}
+              onChange={e => handleSortChange(e.target.value as typeof sortMode)}
               className="text-xs px-2 py-1 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-none outline-none"
             >
               <option value="room">📋 לפי חדר</option>
+              <option value="pending">⏳ לפי משימות</option>
               <option value="new">🆕 קבלות תורן</option>
               <option value="activity">🩺 לפי פעילות</option>
               <option value="severity">🔥 לפי חומרה</option>

@@ -15,8 +15,8 @@ describe("multi-rule firing via parser", () => {
     const result = parsePatientList("101 כהן יוסף 72 NPO FALL ISO");
     expect(result).toHaveLength(1);
     const genTasks = result[0].generatedTasks;
-    // Should have tasks from NPO rule, FALL rule, and ISO rule
-    expect(genTasks.length).toBeGreaterThanOrEqual(3);
+    // Should have tasks from FALL rule and ISO rule (NPO aspiration rule removed — nursing scope)
+    expect(genTasks.length).toBeGreaterThanOrEqual(2);
     // All should be source='generated'
     for (const t of genTasks) {
       expect(t.source).toBe("generated");

@@ -514,11 +514,13 @@ describe("rules engine — all rules", () => {
       expect(tasks.some(t => t.text.includes("Lorazepam 1mg IV"))).toBe(true);
     });
 
-    it("haloperidol is IM only (no IV)", () => {
+    it("haloperidol referenced as IM (not IV)", () => {
       const tasks = applyRules(makePatient({ status: ["דליריום"] }));
-      const haldolTasks = tasks.filter(t => t.text.includes("Haloperidol"));
-      expect(haldolTasks.every(t => t.text.includes("IM"))).toBe(true);
-      expect(haldolTasks.some(t => t.text.includes("IV"))).toBe(false);
+      const allText = tasks.map(t => t.text).join("\n");
+      // Haloperidol should appear with IM route
+      expect(allText).toMatch(/Haloperidol.*IM/);
+      // Haloperidol specifically should not be followed by IV before the next separator
+      expect(allText).not.toMatch(/Haloperidol[^|]*IV/);
     });
 
     it("triggers on sundowning", () => {
@@ -526,10 +528,10 @@ describe("rules engine — all rules", () => {
       expect(generatedSources(tasks)).toContain("דליריום");
     });
 
-    it("generates 13 delirium tasks (workup + non-pharm + treatment ladder)", () => {
+    it("generates 6 actionable delirium tasks (workup + non-pharm + med reference)", () => {
       const tasks = applyRules(makePatient({ status: ["דליריום"] }));
       const delTasks = tasks.filter((t) => t.generatedFrom === "דליריום");
-      expect(delTasks).toHaveLength(14);
+      expect(delTasks).toHaveLength(6);
     });
   });
 
@@ -731,7 +733,7 @@ describe("rules engine — cross-cutting behavior", () => {
   });
 
   it("RULES array has expected number of rules", () => {
-    expect(RULES.length).toBe(58); // +4: comfort_sedation_symptom, aspiration_risk, pressure_ulcer, delirium_nonpharm_bundle
+    expect(RULES.length).toBe(55); // -3: delirium_nonpharm_bundle, aspiration_risk, pressure_ulcer merged/removed
   });
 
   it("every rule has a unique group", () => {
@@ -978,36 +980,13 @@ describe("rules engine — cross-cutting behavior", () => {
 
 // ── New geriatric safety rules (Gemini audit 2026-03-03) ─────────────────────
 
-describe("aspiration_risk rule", () => {
-  it("triggers for dysphagia", () => {
-    const p = makePatient({ diagnosis: "dysphagia aspiration pneumonia" });
-    expect(generatedSources(applyRules(p))).toContain("סיכון לאספירציה");
-  });
-  it("triggers for NPO", () => {
-    const p = makePatient({ diagnosis: "NPO post-op bowel obstruction" });
-    expect(generatedSources(applyRules(p))).toContain("סיכון לאספירציה");
-  });
-});
+// aspiration_risk and pressure_ulcer rules REMOVED — nursing standing orders, not on-call tasks
 
-describe("pressure_ulcer rule", () => {
-  it("triggers for pressure ulcer", () => {
-    const p = makePatient({ diagnosis: "pressure ulcer heel stage 2" });
-    expect(generatedSources(applyRules(p))).toContain("סיכון לפצע לחץ");
-  });
-  it("triggers for decubitus", () => {
-    const p = makePatient({ diagnosis: "decubitus sacrum" });
-    expect(generatedSources(applyRules(p))).toContain("סיכון לפצע לחץ");
-  });
-});
-
-describe("delirium_nonpharm_bundle rule", () => {
-  it("triggers for delirium", () => {
+describe("delirium non-pharm (merged into main delirium rule)", () => {
+  it("main delirium rule includes non-pharm measures", () => {
     const p = makePatient({ diagnosis: "delirium acute confusion" });
-    expect(generatedSources(applyRules(p))).toContain("חבילת דליריום — לא תרופתית");
-  });
-  it("does NOT suppress bundle for comfort patients — non-pharm bundle is always appropriate", () => {
-    const p = makePatient({ diagnosis: "delirium agitation palliative care EOL" });
-    expect(generatedSources(applyRules(p))).toContain("חבילת דליריום — לא תרופתית");
+    const tasks = applyRules(p);
+    expect(tasks.some(t => t.text.includes("תאורה") && t.text.includes("משקפיים"))).toBe(true);
   });
 });
 

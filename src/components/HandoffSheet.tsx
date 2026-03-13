@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState } from "react";
 import { useSimpleToast, SimpleToast } from "./SimpleConfirm";
 import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
 import { SECTION_LABEL, type PatientEntry, type Task } from "../types";
@@ -520,8 +520,17 @@ export function HandoffSheet({ onClose, initialTab }: { onClose: () => void; ini
       arr.push(p);
       map.set(p.section, arr);
     }
+    // Sort each section: new admissions first, then by room
+    for (const [, pts] of map) {
+      pts.sort((a, b) => {
+        const aNew = newAdmissionIds.has(a.id) ? 0 : 1;
+        const bNew = newAdmissionIds.has(b.id) ? 0 : 1;
+        if (aNew !== bNew) return aNew - bNew;
+        return (a.room ?? "").localeCompare(b.room ?? "");
+      });
+    }
     return map;
-  }, [filteredPatients]);
+  }, [filteredPatients, newAdmissionIds]);
 
   const text = useMemo(
     () => buildTextHandoff(patients, filteredPatients, sections, oncallOnly, shiftStart),
@@ -548,6 +557,7 @@ export function HandoffSheet({ onClose, initialTab }: { onClose: () => void; ini
   }, [phlebList]);
 
   // ── Shift report data (merged from MorningReport) ──
+  // Uses filteredPatients so it respects the פעלתי / כל המחלקה toggle
   const h24ago = useMemo(() => new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), []);
   const shiftStartISO = shiftStart.toISOString();
   const admissionEvents = useMemo(() =>
@@ -555,15 +565,15 @@ export function HandoffSheet({ onClose, initialTab }: { onClose: () => void; ini
   const moveEvents = useMemo(() =>
     events.filter(e => e.type === "MOVE" && e.at >= h24ago), [events, h24ago]);
   const openUrgent = useMemo(() =>
-    patients.flatMap(p =>
+    filteredPatients.flatMap(p =>
       [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)]
         .filter(t => !t.done && (t.urgency === "stat" || t.urgency === "urgent"))
         .map(t => ({ task: t, patient: p }))
     ).sort((a, b) => (a.task.urgency === "stat" ? -1 : 1) - (b.task.urgency === "stat" ? -1 : 1)),
-    [patients]);
+    [filteredPatients]);
   const actedon = useMemo(() => {
     const admissionIdSet = new Set(admissionEvents.map(e => e.patientId));
-    return patients.filter(p => {
+    return filteredPatients.filter(p => {
       if (admissionIdSet.has(p.id)) return false;
       const allT = [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)];
       return allT.some(t => t.done && t.doneTime && t.doneTime >= shiftStartISO)
@@ -571,7 +581,7 @@ export function HandoffSheet({ onClose, initialTab }: { onClose: () => void; ini
         || (p.notes ?? []).length > 0
         || !!p.handoverNote;
     });
-  }, [patients, admissionEvents, shiftStartISO]);
+  }, [filteredPatients, admissionEvents, shiftStartISO]);
 
   // Summary stats
   const allTasks = filteredPatients.flatMap(p => [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)]);
