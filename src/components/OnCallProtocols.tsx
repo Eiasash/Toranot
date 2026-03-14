@@ -7,8 +7,8 @@ import { useState } from "react";
 // ─── Shared UI helpers ────────────────────────────────────
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="mb-4">
-      <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5 border-b border-slate-200 dark:border-slate-700 pb-1">
+    <div className="mb-5">
+      <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 mb-2 border-b border-slate-200 dark:border-slate-700 pb-1.5">
         {title}
       </h3>
       {children}
@@ -18,18 +18,18 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Step({ n, children }: { n: number; children: React.ReactNode }) {
   return (
-    <div className="flex gap-2 mb-1.5">
-      <span className="shrink-0 w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center mt-0.5">
+    <div className="flex gap-2.5 mb-2">
+      <span className="shrink-0 w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">
         {n}
       </span>
-      <div className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">{children}</div>
+      <div className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">{children}</div>
     </div>
   );
 }
 
 function Warn({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-2 text-xs text-red-800 dark:text-red-300 mb-2">
+    <div className="bg-red-50 dark:bg-red-900/25 border border-red-200 dark:border-red-700 rounded-lg p-3 text-sm text-red-800 dark:text-red-200 mb-2">
       ⚠️ {children}
     </div>
   );
@@ -37,7 +37,7 @@ function Warn({ children }: { children: React.ReactNode }) {
 
 function Tip({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-2 text-xs text-blue-800 dark:text-blue-300 mb-2">
+    <div className="bg-blue-50 dark:bg-blue-900/25 border border-blue-200 dark:border-blue-700 rounded-lg p-3 text-sm text-blue-800 dark:text-blue-200 mb-2">
       💡 {children}
     </div>
   );
@@ -45,10 +45,10 @@ function Tip({ children }: { children: React.ReactNode }) {
 
 function Drug({ name, dose, route, notes }: { name: string; dose: string; route: string; notes?: string }) {
   return (
-    <div className="bg-slate-50 dark:bg-slate-800/50 rounded px-2 py-1 mb-1 text-xs">
-      <span className="font-semibold text-slate-800 dark:text-slate-200">{name}</span>
-      <span className="text-slate-500 dark:text-slate-400"> — {dose} {route}</span>
-      {notes && <span className="text-slate-500 dark:text-slate-400 block text-[11px]">{notes}</span>}
+    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg px-3 py-1.5 mb-1.5 text-sm">
+      <span className="font-semibold text-slate-800 dark:text-slate-100">{name}</span>
+      <span className="text-slate-600 dark:text-slate-300"> — {dose} {route}</span>
+      {notes && <span className="text-slate-500 dark:text-slate-300 block text-xs mt-0.5">{notes}</span>}
     </div>
   );
 }
@@ -78,7 +78,7 @@ export function ChestPainProtocol() {
       </Section>
 
       <Section title="אבחנה מבדלת — אל תפספס">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>🔴 <strong>תסחיף ריאתי</strong> — D-dimer, CTPA אם סיכון גבוה</div>
           <div>🔴 <strong>דיסקציה של אאורטה</strong> — BP asymmetry, CXR mediastinum רחב, CT angio</div>
           <div>🔴 <strong>pneumothorax</strong> — קולות נשימה חד-צדדיים, CXR</div>
@@ -107,7 +107,7 @@ export function AcuteDyspneaProtocol() {
         <Drug name="Furosemide" dose="40-80mg" route="IV bolus" notes="אם כבר על lasix → כפלת PO dose ב-IV" />
         <Drug name="NTG" dose="SL 0.5mg → drip 10-200mcg/min" route="" notes="הכי אפקטיבי! ❌ אם SBP<90" />
         <Drug name="Morphine" dose="2-4mg IV" route="" notes="מפחית preload + חרדה. זהירות: דיכוי נשימתי" />
-        <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 mt-1">
           ישיבה 90°. BiPAP אם לא מגיב (IPAP 10-15, EPAP 5-8). אם DNI — תעד ceiling of care.
         </div>
       </Section>
@@ -117,13 +117,13 @@ export function AcuteDyspneaProtocol() {
         <Drug name="Ipratropium" dose="0.5mg" route="nebulizer + salbutamol" />
         <Drug name="Methylprednisolone" dose="40mg" route="IV" notes="או Prednisone 40mg PO x5 ימים" />
         <Drug name="Antibiotics" dose="" route="" notes="אם purulent sputum / CRP↑: Azithromycin 500mg PO או Amoxicillin-Clav" />
-        <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 mt-1">
           SpO2 יעד: 88-92%! לא 100%. BiPAP אם pH {"<"}7.35 + CO2 {">"} 45.
         </div>
       </Section>
 
       <Section title="PE — חשוד?">
-        <div className="text-xs text-slate-600 dark:text-slate-400">
+        <div className="text-sm text-slate-700 dark:text-slate-200">
           Wells score → אם סיכון גבוה: CTPA מיידי. טכיקרדיה + hypoxia לא מוסברת = PE עד שהוכח אחרת.
           אם massive PE (shock) → thrombolysis: tPA 100mg IV over 2h. התייעץ קרדיולוג/מכשירים.
         </div>
@@ -153,7 +153,7 @@ export function GIBleedProtocol() {
       </Section>
 
       <Section title="Anticoagulation reversal">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div><strong>Warfarin:</strong> Vitamin K 10mg IV slow + FFP 2-4U (or PCC 25-50U/kg for rapid reversal)</div>
           <div><strong>Dabigatran:</strong> Idarucizumab 5g IV (2 doses of 2.5g)</div>
           <div><strong>Rivaroxaban/Apixaban:</strong> Andexanet alfa (אם זמין), אחרת PCC 50U/kg</div>
@@ -187,7 +187,7 @@ export function AnaphylaxisProtocol() {
       </Section>
 
       <Section title="אחרי ייצוב">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>• מעקב 6-12 שעות (biphasic reaction ב-5-20% מהמקרים)</div>
           <div>• מאסטוציטוזיס? → tryptase</div>
           <div>• שחרור עם EpiPen + הפניה לאלרגולוג</div>
@@ -202,7 +202,7 @@ export function HypertensiveProtocol() {
   return (
     <div className="space-y-3" dir="rtl">
       <Section title="הבדל קריטי">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>🔴 <strong>חירום (Emergency)</strong> — BP מאוד גבוה + end-organ damage (ACS, stroke, aortic dissection, pulmonary edema, AKI, encephalopathy) → IV meds, ICU</div>
           <div>🟡 <strong>דחוף (Urgency)</strong> — BP {">"} 180/120 ללא end-organ damage → PO meds, הורדה הדרגתית</div>
         </div>
@@ -249,7 +249,7 @@ export function RapidAFProtocol() {
       </Section>
 
       <Section title="Rhythm Control (שקול אם <48h / anticoagulated)">
-        <div className="text-xs text-slate-600 dark:text-slate-400 mb-2">
+        <div className="text-sm text-slate-700 dark:text-slate-200 mb-2">
           <strong>AF &lt;48h</strong> → cardioversion בטוח (chemical or electrical).<br />
           <strong>AF &gt;48h or unknown</strong> → TEE לפני cardioversion <em>או</em> anticoagulate 3 שבועות לפני.
         </div>
@@ -267,7 +267,7 @@ export function SyncopeProtocol() {
   return (
     <div className="space-y-3" dir="rtl">
       <Section title="מיון מהיר — high risk vs low risk">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>🔴 <strong>High risk (admit):</strong> cardiac history, exertional, abnormal ECG, Hb drop, age {">"} 60 + no prodrome, family hx sudden death</div>
           <div>🟢 <strong>Low risk (observe/d/c):</strong> prodrome (warmth, nausea, tunnel vision), positional, young, normal ECG, normal vitals</div>
         </div>
@@ -281,7 +281,7 @@ export function SyncopeProtocol() {
       </Section>
 
       <Section title="סיבות נפוצות בקשישים">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>• <strong>Orthostatic hypotension</strong> — תרופות (alpha-blockers, diuretics, antihypertensives), dehydration</div>
           <div>• <strong>Vasovagal</strong> — prodrome + trigger (כאב, חרדה, עמידה ממושכת)</div>
           <div>• <strong>Cardiac</strong> — arrhythmia, AS, HCM, PE</div>
@@ -307,7 +307,7 @@ export function FeverWorkupProtocol() {
       </Section>
 
       <Section title="מתי ABx אמפירי מיידי?">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>🔴 <strong>Sepsis / qSOFA ≥ 2</strong> → ABx תוך שעה</div>
           <div>🔴 <strong>Neutropenic fever</strong> (ANC {"<"} 500) → ABx מיידי (Cefepime / Meropenem)</div>
           <div>🔴 <strong>Meningitis</strong> (חשד) → Ceftriaxone 2g IV + LP</div>
@@ -317,7 +317,7 @@ export function FeverWorkupProtocol() {
       </Section>
 
       <Section title="חום פוסט-ניתוחי — 5 W's (by day)">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div><strong>Day 1-2:</strong> Wind (atelectasis) → incentive spirometry</div>
           <div><strong>Day 3-5:</strong> Water (UTI) → U/A + remove catheter</div>
           <div><strong>Day 5-7:</strong> Wound (SSI) → inspect surgical site</div>
@@ -351,7 +351,7 @@ export function SeizureProtocol() {
       </Section>
 
       <Section title="אחרי הפרכוס — בירור">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>• Labs: glucose, Na, Ca, Mg, BUN/Cr, toxicology screen, anticonvulsant levels</div>
           <div>• CT head ללא חומר ניגוד (first seizure, trauma, anticoagulation, focal)</div>
           <div>• LP אם חשד CNS infection (חום + meningismus)</div>
@@ -360,7 +360,7 @@ export function SeizureProtocol() {
       </Section>
 
       <Section title="סיבות שכיחות בקשישים">
-        <div className="text-xs text-slate-600 dark:text-slate-400">
+        <div className="text-sm text-slate-700 dark:text-slate-200">
           CVA (שכיח!), metabolic (Na+, glucose, Ca2+), medication withdrawal (benzos, alcohol, anticonvulsants), 
           infection (meningitis, encephalitis), brain tumor/mets, uremia
         </div>
@@ -406,7 +406,7 @@ export function DKA_HHS_Protocol() {
       </Section>
 
       <Section title="Resolution DKA + מעקב">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>✅ DKA resolved = pH &gt;7.3 + bicarb &gt;18 + AG &lt;12 (לא glucose לבד!)</div>
           <div>מעבר SC: overlap 2h. Glucose כל שעה. BMP כל 2-4h. I/O כל שעה</div>
           <div>⚠️ SGLT2i (Empa/Dapa) → euglycemic DKA: glucose נורמלי אך ketones+AG gap!</div>
@@ -434,7 +434,7 @@ export function TransfusionReactionProtocol() {
       </Section>
 
       <Section title="סוגי תגובות">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-2">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-2">
           <div>
             <strong>🔴 Hemolytic (acute)</strong> — חום, צמרמורת, כאב גב/חזה, hypotension, דם בשתן<br/>
             → NaCl 0.9% bolus, Furosemide 40mg IV (שמור UO), הדבק דגימות. ICU אם unstable.
@@ -469,7 +469,7 @@ export function PainProtocol() {
   return (
     <div className="space-y-3" dir="rtl">
       <Section title="סולם כאב — WHO Ladder (מותאם גריאטריה)">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-2">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-2">
           <div>
             <strong>שלב 1 — כאב קל (NRS 1-3):</strong><br/>
             Paracetamol 1g PO/IV q6h (max 4g/day, 2g אם כבד)<br/>
@@ -490,7 +490,7 @@ export function PainProtocol() {
       </Section>
 
       <Section title="כאב ספציפי">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div><strong>שבר / Post-op:</strong> Paracetamol קבוע + opioid PRN. Nerve block אם אפשר.</div>
           <div><strong>קוליק כלייתי:</strong> Paracetamol IV 1g + Diclofenac 75mg IM (אם GFR OK). Morphine 2-4mg IV.</div>
           <div><strong>כאב נוירופתי:</strong> Pregabalin 25-75mg PO HS (קשישים: start low).</div>
@@ -510,7 +510,7 @@ export function AnticoagReversalProtocol() {
       <Warn>דימום מסכן חיים + anticoagulation = reversal מיידי. אל תחכה ל-INR.</Warn>
 
       <Section title="Warfarin / Coumadin">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div><strong>INR 3-5, no bleed:</strong> Hold warfarin. שקול Vitamin K 1-2.5mg PO.</div>
           <div><strong>INR 5-9, no bleed:</strong> Hold + Vitamin K 2.5-5mg PO.</div>
           <div><strong>INR {">"} 9, no bleed:</strong> Vitamin K 5-10mg PO.</div>
@@ -520,7 +520,7 @@ export function AnticoagReversalProtocol() {
       </Section>
 
       <Section title="DOACs">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div><strong>Dabigatran:</strong> Idarucizumab (Praxbind) 5g IV (2 doses x 2.5g). Dialyzable.</div>
           <div><strong>Rivaroxaban / Apixaban:</strong> Andexanet alfa (אם זמין). אם לא → PCC 50U/kg.</div>
           <div><strong>כללי לכל DOACs:</strong> activated charcoal אם {"<"} 2h מנטילה. TXA 1g IV.</div>
@@ -528,7 +528,7 @@ export function AnticoagReversalProtocol() {
       </Section>
 
       <Section title="Heparin">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div><strong>UFH:</strong> Protamine 1mg per 100U heparin (last dose). Max 50mg. Give slow IV.</div>
           <div><strong>Enoxaparin ({"<"}8h):</strong> Protamine 1mg per 1mg enoxaparin (~60% reversal).</div>
           <div><strong>Enoxaparin ({">"} 8h):</strong> Protamine 0.5mg per 1mg enoxaparin.</div>
@@ -536,7 +536,7 @@ export function AnticoagReversalProtocol() {
       </Section>
 
       <Section title="Anti-platelets">
-        <div className="text-xs text-slate-600 dark:text-slate-400">
+        <div className="text-sm text-slate-700 dark:text-slate-200">
           Aspirin / Clopidogrel: platelets transfusion (אם דימום active + PLT {"<"} 50). Desmopressin (DDAVP) 0.3mcg/kg IV — improves platelet function.
         </div>
       </Section>
@@ -550,7 +550,7 @@ export function AcuteStrokeProtocol() {
       <Warn>Stroke = Time is Brain! CT head STAT → tPA decision within 60 min of arrival.</Warn>
 
       <Section title="זיהוי — BE FAST">
-        <div className="text-xs text-slate-600 dark:text-slate-400">
+        <div className="text-sm text-slate-700 dark:text-slate-200">
           <strong>B</strong>alance (אי-יציבות) · <strong>E</strong>yes (ראייה כפולה/שדה) · <strong>F</strong>ace (צניחה) · <strong>A</strong>rm (חולשה) · <strong>S</strong>peech (דיבור) · <strong>T</strong>ime (זמן התחלה!)
         </div>
       </Section>
@@ -564,7 +564,7 @@ export function AcuteStrokeProtocol() {
       </Section>
 
       <Section title="tPA — Alteplase 0.9mg/kg (max 90mg)">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>⏱️ Window: {"<"} 4.5h מ-last known well</div>
           <div>❌ Exclude: hemorrhage on CT, recent surgery/bleeding, INR {">"} 1.7, PLT {"<"} 100K, glucose {"<"} 50</div>
           <div>📋 Protocol: 10% bolus over 1min → 90% over 60min</div>
@@ -573,7 +573,7 @@ export function AcuteStrokeProtocol() {
       </Section>
 
       <Section title="Hemorrhagic Stroke">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>• Reverse anticoagulation immediately (see reversal protocol)</div>
           <div>• BP target {"<"} 140 systolic (Nicardipine or Labetalol drip)</div>
           <div>• Neurosurgery consult (IVH, posterior fossa, cerebellar {">"} 3cm)</div>
@@ -590,7 +590,7 @@ export function HyponatremiaProtocol() {
       <Warn>תיקון מהיר מדי → ODS (Osmotic Demyelination). מקסימום 10 mEq/24h. אם חמור סימפטומטי → 4-6 mEq ב-6 שעות ראשונות.</Warn>
 
       <Section title="חומרה">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div><strong>קלה (130-134):</strong> בד"כ אסימפטומטי. בירור + טיפול בסיבה.</div>
           <div><strong>בינונית (125-129):</strong> בחילה, כאב ראש, בלבול. תקן סיבה + שקול NaCl.</div>
           <div><strong>חמורה ({"<"}125) או סימפטומטית:</strong> פרכוסים, coma → Hypertonic saline 3% 100ml IV over 10min. חזור x2 PRN.</div>
@@ -611,7 +611,7 @@ export function HyponatremiaProtocol() {
       </Section>
 
       <Section title="SIADH — טיפול">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>1. הגבלת נוזלים 800ml-1L/d</div>
           <div>2. Salt tablets 3g PO TID (אם נסבל)</div>
           <div>3. Furosemide 20mg PO (paradoxical — מעלה free water excretion)</div>
@@ -630,7 +630,7 @@ export function HyperkalemiaProtocol() {
       <Warn>K+ {">"} 6.5 או שינויי ECG = חירום. Calcium Gluconate מיד!</Warn>
 
       <Section title="ECG Changes (לפי חומרה)">
-        <div className="text-xs text-slate-600 dark:text-slate-400">
+        <div className="text-sm text-slate-700 dark:text-slate-200">
           Peaked T waves → PR prolongation → P wave loss → QRS widening → sine wave → VF/asystole
         </div>
       </Section>
@@ -666,7 +666,7 @@ export function HypoglycemiaProtocol() {
   return (
     <div className="space-y-3" dir="rtl">
       <Section title="הגדרה והערכה">
-        <div className="text-xs text-slate-600 dark:text-slate-400">
+        <div className="text-sm text-slate-700 dark:text-slate-200">
           Glucose {"<"} 70 mg/dL = hypoglycemia. Whipple's triad: symptoms + low glucose + resolution with treatment.
           בקשישים: סימנים לא טיפוסיים — בלבול, נפילה, דיבור לא ברור (מחקה CVA!).
         </div>
@@ -685,7 +685,7 @@ export function HypoglycemiaProtocol() {
       </Section>
 
       <Section title="אחרי ייצוב — חקור סיבה">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>🔴 <strong>Sulfonylureas</strong> (Glibenclamide, Gliclazide) — #1 cause! Admission 24-48h, D10 drip.</div>
           <div>🔴 <strong>Insulin overdose</strong> — D10 drip + glucose monitoring.</div>
           <div>🟡 <strong>Renal failure</strong> — clearance reduced. Adjust doses!</div>
@@ -703,7 +703,7 @@ export function AlteredMentalStatusProtocol() {
   return (
     <div className="space-y-3" dir="rtl">
       <Section title="AEIOU-TIPS — אבחנה מבדלת">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div><strong>A</strong>lcohol / Acidosis</div>
           <div><strong>E</strong>lectrolytes / Encephalopathy (hepatic, uremic, hypertensive, Wernicke)</div>
           <div><strong>I</strong>nfection (UTI, pneumonia, meningitis, sepsis)</div>
@@ -725,7 +725,7 @@ export function AlteredMentalStatusProtocol() {
       </Section>
 
       <Section title="Empiric treatment">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>🟢 <strong>Opioid OD:</strong> Naloxone 0.4mg IV q2-3min</div>
           <div>🟢 <strong>Wernicke:</strong> Thiamine 500mg IV x3/d</div>
           <div>🟢 <strong>Hepatic enceph:</strong> Lactulose 30ml q2h till BM</div>
@@ -749,7 +749,7 @@ export function FallProtocolOnCall() {
       </Section>
 
       <Section title="מתי CT ראש?">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>🔴 <strong>חובה:</strong> anticoag, LOC, focal neuro, GCS {"<"} 15, vomiting, seizure</div>
           <div>🟡 <strong>שקול:</strong> גיל {">"} 65 + head strike, amnesia, dangerous mechanism</div>
           <div>🟢 <strong>לא צריך:</strong> GCS 15, no anticoag, no head strike, no LOC</div>
@@ -757,7 +757,7 @@ export function FallProtocolOnCall() {
       </Section>
 
       <Section title="מתי צילום?">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>• כאב ירך + קיצור + סיבוב חוצה → X-ray hip</div>
           <div>• כאב שורש כף יד → X-ray wrist (Colles')</div>
           <div>• Ottawa rules לקרסול/רגל/ברך</div>
@@ -773,14 +773,14 @@ export function DVTPEProtocol() {
   return (
     <div className="space-y-3" dir="rtl">
       <Section title="DVT">
-        <div className="text-xs text-slate-600 dark:text-slate-400">
+        <div className="text-sm text-slate-700 dark:text-slate-200">
           Wells DVT: ≥2 = likely → US doppler. {"<"}2 → D-dimer first.
           נפיחות חד-צדדית, כאב בשוק, אודם, חום.
         </div>
       </Section>
 
       <Section title="PE — זיהוי">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>Wells PE: ≥5 → CTPA. {"<"}5 → D-dimer.</div>
           <div>Tachycardia + unexplained hypoxia = PE until proven otherwise.</div>
           <div>ECG: sinus tach, S1Q3T3, RBBB, RV strain</div>
@@ -790,7 +790,7 @@ export function DVTPEProtocol() {
       <Section title="טיפול">
         <Drug name="Enoxaparin" dose="1mg/kg SC q12h" route="" notes="CrCl <30 → 1mg/kg q24h" />
         <Drug name="UFH" dose="80U/kg bolus → 18U/kg/h" route="IV" notes="CrCl<30, obesity, high bleed risk" />
-        <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 mt-1">
           Bridge to DOAC or Warfarin. Duration: provoked 3mo, unprovoked ≥6mo.
         </div>
       </Section>
@@ -804,7 +804,7 @@ export function LiverProtocol() {
   return (
     <div className="space-y-3" dir="rtl">
       <Section title="Hepatic Encephalopathy">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div><strong>Grade 1:</strong> sleep disturbance, impaired concentration</div>
           <div><strong>Grade 2:</strong> lethargy, disorientation, asterixis</div>
           <div><strong>Grade 3:</strong> somnolent but arousable, confusion</div>
@@ -816,7 +816,7 @@ export function LiverProtocol() {
       </Section>
 
       <Section title="SBP — Spontaneous Bacterial Peritonitis">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>PMN {">"} 250 in ascites → SBP.</div>
           <div>Ceftriaxone 2g IV daily x 5-7d. Albumin 1.5g/kg day 1, 1g/kg day 3.</div>
         </div>
@@ -831,7 +831,7 @@ export function CorticosteroidProtocol() {
   return (
     <div className="space-y-3" dir="rtl">
       <Section title="Stress Dose — מתי?">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>🔴 סטרואידים {">"} 3 שבועות (Pred ≥ 5mg/d) + acute illness/surgery/shock</div>
           <div>🔴 Known adrenal insufficiency + physiological stress</div>
           <div>🔴 Septic shock not responding to fluids + vasopressors</div>
@@ -839,7 +839,7 @@ export function CorticosteroidProtocol() {
       </Section>
 
       <Section title="מינונים">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div><strong>Minor:</strong> Hydrocortisone 50mg IV x1</div>
           <div><strong>Moderate:</strong> Hydrocortisone 50mg IV q8h x 1-2d</div>
           <div><strong>Major / Adrenal crisis:</strong> Hydrocortisone 100mg IV stat → 50mg q6-8h</div>
@@ -847,7 +847,7 @@ export function CorticosteroidProtocol() {
       </Section>
 
       <Section title="Equivalencies">
-        <div className="text-xs text-slate-600 dark:text-slate-400 font-mono bg-slate-100 dark:bg-slate-800 p-2 rounded">
+        <div className="text-sm text-slate-700 dark:text-slate-200 font-mono bg-slate-100 dark:bg-slate-800 p-2 rounded">
           HC 20mg = Pred 5mg = Methylpred 4mg = Dexa 0.75mg
         </div>
       </Section>
@@ -861,7 +861,7 @@ export function InsomniaBehaviorProtocol() {
   return (
     <div className="space-y-3" dir="rtl">
       <Section title="קו ראשון (לא תרופתי)">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>• הפחת אור ורעש, אטמי אוזניים, מסכת עיניים</div>
           <div>• הימנע VS checks מיותרים בלילה</div>
           <div>• כאב = סיבה #1 — טפל בכאב!</div>
@@ -876,7 +876,7 @@ export function InsomniaBehaviorProtocol() {
       </Section>
 
       <Section title="❌ הימנע בקשישים">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>❌ Benzodiazepines — falls, confusion, paradoxical agitation</div>
           <div>❌ Zolpidem / Zopiclone — falls, complex sleep behaviors</div>
           <div>❌ Diphenhydramine — anticholinergic → delirium</div>
@@ -891,7 +891,7 @@ export function UrinaryRetentionProtocol() {
   return (
     <div className="space-y-3" dir="rtl">
       <Section title="זיהוי">
-        <div className="text-xs text-slate-600 dark:text-slate-400">
+        <div className="text-sm text-slate-700 dark:text-slate-200">
           Bladder scan {">"} 300-400ml + inability to void. בקשישים: דליריום = often retention!
         </div>
       </Section>
@@ -903,7 +903,7 @@ export function UrinaryRetentionProtocol() {
       </Section>
 
       <Section title="סיבות">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>💊 Anticholinergics, opioids, antihistamines, TCAs</div>
           <div>🔴 BPH (#1 בגברים)</div>
           <div>🔴 Constipation / fecal impaction → disimpact!</div>
@@ -920,7 +920,7 @@ export function BloodProductsProtocol() {
   return (
     <div className="space-y-3" dir="rtl">
       <Section title="סף עירוי">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div><strong>pRBC:</strong> Hb {"<"} 7 (restrictive). Hb {"<"} 8 cardiac/ACS. 1 unit ↑ Hb ~1g/dL.</div>
           <div><strong>PLT:</strong> {"<"} 10K prophylactic. {"<"} 50K bleeding/procedure. {"<"} 100K neurosurgery.</div>
           <div><strong>FFP:</strong> INR {">"} 1.5 + bleeding/procedure. 10-15ml/kg.</div>
@@ -929,7 +929,7 @@ export function BloodProductsProtocol() {
       </Section>
 
       <Section title="Massive Transfusion Protocol">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>Ratio: 1:1:1 (pRBC : FFP : PLT). TXA 1g IV within 3h.</div>
           <div>Targets: Hb {">"} 7, PLT {">"} 50K, Fib {">"} 150, INR {"<"} 1.5, iCa {">"} 1.1</div>
           <div>Warm products. Replace Ca (citrate chelation).</div>
@@ -937,7 +937,7 @@ export function BloodProductsProtocol() {
       </Section>
 
       <Section title="דחיפות הזמנה">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div><strong>Emergency:</strong> O-neg (women) / O-pos — no wait</div>
           <div><strong>Urgent (15-30 min):</strong> Type-specific, no crossmatch</div>
           <div><strong>Routine (45-60 min):</strong> Full crossmatch</div>
@@ -958,7 +958,7 @@ export function AcuteAbdomenProtocol() {
       </Section>
 
       <Section title="Red Flags — צריך הדמיה/ניתוח דחוף">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>🔴 Peritonitis (rigid abdomen) → surgical consult STAT</div>
           <div>🔴 Free air on CXR upright → perforation → OR</div>
           <div>🔴 Mesenteric ischemia (pain out of proportion, lactate↑, AF) → CT angio STAT</div>
@@ -968,7 +968,7 @@ export function AcuteAbdomenProtocol() {
       </Section>
 
       <Section title="לפי מיקום">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div><strong>RUQ:</strong> cholecystitis (Murphy's), hepatitis, bile duct stone, Fitz-Hugh-Curtis</div>
           <div><strong>Epigastric:</strong> pancreatitis (lipase), PUD, ACS (!), AAA</div>
           <div><strong>RLQ:</strong> appendicitis, Crohn's, ovarian torsion, ectopic</div>
@@ -986,7 +986,7 @@ export function AcuteKidneyInjuryProtocol() {
   return (
     <div className="space-y-3" dir="rtl">
       <Section title="KDIGO Staging">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div><strong>Stage 1:</strong> Cr x1.5-1.9 or ↑ ≥ 0.3 or UO {"<"} 0.5ml/kg/h x 6-12h</div>
           <div><strong>Stage 2:</strong> Cr x2.0-2.9 or UO {"<"} 0.5ml/kg/h x ≥12h</div>
           <div><strong>Stage 3:</strong> Cr x3 or {">"} 4 or anuria x 12h</div>
@@ -1000,7 +1000,7 @@ export function AcuteKidneyInjuryProtocol() {
       </Section>
 
       <Section title="טיפול">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>✅ Stop nephrotoxins: NSAIDs, aminoglycosides, ACEi/ARB, contrast, metformin</div>
           <div>✅ Fluids if pre-renal (watch for CHF)</div>
           <div>✅ K+ monitoring q4-6h. Hyperkalemia protocol if K {">"} 5.5</div>
@@ -1033,7 +1033,7 @@ export function DeathPronouncementProtocol() {
       </Section>
 
       <Section title="תיעוד בתיק">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>• שעת הגעה ובדיקה</div>
           <div>• ממצאים: no pulse, no heart sounds, no spontaneous respirations, fixed dilated pupils</div>
           <div>• שעת קביעת מוות</div>
@@ -1043,7 +1043,7 @@ export function DeathPronouncementProtocol() {
       </Section>
 
       <Section title="אחרי קביעת מוות">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>• הודע למשפחה (אם לא נוכחים)</div>
           <div>• הודע לרופא הבכיר</div>
           <div>• הסר קטטרים, IV, מוניטור (אלא אם נתיחה)</div>
@@ -1062,7 +1062,7 @@ export function HypercalcemiaProtocol() {
       <Warn>Ca&gt;14mg/dL (3.5mmol/L) = hypercalcemic crisis — טיפול מיידי ללא קשר לסימפטומים</Warn>
 
       <Section title="חומרת Hypercalcemia">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div><strong>קלה:</strong> Ca 10.5–12 mg/dL — לרוב א-סימפטומטי</div>
           <div><strong>בינונית:</strong> Ca 12–14 — עייפות, בלבול, בחילה, polyuria</div>
           <div><strong>קשה:</strong> Ca &gt;14 — arrhythmia, קומה — Stones, Bones, Groans, Moans</div>
@@ -1079,7 +1079,7 @@ export function HypercalcemiaProtocol() {
       </Section>
 
       <Section title="בירור גורם">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>• PTH ↑ → Primary HyperPTH (שכיח #1)</div>
           <div>• PTHrP → ממאירות (Lung, Breast, Renal)</div>
           <div>• Vit D 25-OH → גרנולומות, Vit D toxicity</div>
@@ -1097,7 +1097,7 @@ export function HypernatremiaProtocol() {
       <Warn>הורד Na &gt;10mEq/L/24h → cerebral edema! הורדה איטית בכרוני (&gt;48h)</Warn>
 
       <Section title="אבחון וגורמים">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div><strong>קלה:</strong> Na 145–150 | <strong>בינונית:</strong> 150–160 | <strong>קשה:</strong> &gt;160</div>
           <div>• <strong>Hypovolemic (הכי שכיח בקשישים!):</strong> Diarrhea, הזעה, diuretics — תן נוזלים + תיקון</div>
           <div>• <strong>Euvolemic:</strong> DI (central/nephrogenic), insensible losses</div>
@@ -1107,7 +1107,7 @@ export function HypernatremiaProtocol() {
       </Section>
 
       <Section title="חישוב גירעון ותיקון">
-        <div className="text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-lg p-2">
+        <div className="text-sm text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 rounded-lg p-2">
           <div className="font-mono">Free Water Deficit = TBW × [(Na/140) - 1]</div>
           <div className="font-mono">TBW: ♀60yr+→0.45×kg | ♂60yr+→0.50×kg</div>
         </div>
@@ -1126,7 +1126,7 @@ export function HypermagnesemiaProtocol() {
       <Warn>Mg&gt;6mEq/L = סכנת מוות! DTRs נעלמים לפני cardiac arrest. בדוק DTRs כל שעה!</Warn>
 
       <Section title="תמונה קלינית">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div><strong>Mg 2.5–4:</strong> חולשה, flushing, בחילה</div>
           <div><strong>Mg 4–6:</strong> ↓↓ DTRs, drowsiness, bradycardia, היפוטנסיה</div>
           <div><strong>Mg &gt;6:</strong> ❌ Absent DTRs, apnea, cardiac arrest</div>
@@ -1134,7 +1134,7 @@ export function HypermagnesemiaProtocol() {
       </Section>
 
       <Section title="גורמים">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>• AKI/CKD + Mg תוספים (הכי שכיח!)</div>
           <div>• Antacids עם Mg (Maalox), MgSO4 IV</div>
           <div>• Hypothyroidism, Addison</div>
@@ -1149,7 +1149,7 @@ export function HypermagnesemiaProtocol() {
       </Section>
 
       <Section title="מעקב">
-        <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
           <div>• Mg כל 2-4h | DTRs כל שעה | SpO2 + RR</div>
           <div>• ECG: prolonged PR, wide QRS, peaked T</div>
         </div>

@@ -93,13 +93,13 @@ body {
 }
 .dark .quick-ref .text-gray-500,
 .dark .quick-ref .text-gray-600 {
-  color: #9ca3af !important;
-}
-.dark .quick-ref .text-gray-700 {
   color: #d1d5db !important;
 }
+.dark .quick-ref .text-gray-700 {
+  color: #e5e7eb !important;
+}
 .dark .quick-ref .text-gray-400 {
-  color: #6b7280 !important;
+  color: #9ca3af !important;
 }
 /* Badge colors */
 .dark .quick-ref .bg-green-50 {
@@ -146,24 +146,24 @@ body {
 }
 /* Severity / colored cards */
 .dark .quick-ref .bg-yellow-50 {
-  background-color: rgba(234, 179, 8, 0.12) !important;
-  color: #fde047 !important;
+  background-color: rgba(234, 179, 8, 0.18) !important;
+  color: #fef9c3 !important;
 }
 .dark .quick-ref .bg-yellow-100 {
-  background-color: rgba(234, 179, 8, 0.18) !important;
+  background-color: rgba(234, 179, 8, 0.22) !important;
 }
 .dark .quick-ref .text-yellow-800 {
-  color: #fde047 !important;
+  color: #fef08a !important;
 }
 .dark .quick-ref .bg-red-50 {
-  background-color: rgba(239, 68, 68, 0.12) !important;
-  color: #fca5a5 !important;
+  background-color: rgba(239, 68, 68, 0.18) !important;
+  color: #fecaca !important;
 }
 .dark .quick-ref .bg-red-100 {
-  background-color: rgba(239, 68, 68, 0.18) !important;
+  background-color: rgba(239, 68, 68, 0.22) !important;
 }
 .dark .quick-ref .text-red-800 {
-  color: #fca5a5 !important;
+  color: #fecaca !important;
 }
 .dark .quick-ref .bg-green-100 {
   background-color: rgba(34, 197, 94, 0.18) !important;
@@ -172,10 +172,10 @@ body {
   color: #86efac !important;
 }
 .dark .quick-ref .bg-orange-100 {
-  background-color: rgba(249, 115, 22, 0.18) !important;
+  background-color: rgba(249, 115, 22, 0.22) !important;
 }
 .dark .quick-ref .text-orange-800 {
-  color: #fdba74 !important;
+  color: #fed7aa !important;
 }
 .dark .quick-ref .border-orange-300 {
   border-color: rgba(249, 115, 22, 0.4) !important;

@@ -1187,14 +1187,14 @@ const LYTE_TABS = [
 
 function KSection() {
   return (
-    <div className="space-y-3">
-      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-3 space-y-2">
-        <div className="font-bold text-sm text-purple-800 dark:text-purple-300">היפוקלמיה — תיקון</div>
-        <div className="text-xs space-y-1.5">
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-lg"><span className="font-semibold">K+ 3.0–3.4:</span> KCl 40mEq PO x2-3/d</div>
-          <div className="bg-orange-50 dark:bg-orange-900/20 p-2 rounded-lg"><span className="font-semibold">K+ 2.5–2.9:</span> KCl 10mEq/h IV + PO (max 20mEq/h peripheral)</div>
-          <div className="bg-red-50 dark:bg-red-900/20 p-2 rounded-lg"><span className="font-semibold">K+ &lt;2.5 / ECG∆:</span> KCl 20mEq/h IV + MgSO4 2g IV</div>
-          <div className="text-gray-600 dark:text-gray-400 italic">💡 תמיד בדוק Mg — היפומגנזמיה = K+ לא מתתקן!</div>
+    <div className="space-y-4">
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 space-y-2.5">
+        <div className="font-bold text-base text-purple-800 dark:text-purple-200">היפוקלמיה — תיקון</div>
+        <div className="text-sm space-y-2">
+          <div className="bg-yellow-50 dark:bg-yellow-900/25 p-3 rounded-lg dark:text-yellow-100"><span className="font-semibold">K+ 3.0–3.4:</span> KCl 40mEq PO x2-3/d</div>
+          <div className="bg-orange-50 dark:bg-orange-900/25 p-3 rounded-lg dark:text-orange-100"><span className="font-semibold">K+ 2.5–2.9:</span> KCl 10mEq/h IV + PO (max 20mEq/h peripheral)</div>
+          <div className="bg-red-50 dark:bg-red-900/25 p-3 rounded-lg dark:text-red-100"><span className="font-semibold">K+ &lt;2.5 / ECG∆:</span> KCl 20mEq/h IV + MgSO4 2g IV</div>
+          <div className="text-gray-600 dark:text-gray-300 italic">💡 תמיד בדוק Mg — היפומגנזמיה = K+ לא מתתקן!</div>
         </div>
       </div>
       <HyperkalemiaProtocol />
@@ -1204,18 +1204,18 @@ function KSection() {
 
 function NaSection() {
   return (
-    <div className="space-y-3">
-      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-3 space-y-2">
-        <div className="font-bold text-sm text-indigo-800 dark:text-indigo-300">היפונתרמיה — תיקון מהיר</div>
-        <div className="text-xs space-y-1.5">
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-lg"><span className="font-semibold">Na 125–130 א-סימפטומטי:</span> הגבלת נוזלים 1-1.5L/d + בדוק SIADH</div>
-          <div className="bg-orange-50 dark:bg-orange-900/20 p-2 rounded-lg"><span className="font-semibold">Na 120–125 סימפטומטי:</span> NaCl 0.9% IV + Furosemide אם SIADH</div>
-          <div className="bg-red-50 dark:bg-red-900/20 p-2 rounded-lg"><span className="font-semibold">Na &lt;120 / seizures:</span> NaCl 3% 100ml IV over 10min (x3 max)</div>
-          <div className="text-red-700 dark:text-red-400 font-semibold text-xs">🔴 מקסימום תיקון: 8 mEq/L / 24h! (סכנת ODS)</div>
+    <div className="space-y-4">
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 space-y-2.5">
+        <div className="font-bold text-base text-indigo-800 dark:text-indigo-200">היפונתרמיה — תיקון מהיר</div>
+        <div className="text-sm space-y-2">
+          <div className="bg-yellow-50 dark:bg-yellow-900/25 p-3 rounded-lg dark:text-yellow-100"><span className="font-semibold">Na 125–130 א-סימפטומטי:</span> הגבלת נוזלים 1-1.5L/d + בדוק SIADH</div>
+          <div className="bg-orange-50 dark:bg-orange-900/25 p-3 rounded-lg dark:text-orange-100"><span className="font-semibold">Na 120–125 סימפטומטי:</span> NaCl 0.9% IV + Furosemide אם SIADH</div>
+          <div className="bg-red-50 dark:bg-red-900/25 p-3 rounded-lg dark:text-red-100"><span className="font-semibold">Na &lt;120 / seizures:</span> NaCl 3% 100ml IV over 10min (x3 max)</div>
+          <div className="text-red-700 dark:text-red-300 font-semibold text-sm">🔴 מקסימום תיקון: 8 mEq/L / 24h! (סכנת ODS)</div>
         </div>
       </div>
-      <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
-        <div className="font-bold text-xs text-gray-600 dark:text-gray-400 uppercase mb-2">היפרנתרמיה</div>
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+        <div className="font-bold text-sm text-gray-600 dark:text-gray-200 uppercase mb-2">היפרנתרמיה</div>
         <HypernatremiaProtocol />
       </div>
     </div>
@@ -1224,17 +1224,17 @@ function NaSection() {
 
 function MgSection() {
   return (
-    <div className="space-y-3">
-      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-3 space-y-2">
-        <div className="font-bold text-sm text-blue-800 dark:text-blue-300">היפומגנזמיה — תיקון</div>
-        <div className="text-xs space-y-1.5">
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-lg"><span className="font-semibold">Mg 1.2–1.6:</span> MgO 400mg PO x2/d</div>
-          <div className="bg-orange-50 dark:bg-orange-900/20 p-2 rounded-lg"><span className="font-semibold">Mg &lt;1.2 / סימפטומטי:</span> MgSO4 2g IV over 1h → 4-6g over 24h</div>
-          <div className="text-gray-600 dark:text-gray-400 italic">💡 חיוני לתיקון היפוקלמיה והיפוקלצמיה</div>
+    <div className="space-y-4">
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 space-y-2.5">
+        <div className="font-bold text-base text-blue-800 dark:text-blue-200">היפומגנזמיה — תיקון</div>
+        <div className="text-sm space-y-2">
+          <div className="bg-yellow-50 dark:bg-yellow-900/25 p-3 rounded-lg dark:text-yellow-100"><span className="font-semibold">Mg 1.2–1.6:</span> MgO 400mg PO x2/d</div>
+          <div className="bg-orange-50 dark:bg-orange-900/25 p-3 rounded-lg dark:text-orange-100"><span className="font-semibold">Mg &lt;1.2 / סימפטומטי:</span> MgSO4 2g IV over 1h → 4-6g over 24h</div>
+          <div className="text-gray-600 dark:text-gray-300 italic">💡 חיוני לתיקון היפוקלמיה והיפוקלצמיה</div>
         </div>
       </div>
-      <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
-        <div className="font-bold text-xs text-gray-600 dark:text-gray-400 uppercase mb-2">היפרמגנסמיה</div>
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+        <div className="font-bold text-sm text-gray-600 dark:text-gray-200 uppercase mb-2">היפרמגנסמיה</div>
         <HypermagnesemiaProtocol />
       </div>
     </div>
@@ -1243,18 +1243,18 @@ function MgSection() {
 
 function CaSection() {
   return (
-    <div className="space-y-3">
-      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-3 space-y-2">
-        <div className="font-bold text-sm text-green-800 dark:text-green-300">היפוקלצמיה — תיקון</div>
-        <div className="text-xs space-y-1.5">
-          <div className="bg-gray-50 dark:bg-gray-800/60 p-2 rounded-lg"><span className="font-semibold">תיקון לאלבומין:</span> Ca_corrected = Ca + 0.8 × (4.0 − Albumin)</div>
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-lg"><span className="font-semibold">קל:</span> CaCO3 500mg PO x3/d + Vitamin D</div>
-          <div className="bg-red-50 dark:bg-red-900/20 p-2 rounded-lg"><span className="font-semibold">חמור / סימפטומטי:</span> Ca Gluconate 10% 10-20ml IV over 10min → gtt</div>
-          <div className="text-gray-600 dark:text-gray-400 italic">💡 אם גם היפומגנזמיה — תקן Mg קודם!</div>
+    <div className="space-y-4">
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 space-y-2.5">
+        <div className="font-bold text-base text-green-800 dark:text-green-200">היפוקלצמיה — תיקון</div>
+        <div className="text-sm space-y-2">
+          <div className="bg-gray-50 dark:bg-gray-800/60 p-3 rounded-lg dark:text-gray-200"><span className="font-semibold">תיקון לאלבומין:</span> Ca_corrected = Ca + 0.8 × (4.0 − Albumin)</div>
+          <div className="bg-yellow-50 dark:bg-yellow-900/25 p-3 rounded-lg dark:text-yellow-100"><span className="font-semibold">קל:</span> CaCO3 500mg PO x3/d + Vitamin D</div>
+          <div className="bg-red-50 dark:bg-red-900/25 p-3 rounded-lg dark:text-red-100"><span className="font-semibold">חמור / סימפטומטי:</span> Ca Gluconate 10% 10-20ml IV over 10min → gtt</div>
+          <div className="text-gray-600 dark:text-gray-300 italic">💡 אם גם היפומגנזמיה — תקן Mg קודם!</div>
         </div>
       </div>
-      <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
-        <div className="font-bold text-xs text-gray-600 dark:text-gray-400 uppercase mb-2">היפרקלצמיה</div>
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+        <div className="font-bold text-sm text-gray-600 dark:text-gray-200 uppercase mb-2">היפרקלצמיה</div>
         <HypercalcemiaProtocol />
       </div>
     </div>
@@ -1263,21 +1263,21 @@ function CaSection() {
 
 function PO4Section() {
   return (
-    <div className="space-y-3">
-      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-3 space-y-2">
-        <div className="font-bold text-sm text-amber-800 dark:text-amber-300">היפופוספטמיה — תיקון</div>
-        <div className="text-xs space-y-1.5">
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-lg"><span className="font-semibold">PO4 1.5–2.5:</span> Phospho-Soda 5ml PO x2-3/d</div>
-          <div className="bg-red-50 dark:bg-red-900/20 p-2 rounded-lg"><span className="font-semibold">PO4 &lt;1.5:</span> KPhos/NaPhos 15-30mmol IV over 6h</div>
-          <div className="text-gray-600 dark:text-gray-400 italic">💡 שכיח ב-refeeding, DKA, ספסיס. עלול לגרום חולשת שרירים ואי"ן נשימתית</div>
+    <div className="space-y-4">
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 space-y-2.5">
+        <div className="font-bold text-base text-amber-800 dark:text-amber-200">היפופוספטמיה — תיקון</div>
+        <div className="text-sm space-y-2">
+          <div className="bg-yellow-50 dark:bg-yellow-900/25 p-3 rounded-lg dark:text-yellow-100"><span className="font-semibold">PO4 1.5–2.5:</span> Phospho-Soda 5ml PO x2-3/d</div>
+          <div className="bg-red-50 dark:bg-red-900/25 p-3 rounded-lg dark:text-red-100"><span className="font-semibold">PO4 &lt;1.5:</span> KPhos/NaPhos 15-30mmol IV over 6h</div>
+          <div className="text-gray-600 dark:text-gray-300 italic">💡 שכיח ב-refeeding, DKA, ספסיס. עלול לגרום חולשת שרירים ואי"ן נשימתית</div>
         </div>
       </div>
-      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-3 space-y-2">
-        <div className="font-bold text-sm text-amber-800 dark:text-amber-300">היפרפוספטמיה</div>
-        <div className="text-xs space-y-1.5">
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded-lg"><span className="font-semibold">גורמים:</span> AKI/CKD, Rhabdomyolysis, Hypoparathyroidism</div>
-          <div className="bg-slate-50 dark:bg-slate-800/60 p-2 rounded-lg"><span className="font-semibold">טיפול:</span> Phosphate binders (Calcium carbonate AC), תיקון AKI, דיאטה</div>
-          <div className="text-gray-600 dark:text-gray-400 italic">💡 Hyperphosphatemia + Hypocalcemia = AKI עד הוכחת אחרת</div>
+      <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 space-y-2.5">
+        <div className="font-bold text-base text-amber-800 dark:text-amber-200">היפרפוספטמיה</div>
+        <div className="text-sm space-y-2">
+          <div className="bg-yellow-50 dark:bg-yellow-900/25 p-3 rounded-lg dark:text-yellow-100"><span className="font-semibold">גורמים:</span> AKI/CKD, Rhabdomyolysis, Hypoparathyroidism</div>
+          <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-lg dark:text-slate-200"><span className="font-semibold">טיפול:</span> Phosphate binders (Calcium carbonate AC), תיקון AKI, דיאטה</div>
+          <div className="text-gray-600 dark:text-gray-300 italic">💡 Hyperphosphatemia + Hypocalcemia = AKI עד הוכחת אחרת</div>
         </div>
       </div>
     </div>
@@ -1289,19 +1289,19 @@ export function UnifiedElectrolytesHub() {
   return (
     <div className="space-y-3" dir="rtl">
       {/* Tab bar */}
-      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800/60 rounded-xl p-1">
+      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800/60 rounded-xl p-1.5">
         {LYTE_TABS.map(tab => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+            className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors ${
               activeTab === tab.key
-                ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-300 shadow-sm"
+                ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-200 shadow-sm"
                 : "text-slate-500 dark:text-slate-400"
             }`}
           >
-            <div>{tab.icon}</div>
-            <div className="text-[10px] mt-0.5">{tab.label}</div>
+            <div className="text-base">{tab.icon}</div>
+            <div className="text-xs mt-0.5">{tab.label}</div>
           </button>
         ))}
       </div>
