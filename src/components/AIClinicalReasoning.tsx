@@ -275,7 +275,15 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
   const [proxyMode, setProxyMode] = useState(false);
   useEffect(() => {
     // Seed initial value
-    isProxyAvailableAsync().then(setProxyMode).catch(() => setProxyMode(false));
+    isProxyAvailableAsync().then((available) => {
+      setProxyMode(available);
+      // When proxy is available, clear any locally stored API key (no longer needed,
+      // reduces attack surface from XSS/browser extension key theft)
+      if (available && safeGetItem(API_KEY_STORAGE)) {
+        try { localStorage.removeItem(API_KEY_STORAGE); } catch {}
+        setApiKey("");
+      }
+    }).catch(() => setProxyMode(false));
     // Keep in sync when user logs in/out during the session
     if (!supabase) return;
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
@@ -301,8 +309,14 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
   }, [response]);
 
   const saveKey = useCallback((key: string) => {
-    setApiKey(key);
-    safeSetItem(API_KEY_STORAGE, key);
+    if (key) {
+      setApiKey(key);
+      safeSetItem(API_KEY_STORAGE, key);
+    } else {
+      // Clearing key — remove from localStorage entirely
+      setApiKey("");
+      try { localStorage.removeItem(API_KEY_STORAGE); } catch {}
+    }
     setShowKeySetup(false);
   }, []);
 

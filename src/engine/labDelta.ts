@@ -80,9 +80,9 @@ function classifyAKI(
   // Absolute criterion: acute rise to ≥4.0 requires ≥0.3 mg/dL delta
   // This prevents chronic CKD-5 (stable Cr 4.0–5.0) from being misclassified.
   // Float epsilon guard: 4.1 - 3.8 = 0.2999...97 in IEEE754.
-  // Use 1e-9 epsilon rather than widening the threshold.
-  const FLOAT_EPS = 1e-9;
-  if (peakCr >= 4.0 && absoluteRise + FLOAT_EPS >= 0.3) {
+  // Round to 2 decimal places before comparison to avoid floating point edge cases.
+  const roundedRise = Math.round(absoluteRise * 100) / 100;
+  if (peakCr >= 4.0 && roundedRise >= 0.3) {
     return {
       severity: "critical",
       stage: 3,
