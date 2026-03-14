@@ -637,8 +637,8 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
                   <div key={i} className={`border rounded-xl p-3 space-y-2 ${hasAdjustments ? "border-orange-300 bg-orange-50/30 dark:bg-orange-950/10" : "border-gray-200 dark:border-[#1a1a2e]"}`}>
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <div className="font-bold text-sm">{p.conditionHe}</div>
-                        <div className="text-xs text-gray-500">{p.condition}</div>
+                        <div className="font-bold text-base dark:text-gray-100">{p.conditionHe}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">{p.condition}</div>
                       </div>
                       <button
                         onClick={() => handleCopyProtocol(p, i)}
@@ -648,14 +648,14 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
                         {copiedIdx === i ? "✓" : "📋"}
                       </button>
                     </div>
-                    <div className="text-sm space-y-1">
+                    <div className="text-sm space-y-1.5">
                       <div>
-                        <span className="text-xs font-semibold text-green-700 bg-green-50 px-1.5 py-0.5 rounded">1st Line</span>
-                        <span className="mr-2 text-sm" dir="ltr">{p.empiric}</span>
+                        <span className="text-xs font-semibold text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/30 px-1.5 py-0.5 rounded">1st Line</span>
+                        <span className="mr-2 text-sm dark:text-gray-100" dir="ltr">{p.empiric}</span>
                       </div>
                       <div>
-                        <span className="text-xs font-semibold text-orange-700 bg-orange-50 px-1.5 py-0.5 rounded">Alt</span>
-                        <span className="mr-2 text-sm" dir="ltr">{p.alternative}</span>
+                        <span className="text-xs font-semibold text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/30 px-1.5 py-0.5 rounded">Alt</span>
+                        <span className="mr-2 text-sm dark:text-gray-100" dir="ltr">{p.alternative}</span>
                       </div>
                       {crclBucket && doseLines.length > 0 && (
                         <div className={`mt-2 rounded-lg border p-2.5 text-xs space-y-1.5 ${
@@ -667,7 +667,7 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
                             {hasAdjustments ? "⚠️" : "💊"} Dose — CrCl {BUCKET_LABELS[crclBucket]} ml/min
                           </div>
                           {doseLines.map((d) => (
-                            <div key={d.label} className={`flex flex-col ${d.needsAdjustment ? "text-orange-800 dark:text-orange-300" : "text-gray-600 dark:text-gray-400"}`} dir="ltr">
+                            <div key={d.label} className={`flex flex-col ${d.needsAdjustment ? "text-orange-800 dark:text-orange-200" : "text-gray-600 dark:text-gray-200"}`} dir="ltr">
                               <span className="font-medium">{d.label}:</span>
                               <span className="mr-1">{d.dose}</span>
                               {d.notes && d.needsAdjustment && (
@@ -677,7 +677,7 @@ export function QuickReference({ onClose }: { onClose: () => void }) {
                           ))}
                         </div>
                       )}
-                      <div className="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-[#111] rounded-lg p-2">{p.notes}</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-200 bg-gray-50 dark:bg-[#111] rounded-lg p-2.5">{p.notes}</div>
                     </div>
                   </div>
                   );
