@@ -496,11 +496,20 @@ function innerReducer(state: PatientsState, action: Action): PatientsState {
       if (!editTarget) return state;
       const newRoom = action.room ?? editTarget.room;
       const newSection = action.section ?? editTarget.section;
-      if (
-        (action.room !== undefined || action.section !== undefined) &&
-        bedOccupiedBy(state.patients, newRoom, newSection, action.patientId)
-      ) {
-        return state; // bed occupied — reject silently
+      const occupantId = (action.room !== undefined || action.section !== undefined)
+        ? bedOccupiedBy(state.patients, newRoom, newSection, action.patientId)
+        : null;
+      if (occupantId) {
+        const occupant = state.patients.find((p) => p.id === occupantId);
+        const event: WardEvent = {
+          id: generateId("ev-"),
+          type: "BED_CONFLICT" as WardEvent["type"],
+          at: new Date().toISOString(),
+          patientId: action.patientId,
+          patientName: editTarget.name,
+          text: `מיטה ${newRoom} תפוסה ע״י ${occupant?.name ?? "חולה אחר"}`,
+        };
+        return { ...state, events: [event, ...state.events].slice(0, MAX_EVENTS) };
       }
       return {
         ...state,
@@ -648,8 +657,18 @@ function innerReducer(state: PatientsState, action: Action): PatientsState {
       const patient = state.patients.find(p => p.id === action.patientId);
       if (!patient) return state;
       const moveSection = action.toSection ?? patient.section;
-      if (bedOccupiedBy(state.patients, action.toRoom, moveSection, action.patientId)) {
-        return state; // bed occupied — reject silently
+      const moveOccupantId = bedOccupiedBy(state.patients, action.toRoom, moveSection, action.patientId);
+      if (moveOccupantId) {
+        const moveOccupant = state.patients.find((p) => p.id === moveOccupantId);
+        const conflictEvent: WardEvent = {
+          id: generateId("ev-"),
+          type: "BED_CONFLICT" as WardEvent["type"],
+          at: new Date().toISOString(),
+          patientId: action.patientId,
+          patientName: patient.name,
+          text: `מיטה ${action.toRoom} תפוסה ע״י ${moveOccupant?.name ?? "חולה אחר"}`,
+        };
+        return { ...state, events: [conflictEvent, ...state.events].slice(0, MAX_EVENTS) };
       }
       const event: WardEvent = {
         id: generateId("ev-"),
