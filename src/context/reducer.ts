@@ -503,7 +503,7 @@ function innerReducer(state: PatientsState, action: Action): PatientsState {
         const occupant = state.patients.find((p) => p.id === occupantId);
         const event: WardEvent = {
           id: generateId("ev-"),
-          type: "BED_CONFLICT" as WardEvent["type"],
+          type: "BED_CONFLICT",
           at: new Date().toISOString(),
           patientId: action.patientId,
           patientName: editTarget.name,
@@ -662,7 +662,7 @@ function innerReducer(state: PatientsState, action: Action): PatientsState {
         const moveOccupant = state.patients.find((p) => p.id === moveOccupantId);
         const conflictEvent: WardEvent = {
           id: generateId("ev-"),
-          type: "BED_CONFLICT" as WardEvent["type"],
+          type: "BED_CONFLICT",
           at: new Date().toISOString(),
           patientId: action.patientId,
           patientName: patient.name,

@@ -288,4 +288,5 @@ export type WardEvent =
   | { id: string; type: "ADMISSION"; at: string; patientId: string; patientName: string | null; room: string | null }
   | { id: string; type: "MOVE"; at: string; patientId: string; patientName: string | null; from: string | null; to: string }
   | { id: string; type: "TASK_CREATED"; at: string; patientId?: string; patientName?: string | null; text: string; urgency: string }
-  | { id: string; type: "TASK_COMPLETED"; at: string; patientId: string; taskId: string; text: string };
+  | { id: string; type: "TASK_COMPLETED"; at: string; patientId: string; taskId: string; text: string }
+  | { id: string; type: "BED_CONFLICT"; at: string; patientId: string; patientName: string | null; text: string };
