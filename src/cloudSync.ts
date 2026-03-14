@@ -12,6 +12,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Action } from "./context/reducer";
 import { safeSetItem } from "./utils/storage";
+import { mergeWard, patientToEnvelope, type PatientEnvelope } from "./sync/patientMerge";
+import type { PatientEntry } from "./types";
 
 export type ToranotCloudState = {
   patients: unknown[];
@@ -245,42 +247,51 @@ export function useToranotCloudSync(
 
         safeSetItem(STORAGE_KEY_LAST_PULL, updatedAt ?? "");
 
-        // Conflict detection: if local has patients and cloud has DIFFERENT patients
-        // Compare by patient ID sets to avoid false conflicts from JSON key ordering
-        const localPatients = (state.patients ?? []) as unknown[];
-        const remotePatients = (remote.patients ?? []) as unknown[];
-        const localHasData = Array.isArray(localPatients) && localPatients.length > 0;
-        const cloudHasData = Array.isArray(remotePatients) && remotePatients.length > 0;
+        // Per-patient merge using revision-based conflict detection (Phase 3)
+        // Each patient is merged independently — different patients edited on
+        // two devices are reconciled without either overwriting the other.
+        const localPatients = (state.patients ?? []) as PatientEntry[];
+        const remotePatients = (remote.patients ?? []) as PatientEntry[];
 
-        const patientIds = (arr: unknown[]) =>
-          new Set((arr as { id?: string }[]).map(p => p.id ?? "").filter(Boolean));
-        const localIds = patientIds(localPatients);
-        const remoteIds = patientIds(remotePatients);
-        // Only conflict when BOTH sides have patients the other doesn't.
-        // One-sided differences (cloud has more, or local has more) means one side
-        // is simply behind — apply cloud silently. Conflicting on one-sided diffs
-        // triggered a false "conflict" every boot on a second device, which is the
-        // common case when a colleague opens the app before pulling.
-        const localOnlyIds = [...localIds].filter(id => !remoteIds.has(id));
-        const cloudOnlyIds = [...remoteIds].filter(id => !localIds.has(id));
-        const isGenuineConflict = localHasData && cloudHasData
-          && localOnlyIds.length > 0 && cloudOnlyIds.length > 0;
+        const remoteEnvelopes: PatientEnvelope[] = remotePatients.map((p) =>
+          patientToEnvelope(p, null)
+        );
 
-        if (isGenuineConflict) {
-          // Both sides have unique patients — genuinely diverged, need user decision
+        const mergeResult = mergeWard(localPatients, remoteEnvelopes, uid);
+
+        // Surface per-patient conflicts — never silently overwrite
+        if (mergeResult.conflicts.length > 0) {
           pendingCloudState.current = remote;
           setConflict({
             localCount: localPatients.length,
             cloudCount: remotePatients.length,
             cloudUpdatedAt: updatedAt,
+            perPatientConflicts: mergeResult.conflicts.map((c) => ({
+              patientId: c.local.patientId,
+              patientName: c.local.payload.name ?? c.local.patientId,
+              reason: c.reason,
+            })),
           });
           setStatus("conflict");
+          // Still apply non-conflicted remote patients silently
+          if (mergeResult.toApplyLocally.length > 0) {
+            dispatch({ type: "MERGE_PATIENTS_FROM_REMOTE", patients: mergeResult.toApplyLocally });
+          }
           return;
         }
 
-        // No conflict — apply cloud state
+        // Apply patients that are newer on remote
+        if (mergeResult.toApplyLocally.length > 0) {
+          dispatch({ type: "MERGE_PATIENTS_FROM_REMOTE", patients: mergeResult.toApplyLocally });
+        }
+
+        // Sync non-patient state (shiftHistory, events, unassignedTasks, settings)
+        const nonPatientRemote: ToranotCloudState = {
+          ...remote,
+          patients: [], // patients handled above via per-patient merge
+        };
         lastPushedJson.current = stableJson(remote);
-        dispatch({ type: "IMPORT_CLOUD_STATE", state: remote });
+        dispatch({ type: "IMPORT_CLOUD_STATE", state: nonPatientRemote });
         setStatus("synced");
         setLastSync(new Date());
       } catch (e) {
@@ -360,6 +371,12 @@ export type ConflictData = {
   localCount: number;
   cloudCount: number;
   cloudUpdatedAt: string | null;
+  /** Phase 3: per-patient conflicts needing user resolution */
+  perPatientConflicts?: Array<{
+    patientId: string;
+    patientName: string;
+    reason: string;
+  }>;
 };
 
 // ═══════════════════════════════════════════════════════════

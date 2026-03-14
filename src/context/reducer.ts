@@ -14,6 +14,7 @@ import { mergeScan } from "../engine/mergeScan";
 import { applyRules } from "../engine/rules";
 import { generateId } from "../utils/id";
 import type { ToranotCloudState } from "../cloudSync";
+import { bumpRevision } from "../sync/patientMerge";
 import type { ScanDiff } from "../engine/smartOCR";
 
 // -----------------------------
@@ -69,6 +70,15 @@ export function normalizeTask(t: RawTask): Task {
       ? t.source : "manual") as Task["source"],
   } as Task;
 }
+
+/**
+ * Get the current Supabase user ID for revision stamping.
+ * Returns null when not authenticated — syncMeta.lastModifiedBy will be "local".
+ * This is a module-level side-channel so the reducer doesn't need auth context.
+ */
+let _currentUserId: string | null = null;
+export function setReducerUserId(uid: string | null): void { _currentUserId = uid; }
+export function getReducerUserId(): string | null { return _currentUserId; }
 
 export function normalizePatient(p: RawPatient): PatientEntry {
   return {
@@ -149,7 +159,8 @@ export type Action =
   | { type: "TOGGLE_UNASSIGNED_TASK"; taskId: string }
   | { type: "IMPORT_CLOUD_STATE"; state: ToranotCloudState }
   | { type: "DELETE_TASK"; patientId: string; taskId: string }
-  | { type: "DISMISS_SCAN_DIFF" };
+  | { type: "DISMISS_SCAN_DIFF" }
+  | { type: "MERGE_PATIENTS_FROM_REMOTE"; patients: PatientEntry[] };
 
 export function inferUrgencyFromText(text: string): Urgency {
   const t = text.trim();
@@ -198,7 +209,11 @@ function bedOccupiedBy(
   return occupant?.id ?? null;
 }
 
-export function reducer(state: PatientsState, action: Action): PatientsState {
+/**
+ * Inner reducer — pure state transformation with no side-effects.
+ * Revision bumping is applied by the exported `reducer` wrapper below.
+ */
+function innerReducer(state: PatientsState, action: Action): PatientsState {
   switch (action.type) {
     case "IMPORT_TEXT": {
       const parsed = parsePatientList(action.text);
@@ -777,9 +792,90 @@ export function reducer(state: PatientsState, action: Action): PatientsState {
     case "DISMISS_SCAN_DIFF":
       return { ...state, lastScanDiff: null };
 
+    case "MERGE_PATIENTS_FROM_REMOTE": {
+      // Merge specific patients received from remote sync without touching unrelated ones.
+      // Each incoming patient replaces the local version only if it is newer (higher revision).
+      // This is the per-patient upsert path — never overwrites the full patient array.
+      const incomingMap = new Map(action.patients.map((p) => [p.id, normalizePatient(p as RawPatient)]));
+      const merged = state.patients.map((p) => {
+        const incoming = incomingMap.get(p.id);
+        if (!incoming) return p;
+        const incomingRev = incoming.syncMeta?.revision ?? 0;
+        const localRev = p.syncMeta?.revision ?? 0;
+        return incomingRev > localRev ? incoming : p;
+      });
+      // Add patients that exist on remote but not locally
+      const existingIds = new Set(state.patients.map((p) => p.id));
+      const newPatients = action.patients
+        .filter((p) => !existingIds.has(p.id))
+        .map((p) => normalizePatient(p as RawPatient));
+      return { ...state, patients: [...merged, ...newPatients] };
+    }
+
     default:
       return state;
   }
+}
+
+/**
+ * Public reducer — wraps innerReducer and bumps revision on any patient
+ * whose clinical content changed. This ensures per-patient revision tracking
+ * without patching every individual case.
+ *
+ * IMPORT_CLOUD_STATE and IMPORT_TEXT are excluded — they set revisions
+ * from the incoming data, not from local edits.
+ */
+const REVISION_EXEMPT_ACTIONS = new Set([
+  "IMPORT_CLOUD_STATE",
+  "IMPORT_TEXT",
+  "RESCAN_TEXT",
+  "MERGE_SCAN",
+  "RESTORE_SHIFT",
+  "SET_SECTION",
+  "ARCHIVE_SHIFT",
+  "SYNC_SHIFT_HISTORY",
+  "SYNC_PATIENTS",
+  "LOG_EVENT",
+  "SET_SCAN_MODE",
+  "SET_DARK_MODE",
+  "SET_SHOW_TOMORROW",
+  "ADD_UNASSIGNED_TASK",
+  "REMOVE_UNASSIGNED_TASK",
+  "TOGGLE_UNASSIGNED_TASK",
+]);
+
+export function reducer(state: PatientsState, action: Action): PatientsState {
+  const next = innerReducer(state, action);
+
+  // Skip revision bump for non-patient-mutating actions
+  if (REVISION_EXEMPT_ACTIONS.has(action.type)) return next;
+
+  // If patients array didn't change at all, skip
+  if (next.patients === state.patients) return next;
+
+  // Bump revision for patients whose content changed
+  const uid = _currentUserId;
+  const prevMap = new Map(state.patients.map((p) => [p.id, p]));
+
+  const patientsWithRevisions = next.patients.map((p) => {
+    const prev = prevMap.get(p.id);
+    if (!prev) {
+      // New patient — set revision to 1 if not already set
+      if (p.syncMeta?.revision) return p;
+      return bumpRevision(p, uid);
+    }
+    // Existing patient — bump only if something changed (excluding syncMeta)
+    if (p === prev) return p; // reference equality fast-path
+    const { syncMeta: _a, ...pClinical } = p;
+    const { syncMeta: _b, ...prevClinical } = prev;
+    void _a; void _b;
+    const pJson = JSON.stringify(pClinical);
+    const prevJson = JSON.stringify(prevClinical);
+    if (pJson === prevJson) return p; // no clinical change
+    return bumpRevision(p, uid);
+  });
+
+  return { ...next, patients: patientsWithRevisions };
 }
 
 // -----------------------------
