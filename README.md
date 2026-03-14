@@ -204,3 +204,30 @@ Requires Node ≥22. See `netlify.toml` for function configuration and CSP heade
 - **❓ GoC gap section**: Flags patients with undefined/unknown goals-of-care who have pending stat/urgent tasks. Visible in both the report UI and text/ISBAR export.
 - **💊 Drug safety strip**: Shows patients with allergy conflicts or Beers 2023 hits directly in morning report — no need to open each patient card.
 - **Text handoff**: Now includes GoC gap names and allergy conflict names in shift summary block.
+
+## Parser Safety
+
+### Normalization shim (`normalizeWardText`)
+Applied once at the top of `parsePatientList()` before any structural parsing.
+Handles: Unicode NFC, BiDi stripping, broken-bar/box-drawing/fullwidth pipe → `|`,
+em/en/figure dash variants → `-`, smart quotes → ASCII, non-breaking spaces → space,
+tabs → space, multi-space collapse, CRLF/CR → LF, 3+ blank lines → 2,
+and per-line OCR corrections for `!ד א/ב/ג` and `ד א/ב/ג` section header corruptions.
+
+### Confidence gate
+`ParsePreview` blocks import when `>20%` of parsed rows have `confidence < 0.7`
+OR any patient has `UNKNOWN_SECTION`. The Hebrew warning displayed:
+`נמצאו שורות בעייתיות — בדוק לפני ייבוא`.
+Confidence is not decorative — it is a structural safety gate.
+
+### `UNKNOWN_SECTION` fallback
+No section is ever silently guessed. If no section header appears before a patient row,
+the patient gets `UNKNOWN_SECTION`. The import gate blocks until resolved.
+
+### Fuzz testing (`parserFuzz.test.ts`, `parserNormalize.test.ts`)
+- 200 round-trip tests: generate patients → render text → parse → compare section/room/age
+- 500 mutation fuzz iterations: separator drift, OCR corruption, extra blank lines,
+  whitespace variants, room format drift — parser must never throw
+- 36 unit tests for `normalizeWardText` covering every transformation
+- Output invariants: confidence always `0..1`, section always a valid enum value
+

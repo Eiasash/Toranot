@@ -12,6 +12,90 @@ function stripBidi(text: string): string {
 }
 
 /**
+ * Pre-parser normalization shim.
+ *
+ * Applied ONCE to the raw input before any parsing.
+ * Corrects character-level noise that would silently break the parser:
+ *
+ *   - NFC normalization (composed form — consistent diacritic handling)
+ *   - BiDi control character stripping (WhatsApp / iOS clipboard artifacts)
+ *   - Broken-bar / box-drawing / fullwidth pipe variants → ASCII |
+ *   - Em dash / en dash / minus-like variants → ASCII hyphen-minus
+ *   - Smart/curly quotes → straight ASCII quotes
+ *   - Non-breaking spaces → regular space (U+00A0 common in Word pastes)
+ *   - Tabs → single space
+ *   - Multiple consecutive spaces → single space
+ *   - Windows/old-Mac line endings → Unix LF
+ *   - Three or more consecutive blank lines → two blank lines
+ *   - Unambiguous per-line OCR corruptions of section headers only:
+ *       "!ד א/ב/ג" (צ → !) and "ד א/ב/ג" (צ dropped) on a line by themselves.
+ *     These are already handled by SECTION_ALIASES so this is a belt-and-suspenders
+ *     normalisation that makes the raw text easier to inspect in debug logs.
+ *
+ * Invariants:
+ *   - Output is always a string.
+ *   - Never throws.
+ *   - Never silently removes a patient row — only normalises whitespace/punctuation.
+ *   - UNKNOWN_SECTION fallback is unaffected; section assignment is NOT guessed here.
+ */
+export function normalizeWardText(raw: string): string {
+  // 1. NFC — composed Unicode form; consistent diacritics
+  let text = raw.normalize("NFC");
+
+  // 2. BiDi control characters
+  text = stripBidi(text);
+
+  // 3. Separator variants → ASCII pipe |
+  //    ¦ U+00A6 BROKEN BAR (common OCR substitution for |)
+  //    │ U+2502 BOX DRAWINGS LIGHT VERTICAL
+  //    ǀ U+01C0 LATIN LETTER DENTAL CLICK
+  //    ｜ U+FF5C FULLWIDTH VERTICAL LINE
+  text = text.replace(/[¦│ǀ｜]/g, "|");
+
+  // 4. Dash variants → ASCII hyphen-minus (used in room numbers: 49-3, ניטור-1)
+  //    — U+2014 EM DASH   – U+2013 EN DASH   ‒ U+2012 FIGURE DASH
+  //    ― U+2015 HORIZONTAL BAR   ‑ U+2011 NON-BREAKING HYPHEN
+  //    − U+2212 MINUS SIGN
+  text = text.replace(/[—–‒―‑−]/g, "-");
+
+  // 5. Smart / curly quotes → straight ASCII
+  text = text.replace(/[\u201C\u201D\u201E\u201F]/g, '"').replace(/[\u2018\u2019\u201A\u201B]/g, "'");
+
+  // 6. Non-breaking space (U+00A0) → regular space
+  text = text.replace(/\u00A0/g, " ");
+
+  // 7. Tabs → space
+  text = text.replace(/\t/g, " ");
+
+  // 8. Collapse multiple consecutive spaces → single space (preserve newlines)
+  text = text.replace(/[^\S\n]{2,}/g, " ");
+
+  // 9. Line ending normalisation: CRLF → LF, lone CR → LF
+  text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+
+  // 10. Collapse 3+ consecutive blank lines → 2 blank lines
+  //     (preserves intentional double-blank section separators)
+  text = text.replace(/\n{3,}/g, "\n\n");
+
+  // 11. Per-line OCR section header corrections
+  //     Only applied when the ENTIRE trimmed line matches the corruption pattern.
+  //     Conservative: never modifies lines that could be patient rows.
+  //     The SECTION_ALIASES table also handles these — this is belt-and-suspenders.
+  const correctedLines = text.split("\n").map((line) => {
+    const t = line.trim();
+    // "!ד א" / "!ד ב" / "!ד ג" — OCR replaces צ with !
+    if (/^!ד\s+[אבג]$/.test(t)) return t.replace("!ד", "צד");
+    // "ד א" / "ד ב" / "ד ג" — OCR drops the צ entirely
+    // Guard: must be ONLY two Hebrew characters separated by a space — not a patient line.
+    if (/^ד\s+[אבג]$/.test(t)) return "צ" + t;
+    return line;
+  });
+  text = correctedLines.join("\n");
+
+  return text;
+}
+
+/**
  * Parse a pasted Hebrew patient list into PatientEntry objects.
  *
  * Expected format (flexible):
@@ -343,7 +427,7 @@ function parsePatientLine(
 }
 
 export function parsePatientList(text: string): PatientEntry[] {
-  text = stripBidi(text);
+  text = normalizeWardText(text);
   const lines = text.split("\n");
   const patients: PatientEntry[] = [];
   let currentSection: PatientSection = "UNKNOWN_SECTION";

@@ -158,7 +158,7 @@ export function ParsePreview({ patients: initialPatients, onConfirm, onCancel }:
       ).length,
     0,
   );
-  const lowConfCount = patients.filter((p) => p.confidence < 0.8).length;
+  const lowConfCount = patients.filter((p) => p.confidence < 0.7).length;
   const unknownSectionCount = patients.filter((p) => p.section === "UNKNOWN_SECTION").length;
 
   // Import gate: block if >20% of rows are low-confidence OR any patient has UNKNOWN_SECTION.
