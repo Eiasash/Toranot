@@ -327,4 +327,104 @@ describe("syncReminders", () => {
 
     consoleSpy.mockRestore();
   });
+
+  it("keeps existing reminder when dueAt is unchanged", () => {
+    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    const dueAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+    syncReminders([{
+      id: "p1",
+      name: "כהן",
+      tasks: [{ id: "t1", text: "task", done: false, dueAt }],
+      generatedTasks: [],
+    }]);
+
+    // Sync again with same dueAt — should not reschedule
+    syncReminders([{
+      id: "p1",
+      name: "כהן",
+      tasks: [{ id: "t1", text: "task", done: false, dueAt }],
+      generatedTasks: [],
+    }]);
+
+    vi.advanceTimersByTime(5 * 60 * 1000);
+    // Should fire exactly once (not double-scheduled)
+    expect(consoleSpy).toHaveBeenCalledTimes(1);
+
+    consoleSpy.mockRestore();
+  });
+
+  it("handles mix of done and undone tasks", () => {
+    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    const dueAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+    syncReminders([{
+      id: "p1",
+      name: "כהן",
+      tasks: [
+        { id: "t1", text: "undone task", done: false, dueAt },
+        { id: "t2", text: "done task", done: true, dueAt },
+        { id: "t3", text: "no due", done: false, dueAt: null },
+      ],
+      generatedTasks: [],
+    }]);
+
+    vi.advanceTimersByTime(5 * 60 * 1000);
+    // Only t1 should fire
+    expect(consoleSpy).toHaveBeenCalledTimes(1);
+    expect(consoleSpy.mock.calls[0][0]).toContain("undone task");
+
+    consoleSpy.mockRestore();
+  });
+});
+
+describe("scheduleTaskReminder — edge cases", () => {
+  it("fires immediately when reminder time is past but due time is future", () => {
+    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    const now = Date.now();
+    // Due in 2 min, remind 5 min before → reminder time is 3 min in the past
+    const dueAt = new Date(now + 2 * 60 * 1000).toISOString();
+
+    scheduleTaskReminder("t1", "כהן", "task", dueAt, 5);
+
+    // Should fire immediately since reminder time is past
+    expect(consoleSpy).toHaveBeenCalledTimes(1);
+
+    consoleSpy.mockRestore();
+  });
+
+  it("fires only once even after time advances past due", () => {
+    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    const now = Date.now();
+    const dueAt = new Date(now + 10 * 60 * 1000).toISOString();
+
+    scheduleTaskReminder("t1", "כהן", "task", dueAt, 5);
+
+    vi.advanceTimersByTime(5 * 60 * 1000); // fires at reminder time
+    expect(consoleSpy).toHaveBeenCalledTimes(1);
+
+    vi.advanceTimersByTime(30 * 60 * 1000); // advance well past due time
+    // Still only fired once
+    expect(consoleSpy).toHaveBeenCalledTimes(1);
+
+    consoleSpy.mockRestore();
+  });
+
+  it("handles zero reminderMinsBefore (fires at due time)", () => {
+    const consoleSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    const now = Date.now();
+    const dueAt = new Date(now + 10 * 60 * 1000).toISOString();
+
+    scheduleTaskReminder("t1", "כהן", "task", dueAt, 0);
+
+    // Should not fire at 5 min
+    vi.advanceTimersByTime(5 * 60 * 1000);
+    expect(consoleSpy).not.toHaveBeenCalled();
+
+    // Should fire at 10 min (due time)
+    vi.advanceTimersByTime(5 * 60 * 1000);
+    expect(consoleSpy).toHaveBeenCalledTimes(1);
+
+    consoleSpy.mockRestore();
+  });
 });
