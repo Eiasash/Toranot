@@ -42,6 +42,11 @@
   to = "/.netlify/functions/ocr-proxy"
   status = 200
 
+[[redirects]]
+  from = "/api/github-pat"
+  to = "/.netlify/functions/github-pat"
+  status = 200
+
 # ── SPA catch-all — must be LAST redirect ──
 [[redirects]]
   from = "/*"
