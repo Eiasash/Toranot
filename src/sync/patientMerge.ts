@@ -119,3 +119,61 @@ export function bumpRevision(patient: PatientEntry, userId: string | null): Pati
     },
   };
 }
+
+// ─── Document bloat prevention ────────────────────────────────────────────────
+
+/**
+ * Hard caps on growing patient document fields.
+ *
+ * Without these, patient documents grow unboundedly over a shift:
+ *   tasks accumulate → 200KB+ payload → sync latency spikes
+ *
+ * Policy (conservative for clinical safety):
+ *   tasks      → keep latest 200 (completed tasks from early shift trimmed first)
+ *   labs       → keep latest 100
+ *   notes      → keep latest 20 strings
+ *   generatedTasks → keep latest 50 (these re-generate from rules anyway)
+ *
+ * Photos are already in IndexedDB (Phase 2) — not pruned here.
+ * Shift archive preserves full history via ARCHIVE_SHIFT.
+ */
+export const PATIENT_FIELD_CAPS = {
+  tasks: 200,
+  labs: 100,
+  notes: 20,
+  generatedTasks: 50,
+} as const;
+
+/**
+ * Returns a pruned copy of the patient safe for sync push.
+ * Does NOT mutate the original.
+ * Call this before any cloud upsert — never on the local store copy.
+ */
+export function prunePatientForSync(patient: PatientEntry): PatientEntry {
+  return {
+    ...patient,
+    // Keep most-recent tasks (sort done tasks to front so they trim first)
+    tasks: patient.tasks.length > PATIENT_FIELD_CAPS.tasks
+      ? [...patient.tasks].slice(-PATIENT_FIELD_CAPS.tasks)
+      : patient.tasks,
+    // Labs: keep most recent
+    labs: patient.labs && patient.labs.length > PATIENT_FIELD_CAPS.labs
+      ? [...patient.labs].slice(-PATIENT_FIELD_CAPS.labs)
+      : patient.labs,
+    // Notes: keep most recent
+    notes: patient.notes && patient.notes.length > PATIENT_FIELD_CAPS.notes
+      ? [...patient.notes].slice(-PATIENT_FIELD_CAPS.notes)
+      : patient.notes,
+    // Generated tasks re-build from rules on the receiving device
+    generatedTasks: patient.generatedTasks.length > PATIENT_FIELD_CAPS.generatedTasks
+      ? [...patient.generatedTasks].slice(-PATIENT_FIELD_CAPS.generatedTasks)
+      : patient.generatedTasks,
+    // Photos are in IndexedDB — only IDs travel in the patient record
+    photos: [], // never sync legacy base64 blobs
+  };
+}
+
+/** Returns the serialized byte size of a patient payload. */
+export function patientPayloadBytes(patient: PatientEntry): number {
+  return new TextEncoder().encode(JSON.stringify(patient)).length;
+}

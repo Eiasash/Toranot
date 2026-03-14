@@ -389,12 +389,17 @@ function SyncIndicator() {
   const { status, lastSync } = useCloudSync();
   if (status === "off") return null;
 
-  const config = {
-    syncing: { icon: "⟳", color: "text-blue-400", label: "מסנכרן..." },
-    synced: { icon: "☁️", color: "text-green-400", label: lastSync ? `סונכרן ${lastSync.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })}` : "מסונכרן" },
-    error: { icon: "⚠️", color: "text-red-400", label: "שגיאת סנכרון" },
-    conflict: { icon: "⚡", color: "text-amber-400", label: "קונפליקט" },
-  }[status];
+  // Full mapping — status "off" is handled by the early return above
+  type ActiveStatus = Exclude<typeof status, "off">;
+  const configs: Record<ActiveStatus, { icon: string; color: string; label: string }> = {
+    dirty:    { icon: "🟡", color: "text-amber-400",     label: "שינויים לא שמורים" },
+    syncing:  { icon: "🔄", color: "text-blue-400",      label: "מסנכרן..." },
+    synced:   { icon: "🟢", color: "text-green-400",     label: lastSync ? `סונכרן ${lastSync.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })}` : "מסונכרן" },
+    error:    { icon: "🔴", color: "text-red-400",       label: "שגיאת סנכרון" },
+    conflict: { icon: "⚡", color: "text-amber-400",     label: "קונפליקט — נדרשת פעולה" },
+    fatal:    { icon: "🔴", color: "text-red-500",       label: "שגיאה קבועה — פנה לתמיכה" },
+  };
+  const config = configs[status as ActiveStatus];
 
   return (
     <div className={`flex items-center gap-1 text-[10px] ${config.color} min-h-[44px] px-1`} title={config.label}>
