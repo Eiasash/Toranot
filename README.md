@@ -192,3 +192,10 @@ npm run build     # tsc --noEmit + vite build
 ```
 
 Requires Node ≥22. See `netlify.toml` for function configuration and CSP headers.
+
+## Recent Changes
+
+### Morning Report — Inline Overnight Updates (2026-03-14)
+- **AdmissionMorningNote**: Inline editable note on every admission card in morning report tab. Tap "+ הוסף הערה לדוח בוקר" to add, saves to handoverNote on blur. Shows existing note with ✏️ edit button.
+- **Actedon notes now editable**: In "חולים שטיפלת בהם" section, handoverNote is now inline-editable (was read-only before).
+- **QuickOvernightUpdate**: New widget at bottom of morning report — lets you add an update to any patient NOT already listed (stable patients, lab results, brief checks). Dropdown picker + textarea, saves to handoverNote. Flows into text handoff and ISBAR automatically.

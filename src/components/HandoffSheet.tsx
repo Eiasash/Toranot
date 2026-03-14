@@ -517,6 +517,144 @@ async function generateKabalahSummary(p: PatientEntry): Promise<string> {
   return text.trim();
 }
 
+// ─── Inline editable morning-report note for new admissions ─────────────────
+// Lightweight text field — no AI, no button, just type and blur to save.
+// Writes to patient.handoverNote via SET_HANDOVER_NOTE.
+function AdmissionMorningNote({ patient }: { patient: PatientEntry | undefined }) {
+  const dispatch = usePatientsDispatch();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(patient?.handoverNote ?? "");
+
+  if (!patient) return null;
+
+  const save = () => {
+    dispatch({ type: "SET_HANDOVER_NOTE", patientId: patient.id, note: draft.trim() });
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <div className="mt-1.5">
+        <textarea
+          // eslint-disable-next-line jsx-a11y/no-autofocus
+          autoFocus
+          dir="rtl"
+          rows={2}
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onBlur={save}
+          placeholder="הערה לדוח בוקר..."
+          className="w-full bg-teal-950 border border-teal-600 rounded-lg px-2 py-1 text-[11px] text-teal-100 placeholder-teal-700 resize-none focus:outline-none focus:ring-1 focus:ring-teal-500"
+        />
+        <div className="flex gap-2 mt-1">
+          <button onMouseDown={save} className="text-[10px] text-teal-400 font-bold active:text-teal-200">שמור</button>
+          <button onMouseDown={() => { setDraft(patient.handoverNote ?? ""); setEditing(false); }} className="text-[10px] text-gray-500">ביטול</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-1.5">
+      {patient.handoverNote ? (
+        <div className="flex items-start gap-1.5">
+          <p className="text-[11px] text-teal-200 leading-snug flex-1" dir="rtl">📋 {patient.handoverNote}</p>
+          <button onClick={() => { setDraft(patient.handoverNote ?? ""); setEditing(true); }} className="text-[10px] text-gray-500 shrink-0 active:text-gray-300">✏️</button>
+        </div>
+      ) : (
+        <button
+          onClick={() => { setDraft(""); setEditing(true); }}
+          className="text-[10px] text-teal-600 active:text-teal-400 py-0.5"
+        >
+          + הוסף הערה לדוח בוקר
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── Quick overnight update — add a note to any ward patient from the report ─
+// Shows only patients NOT already in admissions or actedon.
+// Selecting a patient opens an inline textarea. Saves to handoverNote.
+function QuickOvernightUpdate({
+  patients,
+  actedonIds,
+  admissionIds,
+}: {
+  patients: PatientEntry[];
+  actedonIds: Set<string>;
+  admissionIds: Set<string>;
+}) {
+  const dispatch = usePatientsDispatch();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const [open, setOpen] = useState(false);
+
+  // Patients not yet in the report at all
+  const unmentioned = patients.filter(
+    p => !actedonIds.has(p.id) && !admissionIds.has(p.id)
+  );
+  if (unmentioned.length === 0) return null;
+
+  const selected = unmentioned.find(p => p.id === selectedId);
+
+  const save = () => {
+    if (!selectedId || !draft.trim()) return;
+    dispatch({ type: "SET_HANDOVER_NOTE", patientId: selectedId, note: draft.trim() });
+    setDraft("");
+    setSelectedId(null);
+    setOpen(false);
+  };
+
+  return (
+    <div className="border border-dashed border-zinc-700 rounded-xl p-3 space-y-2">
+      {!open ? (
+        <button
+          onClick={() => setOpen(true)}
+          className="w-full text-xs text-zinc-500 active:text-zinc-300 py-1 text-right"
+        >
+          + הוסף עדכון לילי לחולה אחר
+        </button>
+      ) : (
+        <>
+          <p className="text-[11px] font-bold text-zinc-400">עדכון לילי — חולה שאינו ברשימה</p>
+          <select
+            value={selectedId ?? ""}
+            onChange={e => { setSelectedId(e.target.value || null); setDraft(unmentioned.find(p => p.id === e.target.value)?.handoverNote ?? ""); }}
+            className="w-full bg-zinc-900 border border-zinc-600 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-500"
+            dir="rtl"
+          >
+            <option value="">בחר חולה...</option>
+            {unmentioned.map(p => (
+              <option key={p.id} value={p.id}>
+                חד׳ {p.room ?? "?"} — {p.name ?? "?"}
+              </option>
+            ))}
+          </select>
+          {selectedId && (
+            <>
+              <textarea
+                // eslint-disable-next-line jsx-a11y/no-autofocus
+                autoFocus
+                dir="rtl"
+                rows={2}
+                value={draft}
+                onChange={e => setDraft(e.target.value)}
+                placeholder={`עדכון על ${selected?.name ?? "החולה"}...`}
+                className="w-full bg-zinc-900 border border-zinc-600 rounded-lg px-2 py-1 text-[11px] text-white placeholder-zinc-600 resize-none focus:outline-none focus:ring-1 focus:ring-zinc-500"
+              />
+              <div className="flex gap-3">
+                <button onMouseDown={save} className="text-xs text-teal-400 font-bold active:text-teal-200">שמור</button>
+                <button onMouseDown={() => { setOpen(false); setSelectedId(null); setDraft(""); }} className="text-xs text-zinc-600 active:text-zinc-400">ביטול</button>
+              </div>
+            </>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 function KabalahSummaryBlock({ patient }: { patient: PatientEntry | undefined }) {
   const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [summary, setSummary] = useState("");
@@ -840,7 +978,7 @@ export function HandoffSheet({ onClose, initialTab }: { onClose: () => void; ini
                             {new Date(e.at).toLocaleString("he-IL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                           </span>
                         </div>
-                        <KabalahSummaryBlock patient={admPatient} />
+                        <AdmissionMorningNote patient={admPatient} />
                       </div>
                     );
                   })}
@@ -890,14 +1028,14 @@ export function HandoffSheet({ onClose, initialTab }: { onClose: () => void; ini
                         {notes.length > 0 && notes.map((n, i) => (
                           <div key={i} className="text-[11px] text-amber-300">📝 {n}</div>
                         ))}
-                        {p.handoverNote && (
-                          <div className="text-[11px] text-blue-300">📌 {p.handoverNote}</div>
-                        )}
+                        <AdmissionMorningNote patient={p} />
                       </div>
                     );
                   })}
                 </div>
               )}
+              {/* Quick overnight update — add/edit note for any patient without leaving report */}
+              <QuickOvernightUpdate patients={filteredPatients} actedonIds={new Set(actedon.map(p => p.id))} admissionIds={newAdmissionIds} />
             </div>
           ) : view === "phlebotomy" ? (
             /* ── Phlebotomy tab (merged from MorningReport) ── */
