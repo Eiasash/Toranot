@@ -1,6 +1,6 @@
 
 import { useState, useCallback, useRef } from "react";
-import type { PatientEntry, PatientSection } from "../types";
+import type { PatientEntry, PatientSection, PatientClinicalMeta, GoalsOfCare, SexAtBirth } from "../types";
 import { getProxyAuthHeaders, isProxyAvailableAsync } from "../cloudSync";
 import { safeGetItem } from "../utils/storage";
 
@@ -342,6 +342,7 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
   const [remarks, setRemarks] = useState("");
   const [meds, setMeds] = useState<string[]>([]);
   const [allergies, setAllergies] = useState<string[]>([]);
+  const [clinicalMeta, setClinicalMeta] = useState<PatientClinicalMeta>({});
   const [error, setError] = useState<string | null>(null);
   const [parsed, setParsed] = useState(false);
 
@@ -510,6 +511,7 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
       order: Date.now(),
       // Morning presentation stored as handoverNote — shows in handoff sheet
       ...(morningPresentation.trim() ? { handoverNote: `📋 Morning: ${morningPresentation.trim()}` } : {}),
+      clinicalMeta: Object.keys(clinicalMeta).length > 0 ? clinicalMeta : undefined,
     } as PatientEntry;
 
     dispatch({ type: "NEW_ADMISSION", patient });
@@ -896,6 +898,71 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
             <div>
               <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">הערות</label>
               <textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="הערות נוספות..." dir="auto" rows={2} className={`${inputCls} resize-none`} />
+            </div>
+
+            {/* ── Clinical metadata — resolves renal-indeterminate warnings ── */}
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 rounded-xl p-3 space-y-3">
+              <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">⚕ נתונים קליניים (מינון כלייתי)</span>
+
+              <div className="grid grid-cols-2 gap-3">
+                {/* Sex at birth */}
+                <div>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">מין ביולוגי</label>
+                  <select
+                    value={clinicalMeta.sexAtBirth ?? ""}
+                    onChange={(e) => setClinicalMeta({ ...clinicalMeta, sexAtBirth: e.target.value as SexAtBirth || undefined })}
+                    className={inputCls}
+                  >
+                    <option value="">לא ידוע</option>
+                    <option value="male">זכר</option>
+                    <option value="female">נקבה</option>
+                  </select>
+                </div>
+
+                {/* Weight */}
+                <div>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">משקל (ק"ג)</label>
+                  <input
+                    type="number"
+                    min={20}
+                    max={250}
+                    value={clinicalMeta.weightKg ?? ""}
+                    onChange={(e) => setClinicalMeta({ ...clinicalMeta, weightKg: e.target.value ? Number(e.target.value) : null })}
+                    placeholder="55"
+                    className={inputCls}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                {/* Goals of care */}
+                <div>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">יעדי טיפול</label>
+                  <select
+                    value={clinicalMeta.goalsOfCare ?? ""}
+                    onChange={(e) => setClinicalMeta({ ...clinicalMeta, goalsOfCare: e.target.value as GoalsOfCare || undefined })}
+                    className={inputCls}
+                  >
+                    <option value="">טיפול רגיל</option>
+                    <option value="full">טיפול מלא</option>
+                    <option value="limited">טיפול מוגבל</option>
+                    <option value="comfort_only">טיפול מנחם בלבד</option>
+                    <option value="unknown">לא ידוע</option>
+                  </select>
+                </div>
+
+                {/* Dialysis */}
+                <div className="flex items-center gap-2 pt-5">
+                  <input
+                    id="dialysis-check"
+                    type="checkbox"
+                    checked={clinicalMeta.onDialysis ?? false}
+                    onChange={(e) => setClinicalMeta({ ...clinicalMeta, onDialysis: e.target.checked || undefined })}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600"
+                  />
+                  <label htmlFor="dialysis-check" className="text-xs text-gray-700 dark:text-gray-300">דיאליזה</label>
+                </div>
+              </div>
             </div>
           </>
         )}

@@ -23,25 +23,40 @@ function countdownColor(ms: number): string {
   return "bg-amber-100 text-amber-800 border border-amber-300";
 }
 
-export function TaskCountdown({ task }: { task: Task }) {
+// Shared 1-second ticker using a module-level interval — one clock for all
+// TaskCountdown instances instead of one setInterval per mounted component.
+// Avoids O(n) timers when the patient list has many tasks with due times.
+let _clockListeners = new Set<() => void>();
+let _clockTimer: ReturnType<typeof setInterval> | null = null;
+
+function useNow(): number {
   const [now, setNow] = useState(Date.now());
-  const [notified, setNotified] = useState(false);
+  useEffect(() => {
+    const cb = () => setNow(Date.now());
+    _clockListeners.add(cb);
+    if (_clockTimer === null) {
+      _clockTimer = setInterval(() => {
+        const t = Date.now();
+        for (const fn of _clockListeners) fn();
+        void t;
+      }, 1000);
+    }
+    return () => {
+      _clockListeners.delete(cb);
+      if (_clockListeners.size === 0 && _clockTimer !== null) {
+        clearInterval(_clockTimer);
+        _clockTimer = null;
+      }
+    };
+  }, []);
+  return now;
+}
+
+export function TaskCountdown({ task }: { task: Task }) {
+  const now = useNow();
 
   const dueMs = task.dueAt ? new Date(task.dueAt).getTime() : 0;
   const remaining = dueMs - now;
-
-  useEffect(() => {
-    if (!task.dueAt || task.done) return;
-    const interval = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(interval);
-  }, [task.dueAt, task.done]);
-
-  useEffect(() => {
-    if (notified || task.done || remaining > 0) return;
-    if (!task.dueAt) return;
-    setNotified(true);
-    fireAlarm(task.id, task.text);
-  }, [remaining, notified, task.done, task.dueAt, task.text, task.id]);
 
   if (!task.dueAt || task.done) return null;
 
@@ -103,23 +118,6 @@ export function getQuickDueOptions(): Array<{ label: string; minutes: number }> 
 
 export function dueAtFromMinutes(minutes: number): string {
   return new Date(Date.now() + minutes * 60 * 1000).toISOString();
-}
-
-/** Schedule a persistent SW alarm for backgrounded notifications */
-export function scheduleSwAlarm(taskId: string, taskText: string, dueAt: string) {
-  if (!("serviceWorker" in navigator) || !navigator.serviceWorker.controller) return;
-  navigator.serviceWorker.controller.postMessage({
-    type: "SCHEDULE_ALARM",
-    taskId,
-    taskText,
-    dueAt,
-  });
-}
-
-/** Cancel a SW alarm */
-export function cancelSwAlarm(taskId: string) {
-  if (!("serviceWorker" in navigator) || !navigator.serviceWorker.controller) return;
-  navigator.serviceWorker.controller.postMessage({ type: "CANCEL_ALARM", taskId });
 }
 
 function fireAlarm(taskId: string, taskText: string) {

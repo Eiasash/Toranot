@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { usePatientsDispatch } from "../context/PatientsContext";
 import type { Task } from "../types";
-import { TaskCountdown, getQuickDueOptions, dueAtFromMinutes, suggestTimerMinutes, scheduleSwAlarm, cancelSwAlarm } from "./TaskCountdown";
+import { TaskCountdown, getQuickDueOptions, dueAtFromMinutes, suggestTimerMinutes } from "./TaskCountdown";
 
 const SWIPE_THRESHOLD = 80; // px to trigger completion
 
@@ -86,15 +86,7 @@ export function TaskItem({
     setDraft(task.note ?? "");
   }, [task.note]);
 
-  // Sync SW alarm when dueAt changes
-  useEffect(() => {
-    if (task.dueAt && !task.done) {
-      scheduleSwAlarm(task.id, task.text, task.dueAt);
-    } else {
-      cancelSwAlarm(task.id);
-    }
-    return () => cancelSwAlarm(task.id);
-  }, [task.id, task.dueAt, task.done, task.text]);
+  // Reminder scheduling is handled centrally by reminderScheduler.ts — no per-task SW calls needed.
 
   const save = () => {
     if (!onSetNote) {

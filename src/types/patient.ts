@@ -136,8 +136,14 @@ export type PatientEntry = {
   discharged?: boolean;
   isAdmission?: boolean;
 
-  // Photo attachments (base64 data URLs, stored in localStorage)
+  // Legacy photo attachments (base64 data URLs, stored in localStorage).
+  // DEPRECATED: Phase 2 migration moves blobs to IndexedDB.
+  // After migration this field is removed from the patient record.
   photos?: PatientPhoto[];
+
+  // Phase 2: IDs referencing photos stored in IndexedDB (src/persistence/photoStore.ts).
+  // After migration this replaces the legacy photos[] field.
+  photoIds?: string[];
 
   // Known drug allergies (e.g., ["penicillin", "sulfa"])
   allergies?: string[];

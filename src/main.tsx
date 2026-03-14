@@ -81,10 +81,21 @@ if ("serviceWorker" in navigator) {
 
     if (type === "SNOOZE_TASK" && validId(taskId) && validId(patientId) && typeof newDueAt === "string") {
       window.dispatchEvent(new CustomEvent("toranot:task-snooze", { detail: { taskId, patientId, newDueAt } }));
+      // Reset reminder state so the rescheduled task fires again after snooze
+      import("./reminders/reminderScheduler").then(({ resetTaskReminder }) => resetTaskReminder(taskId));
     }
 
     if (type === "FOCUS_PATIENT" && validId(patientId)) {
       window.dispatchEvent(new CustomEvent("toranot:focus-patient", { detail: { patientId } }));
+    }
+
+    // SYNC_REMINDERS: SW relays this after push/background-sync events.
+    // Force an immediate re-check of due tasks.
+    if (type === "SYNC_REMINDERS") {
+      import("./reminders/reminderScheduler").then(({ resyncReminders: _r }) => {
+        // resync is already called by the patients subscription — just trigger it
+        window.dispatchEvent(new CustomEvent("toranot:sync-reminders"));
+      });
     }
   });
 }

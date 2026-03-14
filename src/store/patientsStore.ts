@@ -26,6 +26,7 @@ import {
 import type { PatientEntry, Section, Task, WardEvent, LabEntry } from "../types";
 import { safeGetItem, safeSetItem } from "../utils/storage";
 import type { ScanDiff } from "../engine/smartOCR";
+import { migratePatientPhotos } from "../persistence/photoStore";
 
 // ─── Storage keys (duplicated here so store is self-contained) ────────────────
 const SK_PATIENTS        = "toranot-patients";
@@ -128,6 +129,43 @@ export const usePatientsStore = create<PatientsStoreState>()(
   })),
 );
 
+// ─── Phase 2: IndexedDB photo migration ──────────────────────────────────────
+// Runs once on boot. Patients with legacy base64 .photos are migrated to
+// IndexedDB. The migration is async and fire-and-forget — it does not block
+// the UI. Failures are logged but do not crash the app.
+(async () => {
+  try {
+    const state = usePatientsStore.getState();
+    const patients = state.patients;
+    const toUpdate: Array<{ id: string; photoIds: string[] }> = [];
+
+    for (const p of patients) {
+      if (!p.photos || p.photos.length === 0) continue;
+      const ids = await migratePatientPhotos(
+        p.id,
+        p.photos.map((ph) => ({ id: ph.id, dataUrl: ph.dataUrl, caption: ph.caption, time: ph.time })),
+      );
+      toUpdate.push({ id: p.id, photoIds: ids });
+    }
+
+    if (toUpdate.length > 0) {
+      // Update store: replace photos[] with photoIds[], strip blobs from localStorage
+      usePatientsStore.setState((s) => ({
+        patients: s.patients.map((p) => {
+          const update = toUpdate.find((u) => u.id === p.id);
+          if (!update) return p;
+          const { photos: _dropped, ...rest } = p;
+          void _dropped;
+          return { ...rest, photoIds: update.photoIds };
+        }),
+      }));
+      console.info(`[photoStore] Migrated photos for ${toUpdate.length} patient(s) to IndexedDB`);
+    }
+  } catch (err) {
+    console.warn("[photoStore] Migration error (non-fatal):", err);
+  }
+})();
+
 // ─── Persistence subscriptions ───────────────────────────────────────────────
 // Run once — subscribes directly on store, no component re-render needed.
 // Each slice is persisted independently so an unrelated change doesn't
@@ -135,17 +173,23 @@ export const usePatientsStore = create<PatientsStoreState>()(
 
 usePatientsStore.subscribe(
   (s) => s.patients,
-  (patients) => safeSetItem(SK_PATIENTS, JSON.stringify(patients)),
+  (patients) => {
+    const r = safeSetItem(SK_PATIENTS, JSON.stringify(patients));
+    if (!r.ok) {
+      window.dispatchEvent(new CustomEvent("toranot:storage-full", {
+        detail: { message: r.message, quotaExceeded: r.quotaExceeded }
+      }));
+    }
+  },
 );
 
 usePatientsStore.subscribe(
   (s) => s.shiftHistory,
   (shiftHistory) => {
-    const ok = safeSetItem(SK_SHIFT_HISTORY, JSON.stringify(shiftHistory));
-    if (!ok && shiftHistory.length > 0) {
-      // Fire a DOM event — App.tsx listens and shows an inline toast (no window.alert needed)
+    const r = safeSetItem(SK_SHIFT_HISTORY, JSON.stringify(shiftHistory));
+    if (!r.ok && shiftHistory.length > 0) {
       window.dispatchEvent(new CustomEvent("toranot:storage-full", {
-        detail: { message: "⚠️ אחסון מקומי מלא — לא ניתן לשמור היסטוריית משמרות. מחק משמרות ישנות." }
+        detail: { message: r.message, quotaExceeded: r.quotaExceeded }
       }));
     }
   },
@@ -171,12 +215,26 @@ usePatientsStore.subscribe(
 
 usePatientsStore.subscribe(
   (s) => s.events,
-  (events) => safeSetItem(SK_EVENTS, JSON.stringify(events)),
+  (events) => {
+    const r = safeSetItem(SK_EVENTS, JSON.stringify(events));
+    if (!r.ok) {
+      window.dispatchEvent(new CustomEvent("toranot:storage-full", {
+        detail: { message: r.message, quotaExceeded: r.quotaExceeded }
+      }));
+    }
+  },
 );
 
 usePatientsStore.subscribe(
   (s) => s.unassignedTasks,
-  (tasks) => safeSetItem(SK_UNASSIGNED, JSON.stringify(tasks)),
+  (tasks) => {
+    const r = safeSetItem(SK_UNASSIGNED, JSON.stringify(tasks));
+    if (!r.ok) {
+      window.dispatchEvent(new CustomEvent("toranot:storage-full", {
+        detail: { message: r.message, quotaExceeded: r.quotaExceeded }
+      }));
+    }
+  },
 );
 
 // ─── Selector helpers ─────────────────────────────────────────────────────────

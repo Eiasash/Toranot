@@ -17,7 +17,8 @@ import { ShiftTimer } from "./components/ShiftTimer";
 import { usePatientsDispatch, usePatientsState, useCloudSync } from "./context/PatientsContext";
 const QRSync            = lazy(() => import("./components/QRSync").then(m => ({ default: m.QRSync })));
 const QuickCaptureSheet = lazy(() => import("./components/QuickCaptureSheet").then(m => ({ default: m.QuickCaptureSheet })));
-import { requestNotificationPermission, syncReminders, cancelAllReminders } from "./utils/taskReminders";
+import { requestNotificationPermission } from "./utils/taskReminders";
+import { startReminderScheduler, resyncReminders, stopReminderScheduler } from "./reminders/reminderScheduler";
 import { formatScanDiffSummary } from "./engine/smartOCR";
 import { OverflowMenu } from "./components/OverflowMenu";
 const ShiftHandoffModal = lazy(() => import("./components/ShiftHandoffModal").then(m => ({ default: m.ShiftHandoffModal })));
@@ -487,9 +488,13 @@ function AppInner() {
       }
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { syncReminders(patients); }, [patients]);
-  // Cancel all reminder timers when the patient list is cleared
-  useEffect(() => { if (patients.length === 0) cancelAllReminders(); }, [patients.length]);
+  // Start the shared scheduler once; re-sync whenever patients change.
+  // The scheduler handles snooze reset, visibility re-check, and dedup.
+  useEffect(() => {
+    startReminderScheduler();
+    return () => stopReminderScheduler();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { resyncReminders(patients); }, [patients]);
 
   const openRef = useCallback(() => {
     setModal((prev) => (prev === "reference" ? "none" : "reference"));

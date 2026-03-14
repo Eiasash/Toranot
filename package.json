@@ -31,6 +31,7 @@
   "license": "ISC",
   "dependencies": {
     "@supabase/supabase-js": "^2.49.0",
+    "dexie": "^4.3.0",
     "dompurify": "^3.1.6",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.4",

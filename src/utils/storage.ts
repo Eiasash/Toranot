@@ -11,12 +11,51 @@ export function safeGetItem(key: string): string | null {
   }
 }
 
-export function safeSetItem(key: string, value: string): boolean {
+export type SetItemResult =
+  | { ok: true }
+  | { ok: false; quotaExceeded: true; message: string }
+  | { ok: false; quotaExceeded: false; message: string };
+
+/**
+ * Safe localStorage.setItem.
+ * Returns a discriminated result — callers MUST check result.ok for clinical-data keys.
+ * QuotaExceededError is surfaced separately so the UI can show a specific warning.
+ */
+export function safeSetItem(key: string, value: string): SetItemResult {
   try {
     localStorage.setItem(key, value);
-    return true;
+    return { ok: true };
   } catch (err) {
-    console.warn(`Failed to write localStorage key "${key}":`, err);
+    const isQuota =
+      err instanceof DOMException &&
+      (err.name === "QuotaExceededError" || err.name === "NS_ERROR_DOM_QUOTA_REACHED");
+    const message = isQuota
+      ? `אחסון מקומי מלא — לא ניתן לשמור "${key}". פנה מקום בדיסק או מחק משמרות ישנות.`
+      : `שגיאת אחסון בלתי צפויה עבור "${key}": ${String(err)}`;
+    console.warn(`[storage] ${message}`, err);
+    return { ok: false, quotaExceeded: isQuota, message };
+  }
+}
+
+/** Estimate current localStorage usage and quota (bytes). Returns null when API unavailable. */
+export async function estimateStorage(): Promise<{ usage: number; quota: number } | null> {
+  if (!("storage" in navigator && "estimate" in navigator.storage)) return null;
+  try {
+    const { usage = 0, quota = 0 } = await navigator.storage.estimate();
+    return { usage, quota };
+  } catch {
+    return null;
+  }
+}
+
+/** Returns true if localStorage appears writable (quick canary write). */
+export function storageAvailable(): boolean {
+  const canary = "__toranot_canary__";
+  try {
+    localStorage.setItem(canary, "1");
+    localStorage.removeItem(canary);
+    return true;
+  } catch {
     return false;
   }
 }

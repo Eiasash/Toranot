@@ -1,18 +1,17 @@
 /**
- * Service Worker v8 — Push notifications + improved offline + asset precaching
- * 
- * NEW: Background push notification support for task reminders.
- * These work even when the app is backgrounded/screen off.
- * 
+ * Service Worker v9 — Offline caching + immediate push notifications
+ *
  * Strategy: Cache-first for hashed assets (immutable), network-first for HTML.
  * Cross-Origin Isolation headers for SharedArrayBuffer (Tesseract.js).
+ *
+ * IMPORTANT: SW is ephemeral — the browser terminates it after ~30s idle.
+ * Reminder scheduling is handled entirely by the app-side reminderScheduler
+ * (src/reminders/reminderScheduler.ts). The SW relays SYNC_REMINDERS signals
+ * to open windows but does NOT maintain its own timers or alarm state.
  */
 
 const CACHE_VERSION = 1741686000000; // 2026-03-11 allergy safety + error boundaries + lab alerts
 const CACHE_NAME = `toranot-v${CACHE_VERSION}`;
-
-/** @type {Map<string, ReturnType<typeof setTimeout>>} */
-const pendingAlarms = new Map();
 
 const PRECACHE_ASSETS = [
   "./",
@@ -320,31 +319,19 @@ self.addEventListener("message", (event) => {
     return;
   }
 
-  // ── Schedule a persistent alarm (survives SW restart via Map) ──
-  if (type === "SCHEDULE_ALARM" && taskId && dueAt) {
-    if (pendingAlarms.has(taskId)) {
-      clearTimeout(pendingAlarms.get(taskId));
-      pendingAlarms.delete(taskId);
-    }
-    const alarmDelay = new Date(dueAt).getTime() - Date.now();
-    if (alarmDelay <= 0) {
-      fireTaskAlarm(taskId, taskText ?? "משימה");
-      return;
-    }
-    const tid = setTimeout(() => {
-      fireTaskAlarm(taskId, taskText ?? "משימה");
-      pendingAlarms.delete(taskId);
-    }, Math.min(alarmDelay, 2147483647));
-    pendingAlarms.set(taskId, tid);
-    return;
-  }
-
-  // ── Cancel a pending alarm ──
-  if (type === "CANCEL_ALARM" && taskId) {
-    if (pendingAlarms.has(taskId)) {
-      clearTimeout(pendingAlarms.get(taskId));
-      pendingAlarms.delete(taskId);
-    }
+  // ── SYNC_REMINDERS broadcast — relay to all open windows ──
+  // The app-side reminderScheduler handles actual timing. The SW is ephemeral
+  // and cannot maintain reliable background timers (terminated after ~30s idle).
+  // This message channel lets the SW signal open windows to re-check due tasks
+  // on push/sync events without claiming fake persistent alarm capability.
+  if (type === "SYNC_REMINDERS") {
+    event.waitUntil(
+      self.clients.matchAll({ type: "window", includeUncontrolled: false }).then((clients) => {
+        for (const client of clients) {
+          client.postMessage({ type: "SYNC_REMINDERS" });
+        }
+      })
+    );
     return;
   }
 

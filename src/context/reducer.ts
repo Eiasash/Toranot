@@ -104,7 +104,8 @@ export function normalizePatient(p: RawPatient): PatientEntry {
 function stripPatientForArchive(p: PatientEntry): PatientEntry {
   return {
     ...p,
-    photos: [],
+    photos: [],      // legacy base64 blobs — never archive
+    photoIds: [],    // IndexedDB refs — not archived (blobs live in device IDB only)
     generatedTasks: [],
   };
 }
