@@ -65,3 +65,69 @@ export function patientCrClBucket(
   const crcl = cockcroft(ageYears, weightKg, sexFemale, serumCrMgDl);
   return crclToBucket(crcl);
 }
+
+// ─────────────────────────────────────────────────────────────────────
+// Structured Cockcroft-Gault API (Phase 1 renal dosing redesign)
+//
+// Unlike the legacy cockcroft() function above:
+// - Requires explicit sex and weight — never guesses
+// - NO creatinine floor — uses measured Cr as-is
+//   (the floor was heuristic; structured data should be trusted directly)
+// - Returns null with an explanatory reason when required inputs are absent
+// - Callers must surface the indeterminate reason to the clinician
+// ─────────────────────────────────────────────────────────────────────
+
+export interface CockcroftGaultInput {
+  ageYears: number;
+  sexAtBirth: "male" | "female";
+  weightKg: number;
+  serumCrMgDl: number;
+  onDialysis?: boolean;
+}
+
+export interface CockcroftGaultResult {
+  crcl: number | null;
+  bucket: CrClBucket | null;
+  indeterminate: boolean;
+  indeterminateReason?: string;
+}
+
+/**
+ * Structured Cockcroft-Gault calculation.
+ *
+ * Returns indeterminate (crcl: null) when required inputs are missing.
+ * Never applies a Cr floor — the caller is expected to provide measured values.
+ */
+export function calculateCockcroftGault(
+  input: Partial<CockcroftGaultInput>
+): CockcroftGaultResult {
+  // Dialysis overrides everything — bucket is always "hd"
+  if (input.onDialysis) {
+    return { crcl: null, bucket: "hd", indeterminate: false };
+  }
+
+  const missing: string[] = [];
+  if (input.ageYears == null) missing.push("גיל");
+  if (input.weightKg == null || input.weightKg <= 0) missing.push("משקל");
+  if (input.sexAtBirth == null) missing.push("מין");
+  if (input.serumCrMgDl == null || input.serumCrMgDl <= 0) missing.push("קראטינין");
+
+  if (missing.length > 0) {
+    return {
+      crcl: null,
+      bucket: null,
+      indeterminate: true,
+      indeterminateReason: `חסרים נתונים לחישוב קר'קל: ${missing.join(", ")}. יש לאמת מינון כלייתי ידנית.`,
+    };
+  }
+
+  const { ageYears, weightKg, sexAtBirth, serumCrMgDl } = input as Required<CockcroftGaultInput>;
+  const sexFactor = sexAtBirth === "female" ? 0.85 : 1.0;
+  const crcl = Math.max(0, Math.round(((140 - ageYears) * weightKg * sexFactor) / (72 * serumCrMgDl)));
+
+  return {
+    crcl,
+    bucket: crclToBucket(crcl),
+    indeterminate: false,
+  };
+}

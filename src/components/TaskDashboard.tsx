@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
-import type { Task, PatientEntry, Urgency, Section } from "../types";
-import { SECTION_LABEL } from "../types";
+import type { Task, PatientEntry, PatientSection, Urgency, Section } from "../types";
+import { SECTION_LABEL, patientSectionLabel } from "../types";
 import { SectionDashboard } from "./SectionDashboard";
 
 interface DashTask {
@@ -87,7 +87,7 @@ export function TaskDashboard({ onClose }: { onClose: () => void }) {
 
   // Route mode: group pending tasks by section → room for physical rounds
   const routeGroups = useMemo(() => {
-    const map = new Map<Section, Map<string, DashTask[]>>();
+    const map = new Map<PatientSection, Map<string, DashTask[]>>();
     for (const d of allDashTasks) {
       const sec = d.patient.section;
       if (!map.has(sec)) map.set(sec, new Map());
@@ -97,7 +97,7 @@ export function TaskDashboard({ onClose }: { onClose: () => void }) {
       roomMap.get(roomKey)!.push(d);
     }
     // Sort rooms naturally within each section
-    const result: Array<{ section: Section; rooms: Array<{ room: string; tasks: DashTask[] }> }> = [];
+    const result: Array<{ section: PatientSection; rooms: Array<{ room: string; tasks: DashTask[] }> }> = [];
     for (const [section, roomMap] of map) {
       const rooms = [...roomMap.entries()]
         .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
@@ -184,7 +184,7 @@ export function TaskDashboard({ onClose }: { onClose: () => void }) {
               routeGroups.map(({ section, rooms }) => (
                 <div key={section}>
                   <div className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 px-1">
-                    📍 {SECTION_LABEL[section]}
+                    📍 {patientSectionLabel(section)}
                   </div>
                   {rooms.map(({ room, tasks }) => (
                     <div key={room} className="mb-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 p-2">

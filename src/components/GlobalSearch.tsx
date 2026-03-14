@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { usePatientsState } from "../context/PatientsContext";
-import { SECTION_LABEL } from "../types";
+import { SECTION_LABEL, patientSectionLabel } from "../types";
 
 // ─── Searchable data sources ─────────────────────────────
 // We inline the data references here to avoid circular imports.
@@ -206,7 +206,7 @@ export function GlobalSearch({ onClose }: { onClose: () => void }) {
                       {p.room && <span className="text-xs font-mono bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded shrink-0">{p.room}</span>}
                       <span className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">{p.name ?? "—"}</span>
                       {acuityScore >= 5 && <span className="text-xs text-red-500 shrink-0">⚠️</span>}
-                      <span className="text-xs text-gray-400 shrink-0 mr-auto">{SECTION_LABEL[p.section]}</span>
+                      <span className="text-xs text-gray-400 shrink-0 mr-auto">{patientSectionLabel(p.section)}</span>
                     </div>
                     {p.diagnosis && <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{p.diagnosis}</div>}
                   </button>

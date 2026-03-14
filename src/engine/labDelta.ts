@@ -65,12 +65,28 @@ function classifyAKI(
   const absoluteRise = peakCr - baseline;
   const hoursElapsed = (peakTime.getTime() - baselineTime.getTime()) / 3.6e6;
 
-  // KDIGO Stage 3
-  if (ratio >= 3.0 || peakCr >= 4.0) {
+  // KDIGO Stage 3: ratio ≥3 OR acute rise to ≥4.0 mg/dL
+  // CRITICAL: "peakCr >= 4.0" alone is NOT AKI — stable CKD-5 (e.g. Cr 4.2→4.2) must NOT
+  // fire this. Stage 3 on the absolute criterion requires an acute RISE to ≥4.0,
+  // meaning peakCr ≥ 4.0 AND the absolute rise is ≥ 0.3 mg/dL (KDIGO 2012 §2.1.2).
+  if (ratio >= 3.0) {
     return {
       severity: "critical",
       stage: 3,
-      message: `AKI Stage 3 (KDIGO) — Cr x${ratio.toFixed(1)} מהבסיס. שקול דיאליזה, הפסק נפרוטוקסיים, נפרולוג`,
+      message: `AKI Stage 3 (KDIGO) — עלייה חריפה Cr x${ratio.toFixed(1)} מהבסיס. שקול דיאליזה, הפסק נפרוטוקסיים, נפרולוג`,
+    };
+  }
+
+  // Absolute criterion: acute rise to ≥4.0 requires ≥0.3 mg/dL delta
+  // This prevents chronic CKD-5 (stable Cr 4.0–5.0) from being misclassified.
+  // Float epsilon guard: 4.1 - 3.8 = 0.2999...97 in IEEE754.
+  // Use 1e-9 epsilon rather than widening the threshold.
+  const FLOAT_EPS = 1e-9;
+  if (peakCr >= 4.0 && absoluteRise + FLOAT_EPS >= 0.3) {
+    return {
+      severity: "critical",
+      stage: 3,
+      message: `AKI Stage 3 (KDIGO) — עלייה חריפה ל-Cr ${peakCr.toFixed(1)} (עלייה ${absoluteRise.toFixed(2)} מהבסיס). שקול דיאליזה, הפסק נפרוטוקסיים, נפרולוג`,
     };
   }
 

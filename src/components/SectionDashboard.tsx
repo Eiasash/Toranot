@@ -1,9 +1,9 @@
 import { useMemo } from "react";
-import type { PatientEntry, Section } from "../types";
-import { SECTION_LABEL } from "../types";
+import type { PatientEntry, PatientSection, Section } from "../types";
+import { SECTION_LABEL, patientSectionLabel } from "../types";
 
 interface SectionSummary {
-  section: Section;
+  section: PatientSection;
   total: number;
   statTasks: number;
   urgentTasks: number;
@@ -69,7 +69,7 @@ export function SectionDashboard({
   onSelectSection: (section: Section) => void;
 }) {
   const summaries = useMemo(() => {
-    const map = new Map<Section, PatientEntry[]>();
+    const map = new Map<PatientSection, PatientEntry[]>();
     for (const p of patients) {
       const arr = map.get(p.section) ?? [];
       arr.push(p);
@@ -111,12 +111,12 @@ export function SectionDashboard({
       {summaries.map((s) => (
         <button
           key={s.section}
-          onClick={() => onSelectSection(s.section)}
+          onClick={() => s.section !== "UNKNOWN_SECTION" && onSelectSection(s.section as Section)}
           className="w-full text-right border border-gray-200 dark:border-gray-700 rounded-xl p-3 bg-white dark:bg-gray-800/40 active:bg-gray-50 dark:active:bg-gray-700/40 space-y-1.5 transition-colors"
         >
           <div className="flex items-center justify-between">
             <span className="text-sm font-bold dark:text-gray-100">
-              {SECTION_LABEL[s.section]} ({s.total})
+              {patientSectionLabel(s.section)} ({s.total})
             </span>
             <div className="flex gap-1.5">
               {s.statTasks > 0 && (

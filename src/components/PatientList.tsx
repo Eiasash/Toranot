@@ -1,7 +1,7 @@
 import React, { useCallback, useState, useTransition, useMemo, Component } from "react";
 import type { ErrorInfo } from "react";
 import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
-import { SECTION_LABEL, PATIENT_SECTIONS } from "../types";
+import { SECTION_LABEL, PATIENT_SECTIONS, patientSectionLabel } from "../types";
 import { PatientCard, PatientRow } from "./PatientCard";
 import { PullToRefresh } from "./PullToRefresh";
 import { calculateAcuity } from "../engine/acuity";
@@ -246,7 +246,7 @@ export function PatientList() {
                   {showDivider && (
                     <div className="flex items-center gap-2 py-1.5 px-1 mt-1">
                       <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 whitespace-nowrap">
-                        {SECTION_LABEL[patient.section] ?? patient.section}
+                        {patientSectionLabel(patient.section)}
                       </span>
                       <div className="flex-1 border-t border-blue-200 dark:border-blue-800" />
                     </div>
@@ -282,7 +282,7 @@ export function PatientList() {
                   {showDivider && (
                     <tr className="bg-blue-50 dark:bg-blue-900/20">
                       <td colSpan={6} className="py-1.5 px-4 text-xs font-semibold text-blue-700 dark:text-blue-400">
-                        {SECTION_LABEL[patient.section] ?? patient.section}
+                        {patientSectionLabel(patient.section)}
                       </td>
                     </tr>
                   )}

@@ -85,6 +85,15 @@ export function normalizePatient(p: RawPatient): PatientEntry {
     labs: Array.isArray(p.labs) ? p.labs : [],
     allergies: Array.isArray(p.allergies) ? p.allergies : [],
     order: typeof p.order === "number" ? p.order : 0,
+    // Phase 1: ensure structured clinical metadata is always present.
+    // Prevents renal/comfort logic from crashing on old localStorage records.
+    clinicalMeta: (p as PatientEntry).clinicalMeta ?? {},
+    // Phase 4: per-patient revision tracking (forward-compat with sync redesign).
+    syncMeta: (p as PatientEntry).syncMeta ?? {
+      revision: 1,
+      lastModifiedAt: new Date().toISOString(),
+      lastModifiedBy: "local",
+    },
     ...(p.discharged ? { discharged: true } : {}),
     ...(p.isAdmission ? { isAdmission: true } : {}),
   } as PatientEntry;

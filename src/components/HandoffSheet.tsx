@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useSimpleToast, SimpleToast } from "./SimpleConfirm";
 import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
-import { SECTION_LABEL, type PatientEntry, type Task } from "../types";
+import { SECTION_LABEL, patientSectionLabel, type PatientEntry, type Task } from "../types";
 import { formatLabsForHandoff } from "./LabChart";
 import {
   checkDrugInteractions,
@@ -103,7 +103,7 @@ function buildTextHandoff(patients: PatientEntry[], filteredPatients: PatientEnt
   }
   for (const [section, pts] of sections) {
     lines.push("");
-    lines.push(`▸ ${SECTION_LABEL[section as keyof typeof SECTION_LABEL] ?? section} (${pts.length})`);
+    lines.push(`▸ ${patientSectionLabel(section as import("../types").PatientSection)} (${pts.length})`);
     lines.push("");
     for (const p of pts) { lines.push(formatPatient(p)); lines.push(""); }
   }
@@ -781,7 +781,7 @@ export function HandoffSheet({ onClose, initialTab }: { onClose: () => void; ini
               {[...sections.entries()].map(([section, pts]) => (
                 <SectionBlock
                   key={section}
-                  label={SECTION_LABEL[section as keyof typeof SECTION_LABEL] ?? section}
+                  label={patientSectionLabel(section as import("../types").PatientSection)}
                   patients={pts}
                   newIds={newAdmissionIds}
                   dispatch={dispatch}

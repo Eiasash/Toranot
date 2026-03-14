@@ -1,5 +1,56 @@
 # תורנות — Toranot
 
+## Recent Changes
+
+### Phase 1 — Clinical correctness and parser safety ($(date))
+
+**AKI staging fix (KDIGO correctness)**
+- `peakCr >= 4.0` alone no longer labels stable CKD-5 as AKI Stage 3
+- Stage 3 now requires `ratio >= 3` OR `(peakCr >= 4.0 AND acuteRise >= 0.3 mg/dL)`
+- IEEE-754 float epsilon (1e-9) prevents rounding artifacts in the 0.3 threshold
+
+**Renal dosing — new structured API**
+- Added `calculateCockcroftGault()` in `src/utils/renal.ts`
+- Returns `indeterminate` with a Hebrew reason when sex/weight/age are absent
+- No creatinine floor — uses measured values directly
+- Legacy `cockcroft()` preserved for existing callers
+
+**Drug interactions — linezolid and TMP-SMX coverage**
+- `linezolid + SSRI/SNRI/tramadol` → critical serotonin syndrome warnings
+- `trimethoprim/SMX + spironolactone` → critical hyperkalemia (ENaC dual blockade)
+- `TMP-SMX` pattern extended to match `TMP-SMX`, `co-trimoxazole`, `septra`
+
+**Comfort care suppression**
+- Task text now included in comfort-signal scan (was: diagnosis/flags/notes only)
+- `clinicalMeta.goalsOfCare === "comfort_only"` suppresses aggressive workup directly
+- `isComfortCarePatient()` exported as a shared helper
+- DNR/DNI alone confirmed non-suppressing
+
+**Parser — no more silent section assignment**
+- Default section changed from `SIDE_A` to `UNKNOWN_SECTION`
+- Patients without a section header are explicitly marked — never silently placed in צד א
+- `patientSectionLabel()` helper handles `UNKNOWN_SECTION` in all UI label sites
+
+**Canonical lab thresholds**
+- New `src/clinical/clinicalThresholds.ts` — single source of truth for K, Na, Hb, Lactate
+- Creatinine marked `mode: "delta_only"` — raw Cr cannot trigger AKI badge without delta
+- `isCriticalLabValue()` and `isWarningLabValue()` exported for component use
+
+**Type system**
+- `PatientClinicalMeta` (sexAtBirth, weightKg, onDialysis, baselineCreatinine, goalsOfCare)
+- `PatientSyncMeta` (revision, lastModifiedAt, lastModifiedBy) — forward-compat for Phase 4
+- `UNKNOWN_SECTION` added to `PATIENT_SECTIONS` and `PatientSection` union
+- `normalizePatient()` defaults `clinicalMeta: {}` and `syncMeta` on boot — no crashes from old localStorage
+
+**PatientCard acuity**
+- Deleted local `calcAcuity()` duplicate
+- Now uses `calculateAcuity(patient).score` from `src/engine/acuity.ts` everywhere
+
+**Tests**
+- 39 new Phase 1 acceptance tests in `src/__tests__/phase1.test.ts`
+- Total: 992 passing (was 953)
+
+
 Hebrew-language PWA for on-call geriatric ward shift management at Shaare Zedek Medical Center.
 
 Live: **[toranot.netlify.app](https://toranot.netlify.app)**

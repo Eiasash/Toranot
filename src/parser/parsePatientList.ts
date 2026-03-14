@@ -346,7 +346,7 @@ export function parsePatientList(text: string): PatientEntry[] {
   text = stripBidi(text);
   const lines = text.split("\n");
   const patients: PatientEntry[] = [];
-  let currentSection: PatientSection = "SIDE_A";
+  let currentSection: PatientSection = "UNKNOWN_SECTION";
   const today = new Date();
   const date = `${String(today.getDate()).padStart(2, "0")}/${String(today.getMonth() + 1).padStart(2, "0")}/${today.getFullYear()}`;
 

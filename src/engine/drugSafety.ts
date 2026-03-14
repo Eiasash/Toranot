@@ -51,6 +51,8 @@ const DRUG_PATTERNS: Record<string, RegExp> = {
   potassium: /KCl|אשלגן|potassium/i,
   // Serotonin
   ssri: /SSRI|sertraline|סרטרלין|paroxetine|פרוקסטין|fluoxetine|פלואוקסטין|escitalopram|cipralex|ציפרלקס/i,
+  snri: /SNRI|venlafaxine|ונלפקסין|efexor|אפקסור|duloxetine|דולוקסטין|cymbalta|desvenlafaxine/i,
+  linezolid: /linezolid|לינזוליד|zyvox|זייבוקס/i,
   tramadol: /tramadol|טרמדול|tramadex/i,
   // Sedation
   benzodiazepine: /benzo|lorazepam|לוראזפם|diazepam|דיאזפם|midazolam|מידזולם|clonazepam|קלונזפם|oxazepam/i,
@@ -59,7 +61,7 @@ const DRUG_PATTERNS: Record<string, RegExp> = {
   metformin: /metformin|מטפורמין|glucophage/i,
   digoxin: /digoxin|דיגוקסין|lanoxin/i,
   lithium: /lithium|ליתיום/i,
-  trimethoprim: /trimethoprim|טרימתופרים|bactrim|באקטרים|septra/i,
+  trimethoprim: /trimethoprim|טרימתופרים|bactrim|באקטרים|septra|TMP.?SMX|TMP.?sulfamethoxazole/i,
   gentamicin: /gentamicin|גנטמיצין/i,
   vancomycin: /vancomycin|ונקומיצין/i,
   fluconazole: /fluconazole|פלוקונזול|diflucan/i,
@@ -113,6 +115,13 @@ const INTERACTIONS: DrugInteraction[] = [
 
   // ── Serotonin syndrome ──
   { drugA: "ssri", drugB: "tramadol", severity: "major", risk: "תסמונת סרוטונין", detail: "SSRI + Tramadol = סיכון Serotonin syndrome. שקול Paracetamol + weak opioid" },
+  { drugA: "snri", drugB: "tramadol", severity: "major", risk: "תסמונת סרוטונין", detail: "SNRI + Tramadol = סיכון Serotonin syndrome. שקול חלופה לטרמדול" },
+  // Linezolid is an MAO-A inhibitor — serotonin syndrome with all serotoninergic drugs
+  { drugA: "linezolid", drugB: "ssri", severity: "critical", risk: "תסמונת סרוטונין", detail: "Linezolid (MAO-A inhibitor) + SSRI = סיכון גבוה ל-Serotonin syndrome. הפסק SSRI לפחות 24h לפני Linezolid!" },
+  { drugA: "linezolid", drugB: "snri", severity: "critical", risk: "תסמונת סרוטונין", detail: "Linezolid (MAO-A inhibitor) + SNRI = סיכון גבוה ל-Serotonin syndrome. הפסק SNRI לפני Linezolid!" },
+  { drugA: "linezolid", drugB: "tramadol", severity: "critical", risk: "תסמונת סרוטונין", detail: "Linezolid + Tramadol = סיכון קריטי ל-Serotonin syndrome. הימנע לחלוטין!" },
+  // TMP-SMX + spironolactone — severe hyperkalemia via dual ENaC blockade
+  { drugA: "trimethoprim", drugB: "spironolactone", severity: "critical", risk: "היפרקלמיה קריטית", detail: "Bactrim/TMP + Spironolactone = חסימה כפולה של ENaC → K+ ↑↑↑. סכנת חיים בקשישים עם CKD. בדוק K+ דחוף!" },
 
   // ── Sedation / respiratory depression ──
   { drugA: "benzodiazepine", drugB: "opioid", severity: "critical", risk: "דיכוי נשימתי", detail: "Benzo + Opioid = סיכון דיכוי נשימה ומוות בקשישים. הימנע!" },
@@ -194,11 +203,22 @@ export interface RenalWarning {
   adjustment: string;   // Hebrew guidance
   crcl: number;         // conservative CrCl used for the decision
   severity: "critical" | "warning";
-  // Flags that the CrCl was estimated without actual patient weight/sex.
-  // The displayed CrCl is the LOWER of two demographic estimates so the
-  // engine errs toward over-alerting rather than under-alerting.
-  weightAssumed: true;
-  crclRange: { female55kg: number; male70kg: number };
+  /**
+   * Flags that the CrCl was estimated without actual patient weight/sex.
+   * The displayed CrCl is the LOWER of two demographic estimates so the
+   * engine errs toward over-alerting rather than under-alerting.
+   * Optional: absent on indeterminate warnings (where crcl is 0 sentinel).
+   */
+  weightAssumed?: true;
+  crclRange?: { female55kg: number; male70kg: number };
+  /**
+   * When true: structured demographics were not available.
+   * The engine could not produce a reliable CrCl estimate.
+   * The clinician MUST manually verify the renal dose before administering.
+   */
+  indeterminate?: boolean;
+  indeterminateReason?: string;
+  assumptions?: string[];
 }
 
 interface RenalDrug {

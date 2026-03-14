@@ -5,7 +5,9 @@ export const SECTIONS = ["ALL", "SIDE_A", "SIDE_B", "SIDE_C", "REHAB", "MONITOR"
 export type Section = (typeof SECTIONS)[number];
 
 // Sections that patients can actually belong to (ALL is view-only filter)
-export const PATIENT_SECTIONS = ["SIDE_A", "SIDE_B", "SIDE_C", "REHAB", "MONITOR"] as const;
+// UNKNOWN_SECTION: assigned by parser when no section header was seen.
+// Must be resolved to a real section before import is committed.
+export const PATIENT_SECTIONS = ["SIDE_A", "SIDE_B", "SIDE_C", "REHAB", "MONITOR", "UNKNOWN_SECTION"] as const;
 export type PatientSection = (typeof PATIENT_SECTIONS)[number];
 
 export const SECTION_LABEL: Record<Section, string> = {
@@ -16,6 +18,19 @@ export const SECTION_LABEL: Record<Section, string> = {
   REHAB: "שיקום",
   MONITOR: "ניטור",
 };
+
+// Label for the UNKNOWN_SECTION state — shown in preview/warning UI
+export const UNKNOWN_SECTION_LABEL = "קטע לא ידוע";
+
+/**
+ * Returns a display label for any PatientSection, including UNKNOWN_SECTION.
+ * Components should use this instead of SECTION_LABEL[patient.section] directly,
+ * which does not typecheck when patient.section can be UNKNOWN_SECTION.
+ */
+export function patientSectionLabel(section: PatientSection): string {
+  if (section === "UNKNOWN_SECTION") return UNKNOWN_SECTION_LABEL;
+  return SECTION_LABEL[section as Section];
+}
 
 export type Urgency = "stat" | "urgent" | "morning" | "routine" | "extra";
 
@@ -52,6 +67,43 @@ export type Task = {
   // User explicitly dismissed this generated task — suppress on re-generate.
   dismissed?: boolean;
 };
+
+// ─── Structured clinical metadata ──────────────────────────
+// Explicit demographics/care-goals carried on the patient record.
+// Populated via AddAdmissionModal / patient editor.
+// When absent, renal-dose and comfort-care logic must emit indeterminate
+// warnings rather than guessing from free text.
+export type GoalsOfCare = "full" | "limited" | "comfort_only" | "unknown";
+export type SexAtBirth = "male" | "female" | "unknown";
+
+export interface PatientClinicalMeta {
+  sexAtBirth?: SexAtBirth;
+  weightKg?: number | null;
+  onDialysis?: boolean;
+  baselineCreatinine?: number | null;
+  goalsOfCare?: GoalsOfCare;
+}
+
+// ─── Sync metadata ──────────────────────────────────────────
+// Per-patient revision tracking for shared-shift conflict detection.
+// Phase 4 — populated here so the type is forward-compatible.
+export interface PatientSyncMeta {
+  revision?: number;
+  lastModifiedAt?: string;
+  lastModifiedBy?: string | null;
+}
+
+// ─── Photo reference (Phase 2: IndexedDB migration) ────────
+// Phase 2 will replace PatientPhoto.dataUrl with a blobKey reference.
+// Both shapes are kept for migration compatibility.
+export interface PatientPhotoRef {
+  id: string;
+  blobKey: string;
+  thumbBlobKey?: string;
+  caption?: string;
+  mimeType?: string;
+  time: string;
+}
 
 export type PatientEntry = {
   id: string; // stable key (room+name hash)
@@ -92,6 +144,13 @@ export type PatientEntry = {
 
   // Display order within section (lower = higher on list)
   order?: number;
+
+  // Structured clinical metadata — explicit demographics and care goals.
+  // When absent, renal/comfort logic emits indeterminate warnings.
+  clinicalMeta?: PatientClinicalMeta;
+
+  // Sync metadata — per-patient revision for conflict detection (Phase 4).
+  syncMeta?: PatientSyncMeta;
 };
 
 export type PatientPhoto = {

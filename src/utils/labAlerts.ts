@@ -39,10 +39,12 @@ const CRITICAL_THRESHOLDS: CriticalThreshold[] = [
     lowMessage: "היפוקלצמיה חמורה — Ca gluconate IV + Mg check",
   },
   {
+    // NOTE: Raw Cr >= 5.0 notification is for very-high-CKD burden awareness only.
+    // AKI staging must use KDIGO delta logic (calculateLabDeltas), not this threshold.
     label: /^Cr$|^creatinine$/i,
     criticalHigh: 5.0,
     criticalLow: undefined,
-    highMessage: "Cr קריטי — שקול דיאליזה, הפסק נפרוטוקסיים, נפרולוג",
+    highMessage: "Cr גבוה מאוד — אי ספיקה כלייתית חמורה / AKI — בדוק baseline ו-delta, הפסק נפרוטוקסיים",
     lowMessage: "",
   },
   {

@@ -933,6 +933,27 @@ const RULES: Rule[] = [
 
 ];
 
+/**
+ * Returns true if this patient is comfort-care/palliative only.
+ * Exported for use in other components (PatientCard, DrugSafetyAlerts, etc.)
+ * rather than re-implementing the detection logic per-component.
+ */
+export function isComfortCarePatient(patient: PatientEntry): boolean {
+  const signal = [
+    patient.diagnosis ?? "",
+    ...patient.flags,
+    ...patient.status,
+    ...(patient.notes ?? []),
+    patient.handoverNote ?? "",
+    ...patient.tasks.map((t) => t.text),
+  ].join(" ");
+  return (
+    patient.clinicalMeta?.goalsOfCare === "comfort_only" ||
+    COMFORT_CARE_PATTERN.test(signal) ||
+    COMFORT_SEDATION_PATTERN.test(signal)
+  );
+}
+
 export function applyRules(patient: PatientEntry): Task[] {
   const generated: Task[] = [];
   const matchedGroups = new Set<string>();
@@ -941,8 +962,23 @@ export function applyRules(patient: PatientEntry): Task[] {
   // If the patient is flagged for comfort care only, suppress aggressive
   // workup and intervention tasks. DNR/DNI alone does NOT suppress —
   // only explicit comfort-care / palliative / end-of-life flags do.
-  const allFlags = [patient.diagnosis ?? "", ...patient.flags, ...patient.status, ...(patient.notes ?? []), patient.handoverNote ?? ""].join(" ");
-  const isComfortCareOnly = COMFORT_CARE_PATTERN.test(allFlags) || COMFORT_SEDATION_PATTERN.test(allFlags);
+  // Build the comfort-care signal text from all relevant fields including task text.
+  // Task text is included because clinicians frequently write "comfort care" or
+  // "palliative" as a manual task note rather than in diagnosis/status.
+  // Structured goalsOfCare from clinicalMeta takes precedence when present.
+  const comfortSignalText = [
+    patient.diagnosis ?? "",
+    ...patient.flags,
+    ...patient.status,
+    ...(patient.notes ?? []),
+    patient.handoverNote ?? "",
+    ...patient.tasks.map((t) => t.text),
+  ].join(" ");
+  const isComfortCareOnly =
+    patient.clinicalMeta?.goalsOfCare === "comfort_only" ||
+    COMFORT_CARE_PATTERN.test(comfortSignalText) ||
+    COMFORT_SEDATION_PATTERN.test(comfortSignalText);
+  const allFlags = comfortSignalText; // keep allFlags for backward compat with any callers
 
   // Pre-build text blobs for each trigger scope
   const diagnosisText = patient.diagnosis ?? "";

@@ -1,3 +1,4 @@
+import { calculateAcuity } from "../engine/acuity";
 import React, { useMemo, useState, useCallback, useEffect, memo, lazy, Suspense } from "react";
 import type { PatientEntry, Task } from "../types";
 import { SECTIONS, SECTION_LABEL } from "../types";
@@ -82,36 +83,10 @@ function sortTasks(tasks: Task[]) {
   });
 }
 
-/** Calculate patient acuity score based on task urgency, lab flags, and clinical flags */
-function calcAcuity(patient: PatientEntry): number {
-  let score = 0;
-  const allTasks = [...patient.tasks, ...patient.generatedTasks];
-  for (const t of allTasks) {
-    if (t.done) continue;
-    if (t.urgency === "stat") score += 3;
-    else if (t.urgency === "urgent") score += 2;
-  }
-  // Critical flags
-  const flagUpper = patient.flags.map((f) => f.toUpperCase());
-  if (flagUpper.some((f) => f.includes("ISO") || f.includes("ISOLATION"))) score += 2;
-  if (flagUpper.some((f) => f.includes("NPO"))) score += 1;
-  if (flagUpper.some((f) => f.includes("FALL"))) score += 1;
-  // Critical labs
-  for (const lab of patient.labs ?? []) {
-    const l = lab.label.toLowerCase().replace(/[+\s]/g, "");
-    const v = lab.value;
-    if (
-      (l === "k" && (v > 6 || v < 2.5)) ||
-      (l === "na" && (v < 120 || v > 160)) ||
-      (l === "hb" && v < 7) ||
-      (l === "lactate" && v > 4)
-    ) score += 3;
-  }
-  return score;
-}
+// acuity: use calculateAcuity() from engine/acuity — deleted local duplicate (Phase 1)
 
 function AcuityBadge({ patient }: { patient: PatientEntry }) {
-  const score = calcAcuity(patient);
+  const score = calculateAcuity(patient).score;
   if (score === 0) return null;
   let colorClass: string;
   if (score >= 8) colorClass = "bg-red-600 text-white";
@@ -307,7 +282,7 @@ function PatientCardBase({ patient }: { patient: PatientEntry }) {
   };
 
   // Acuity score for left border
-  const acuityScore = calcAcuity(patient);
+  const acuityScore = calculateAcuity(patient).score;
   const borderColor =
     acuityScore >= 8 ? "border-l-red-500" :
     acuityScore >= 5 ? "border-l-yellow-400" :

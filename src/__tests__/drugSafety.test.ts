@@ -362,11 +362,10 @@ describe("checkRenalDoseWarnings", () => {
       labs: [{ id: "l1", label: "Cr", value: 1.5, time: new Date().toISOString() }],
     });
     const warnings = checkRenalDoseWarnings(p);
-    if (warnings.length > 0) {
+    const range = warnings[0]?.crclRange;
+    if (warnings.length > 0 && range) {
       expect(warnings[0].weightAssumed).toBe(true);
-      expect(warnings[0].crclRange.female55kg).toBeLessThanOrEqual(
-        warnings[0].crclRange.male70kg,
-      );
+      expect(range.female55kg).toBeLessThanOrEqual(range.male70kg);
     }
   });
 

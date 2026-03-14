@@ -75,9 +75,9 @@ describe("parsePatientList", () => {
       expect(result[4].section).toBe("MONITOR");
     });
 
-    it("defaults to SIDE_A when no header is present", () => {
+    it("defaults to UNKNOWN_SECTION when no header is present", () => {
       const result = parsePatientList("101 כהן יוסף 72");
-      expect(result[0].section).toBe("SIDE_A");
+      expect(result[0].section).toBe("UNKNOWN_SECTION");
     });
   });
 
@@ -354,7 +354,7 @@ describe("parsePatientList", () => {
   describe("monitor room section inference", () => {
     it("ניטור room does NOT infer section — only headers assign sections", () => {
       const result = parsePatientList("ניטור-1 כהן דני 55");
-      expect(result[0].section).toBe("SIDE_A"); // default, no header
+      expect(result[0].section).toBe("UNKNOWN_SECTION"); // safe default, no header
     });
   });
 

@@ -12,7 +12,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import type { PatientEntry } from "../types";
-import { SECTION_LABEL } from "../types";
+import { SECTION_LABEL, patientSectionLabel } from "../types";
 
 interface ParsePreviewProps {
   patients: PatientEntry[];
@@ -23,7 +23,7 @@ interface ParsePreviewProps {
 function groupBySection(patients: PatientEntry[]) {
   const map = new Map<string, PatientEntry[]>();
   for (const p of patients) {
-    const label = SECTION_LABEL[p.section] ?? p.section;
+    const label = patientSectionLabel(p.section);
     if (!map.has(label)) map.set(label, []);
     map.get(label)!.push(p);
   }
