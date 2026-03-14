@@ -15,6 +15,88 @@ import { safeSetItem } from "./utils/storage";
 import { mergeWard, patientToEnvelope, type PatientEnvelope } from "./sync/patientMerge";
 import type { PatientEntry } from "./types";
 
+// ════════════════════════════════════════════════════════════
+// SYNC OBSERVABILITY — conflict rate + merge outcome tracking
+//
+// Conflict retry rate = conflicts / writes
+// Healthy: <5%  |  Contention: 5-15%  |  Problem: >15%
+// ════════════════════════════════════════════════════════════
+
+export interface SyncMetrics {
+  writes: number;
+  conflicts: number;
+  retriesTotal: number;
+  mergeOutcomes: {
+    identical: number;
+    remoteNewer: number;
+    localNewer: number;
+    conflict: number;
+  };
+  lastReset: number;
+}
+
+function makeFreshMetrics(): SyncMetrics {
+  return {
+    writes: 0,
+    conflicts: 0,
+    retriesTotal: 0,
+    mergeOutcomes: { identical: 0, remoteNewer: 0, localNewer: 0, conflict: 0 },
+    lastReset: Date.now(),
+  };
+}
+
+const _metrics: SyncMetrics = makeFreshMetrics();
+
+/** Returns the current conflict retry rate (0–1). Returns 0 when no writes yet. */
+export function getConflictRate(): number {
+  return _metrics.writes === 0 ? 0 : _metrics.conflicts / _metrics.writes;
+}
+
+/** Returns a snapshot of all sync metrics. */
+export function getSyncMetrics(): Readonly<SyncMetrics> {
+  return { ..._metrics, mergeOutcomes: { ..._metrics.mergeOutcomes } };
+}
+
+/** Reset metrics counters (e.g. on shift archive). */
+export function resetSyncMetrics(): void {
+  Object.assign(_metrics, makeFreshMetrics());
+}
+
+function recordWrite(): void { _metrics.writes++; }
+function recordConflict(): void { _metrics.conflicts++; }
+function recordRetry(): void { _metrics.retriesTotal++; }
+function recordMergeOutcome(kind: "identical" | "remoteNewer" | "localNewer" | "conflict"): void {
+  _metrics.mergeOutcomes[kind]++;
+}
+
+// Expose on window for devtools inspection during live shifts
+// Usage: window.__toranotMetrics  or  window.__toranotMetrics.getConflictRate()
+if (typeof window !== "undefined") {
+  (window as unknown as Record<string, unknown>).__toranotMetrics = {
+    get: () => getSyncMetrics(),
+    rate: () => getConflictRate(),
+    reset: () => resetSyncMetrics(),
+  };
+}
+
+// Log conflict rate every 60s — only when actively syncing
+let _metricsInterval: ReturnType<typeof setInterval> | null = null;
+function startMetricsLogging(): void {
+  if (_metricsInterval) return;
+  _metricsInterval = setInterval(() => {
+    if (_metrics.writes === 0) return;
+    const rate = getConflictRate();
+    const pct = (rate * 100).toFixed(1);
+    if (rate > 0.15) {
+      console.warn(`[Toranot sync] ⚠️ High conflict rate: ${pct}% (${_metrics.conflicts}/${_metrics.writes} writes). Check for concurrent editors.`);
+    } else if (rate > 0.05) {
+      console.info(`[Toranot sync] Elevated conflict rate: ${pct}% — normal during handoff bursts.`);
+    } else {
+      console.debug(`[Toranot sync] Conflict rate: ${pct}% — healthy.`);
+    }
+  }, 60_000);
+}
+
 export type ToranotCloudState = {
   patients: unknown[];
   shiftHistory: unknown[];
@@ -185,6 +267,8 @@ export function useToranotCloudSync(
   const lastPushedJson = useRef<string>("");
   const pushTimer = useRef<number | null>(null);
   const [status, setStatus] = useState<SyncStatus>(supabase ? "syncing" : "off");
+  // Start conflict rate logging (no-op if already running)
+  if (supabase) startMetricsLogging();
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [conflict, setConflict] = useState<ConflictData | null>(null);
   const pendingCloudState = useRef<ToranotCloudState | null>(null);
@@ -261,6 +345,7 @@ export function useToranotCloudSync(
 
         // Surface per-patient conflicts — never silently overwrite
         if (mergeResult.conflicts.length > 0) {
+          recordConflict();
           pendingCloudState.current = remote;
           setConflict({
             localCount: localPatients.length,
@@ -280,6 +365,10 @@ export function useToranotCloudSync(
           return;
         }
 
+        // Record merge outcome distribution from ward merge results
+        if (mergeResult.toApplyLocally.length > 0) recordMergeOutcome("remoteNewer");
+        if (mergeResult.toPushRemote.length > 0) recordMergeOutcome("localNewer");
+        if (mergeResult.conflicts.length > 0) recordMergeOutcome("conflict");
         // Apply patients that are newer on remote
         if (mergeResult.toApplyLocally.length > 0) {
           dispatch({ type: "MERGE_PATIENTS_FROM_REMOTE", patients: mergeResult.toApplyLocally });
@@ -341,6 +430,7 @@ export function useToranotCloudSync(
         for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
           try {
             setStatus("syncing");
+            recordWrite();
             await pushCloud(cloudState);
             lastPushedJson.current = json;
             setStatus("synced");
@@ -348,6 +438,7 @@ export function useToranotCloudSync(
             return; // success — exit retry loop
           } catch (e) {
             console.warn(`[Toranot] cloud push failed (attempt ${attempt + 1}/${MAX_RETRIES})`, e);
+            recordRetry();
             if (attempt < MAX_RETRIES - 1) {
               await new Promise(r => setTimeout(r, 2500 * Math.pow(2, attempt)));
             } else {
