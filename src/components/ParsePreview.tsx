@@ -159,6 +159,14 @@ export function ParsePreview({ patients: initialPatients, onConfirm, onCancel }:
     0,
   );
   const lowConfCount = patients.filter((p) => p.confidence < 0.8).length;
+  const unknownSectionCount = patients.filter((p) => p.section === "UNKNOWN_SECTION").length;
+
+  // Import gate: block if >20% of rows are low-confidence OR any patient has UNKNOWN_SECTION.
+  // UNKNOWN_SECTION means no section header was seen — silently importing would place patients
+  // in the wrong ward. The doctor must assign sections in the preview before importing.
+  const importBlocked =
+    unknownSectionCount > 0 ||
+    (patients.length > 0 && lowConfCount / patients.length > 0.2);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-gray-900">
@@ -318,12 +326,22 @@ export function ParsePreview({ patients: initialPatients, onConfirm, onCancel }:
 
       {/* Footer */}
       <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900 space-y-2">
+        {importBlocked && (
+          <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-2">
+            <span className="text-amber-600 text-base mt-0.5">⚠</span>
+            <p className="text-xs text-amber-800 dark:text-amber-300">
+              {unknownSectionCount > 0
+                ? `${unknownSectionCount} חולים ללא קטע — הגדר קטע לפני ייבוא`
+                : `נמצאו שורות בעייתיות (${lowConfCount} מתוך ${patients.length}) — בדוק לפני ייבוא`}
+            </p>
+          </div>
+        )}
         <button
           onClick={() => onConfirm(patients)}
-          disabled={patients.length === 0}
-          className="w-full py-4 bg-blue-600 text-white rounded-xl text-lg font-bold active:bg-blue-700 active:scale-[0.98] transition-transform disabled:opacity-40"
+          disabled={patients.length === 0 || importBlocked}
+          className="w-full py-4 bg-blue-600 text-white rounded-xl text-lg font-bold active:bg-blue-700 active:scale-[0.98] transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          ✓ אשר ייבוא {patients.length} חולים
+          {importBlocked ? "⚠ תקן שגיאות לפני ייבוא" : `✓ אשר ייבוא ${patients.length} חולים`}
         </button>
         <button
           onClick={onCancel}

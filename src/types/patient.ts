@@ -175,6 +175,66 @@ export type LabEntry = {
 };
 
 /**
+ * Canonical section alias table.
+ *
+ * All section header matching must go through this table, not through
+ * scattered regex. Adding a new format/OCR variant = adding one string here.
+ *
+ * Includes:
+ *   - Standard Hebrew headers
+ *   - Common OCR corruptions (ד א for צד א, !ד for צד, etc.)
+ *   - English variants used in bilingual contexts
+ *   - Separator variants (colon, dash, etc. are stripped before matching)
+ */
+export const SECTION_ALIASES: Record<Exclude<PatientSection, "UNKNOWN_SECTION">, string[]> = {
+  SIDE_A: [
+    "צד א",
+    "צד א:",
+    "צדא",
+    "!ד א",   // OCR: צ → !
+    "ד א",    // OCR: צ dropped
+    "side a",
+    "sidea",
+    "a ward",
+  ],
+  SIDE_B: [
+    "צד ב",
+    "צד ב:",
+    "צדב",
+    "!ד ב",
+    "ד ב",
+    "side b",
+    "sideb",
+    "b ward",
+  ],
+  SIDE_C: [
+    "צד ג",
+    "צד ג:",
+    "צדג",
+    "!ד ג",
+    "ד ג",
+    "side c",
+    "sidec",
+    "c ward",
+  ],
+  REHAB: [
+    "שיקום",
+    "שיקומי",
+    "rehab",
+    "rehabilitation",
+    "שיקום:",
+  ],
+  MONITOR: [
+    "ניטור",
+    "מוניטור",
+    "מוניטורים",
+    "monitor",
+    "monitoring",
+    "ניטור:",
+  ],
+};
+
+/**
  * Strict helper: map a header-only line -> Section.
  *
  * IMPORTANT:
@@ -191,37 +251,16 @@ export function detectSectionFromHeader(headerText: string): PatientSection | nu
 
   // Check if this looks like a patient line (has room number + name pattern)
   // e.g., "ניטור 3 כהן יוסף" or "49/1 לוי שרה"
-  // If it has both a number AND Hebrew letters after, it's likely a patient line
   if (/\d+.*[א-ת]/.test(cleaned)) return null;
 
-  // Normalize for comparison (keep spaces between words for "צד א" etc.)
-  const normalized = cleaned.toLowerCase();
-  const compact = normalized.replace(/\s+/g, "");
-
-  // Check with spaces first (for "צד א", "צד ב", "צד ג")
-  if (normalized === "צד א" || compact === "צדא" || compact === "sidea") return "SIDE_A";
-  if (normalized === "צד ב" || compact === "צדב" || compact === "sideb") return "SIDE_B";
-  if (normalized === "צד ג" || compact === "צדג" || compact === "sidec") return "SIDE_C";
-
-  if (
-    compact === "שיקום" ||
-    compact === "שיקומי" ||
-    compact === "rehab" ||
-    compact === "rehabilitation"
-  )
-    return "REHAB";
-
-  // For monitor, be careful not to match "ניטור 3" (which is a room)
-  // Only match if it's just "ניטור" without a following number
-  if (!cleaned.match(/ניטור\s+\d/) && !cleaned.match(/monitor\s+\d/)) {
-    if (
-      compact === "ניטור" ||
-      compact === "מוניטור" ||
-      compact === "מוניטורים" ||
-      compact === "monitor" ||
-      compact === "monitoring"
-    )
-      return "MONITOR";
+  // Primary: match against canonical alias table (SECTION_ALIASES)
+  const normalizedForAlias = cleaned.toLowerCase().trim();
+  for (const [section, aliases] of Object.entries(SECTION_ALIASES) as Array<[Exclude<PatientSection, "UNKNOWN_SECTION">, string[]]>) {
+    if (aliases.some((alias) => normalizedForAlias === alias.toLowerCase() || normalizedForAlias.replace(/\s+/g, "") === alias.toLowerCase().replace(/\s+/g, ""))) {
+      // Extra guard for MONITOR: "ניטור 3" (room label) must not match as a header
+      if (section === "MONITOR" && /ניטור\s*\d|monitor\s*\d/i.test(cleaned)) continue;
+      return section;
+    }
   }
 
   return null;

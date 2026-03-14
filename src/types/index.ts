@@ -4,6 +4,7 @@ export {
   SECTION_LABEL,
   UNKNOWN_SECTION_LABEL,
   patientSectionLabel,
+  SECTION_ALIASES,
   detectSectionFromHeader,
   detectSectionFromRoom,
 } from "./patient";
