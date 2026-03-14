@@ -310,11 +310,31 @@ export function useToranotCloudSync(
   cloudStateRef.current = cloudState;
 
   const resolveConflict = useCallback((choice: "local" | "cloud") => {
-    if (choice === "cloud" && pendingCloudState.current) {
-      lastPushedJson.current = stableJson(pendingCloudState.current);
-      dispatch({ type: "IMPORT_CLOUD_STATE", state: pendingCloudState.current });
+    const isBudgetExhausted = conflict?.budgetExhausted ?? false;
+
+    if (choice === "cloud") {
+      if (isBudgetExhausted) {
+        // Budget was exhausted on push — pull fresh cloud state and apply it.
+        // This discards any local unsaved changes the user is accepting to lose.
+        setStatus("syncing");
+        pullCloud().then(({ state: remote }) => {
+          if (remote) {
+            lastPushedJson.current = stableJson(remote);
+            dispatch({ type: "IMPORT_CLOUD_STATE", state: remote });
+          }
+          setStatus("synced");
+          setLastSync(new Date());
+        }).catch((e) => {
+          console.warn("[Toranot] budget-exhausted pull failed", e);
+          setStatus("error");
+        });
+      } else if (pendingCloudState.current) {
+        lastPushedJson.current = stableJson(pendingCloudState.current);
+        dispatch({ type: "IMPORT_CLOUD_STATE", state: pendingCloudState.current });
+        setStatus("synced");
+      }
     } else if (choice === "local") {
-      // Push local state immediately and stamp lastPushedJson so the debounced push is suppressed.
+      // Force-push local state — user explicitly chose to overwrite cloud.
       const current = cloudStateRef.current;
       const json = stableJson(current);
       lastPushedJson.current = json;
@@ -325,7 +345,7 @@ export function useToranotCloudSync(
     }
     pendingCloudState.current = null;
     setConflict(null);
-  }, [dispatch]);
+  }, [dispatch, conflict]);
 
   // Pull on mount (and on auth change)
   useEffect(() => {
@@ -464,7 +484,23 @@ export function useToranotCloudSync(
               const jitter = base * 0.2 * (Math.random() - 0.5);
               await new Promise(r => setTimeout(r, Math.round(base + jitter)));
             } else {
-              setStatus("error");
+              // Retry budget exhausted — surface as a conflict instead of silent error.
+              // Local state is preserved in memory + localStorage (safe).
+              // The user can choose to retry, keep local, or accept cloud state.
+              recordConflict();
+              const localPatients = (cloudStateRef.current.patients ?? []) as PatientEntry[];
+              setConflict({
+                localCount: localPatients.length,
+                cloudCount: 0, // unknown — last push attempt failed before we could compare
+                cloudUpdatedAt: null,
+                budgetExhausted: true,
+                attemptsExhausted: MAX_RETRIES,
+              });
+              setStatus("conflict");
+              console.error(
+                `[Toranot sync] Push budget exhausted after ${MAX_RETRIES} attempts. ` +
+                "Local changes preserved. User action required."
+              );
             }
           }
         }
@@ -490,6 +526,16 @@ export type ConflictData = {
     patientName: string;
     reason: string;
   }>;
+  /**
+   * True when the retry budget was exhausted on push (all MAX_RETRIES attempts
+   * failed). The local state is safe — it's in memory and in localStorage.
+   * The user must decide whether to overwrite cloud or discard local changes.
+   * "Hot document" protection: prevents a document that keeps conflicting from
+   * retrying forever and amplifying failures.
+   */
+  budgetExhausted?: boolean;
+  /** Number of push attempts that were made before budget exhaustion */
+  attemptsExhausted?: number;
 };
 
 // ═══════════════════════════════════════════════════════════

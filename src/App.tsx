@@ -409,6 +409,8 @@ function ConflictDialog() {
   const { conflict, resolveConflict } = useCloudSync();
   if (!conflict) return null;
 
+  const isBudgetExhausted = conflict.budgetExhausted === true;
+
   const cloudTime = conflict.cloudUpdatedAt
     ? new Date(conflict.cloudUpdatedAt).toLocaleString("he-IL", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })
     : "לא ידוע";
@@ -417,10 +419,14 @@ function ConflictDialog() {
     <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center px-4 pb-8 sm:pb-0 bg-black/50">
       <div className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden">
         <div className="px-5 pt-5 pb-4">
-          <div className="text-2xl mb-2">⚡</div>
-          <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">קונפליקט סנכרון</h3>
+          <div className="text-2xl mb-2">{isBudgetExhausted ? "🔄" : "⚡"}</div>
+          <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
+            {isBudgetExhausted ? "שגיאת סנכרון — לא הצלחנו לשמור" : "קונפליקט סנכרון"}
+          </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            נמצאו נתונים שונים במכשיר ובענן. איזו גרסה לשמור?
+            {isBudgetExhausted
+              ? `ניסינו ${conflict.attemptsExhausted ?? 3} פעמים לשמור לענן — ללא הצלחה. הנתונים במכשיר שמורים. איך להמשיך?`
+              : "נמצאו נתונים שונים במכשיר ובענן. איזו גרסה לשמור?"}
           </p>
         </div>
         <div className="px-5 pb-4 space-y-2">
@@ -428,27 +434,42 @@ function ConflictDialog() {
             <p className="text-xs font-semibold text-blue-800 dark:text-blue-300">
               📱 מכשיר — {conflict.localCount} מטופלים
             </p>
-            <p className="text-[11px] text-blue-600 dark:text-blue-400">הנתונים שנמצאים כרגע במכשיר הזה</p>
-          </div>
-          <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-xl p-3">
-            <p className="text-xs font-semibold text-purple-800 dark:text-purple-300">
-              ☁️ ענן — {conflict.cloudCount} מטופלים
+            <p className="text-[11px] text-blue-600 dark:text-blue-400">
+              {isBudgetExhausted ? "הנתונים הנוכחיים — לא נשמרו לענן" : "הנתונים שנמצאים כרגע במכשיר הזה"}
             </p>
-            <p className="text-[11px] text-purple-600 dark:text-purple-400">עודכן: {cloudTime}</p>
           </div>
+          {!isBudgetExhausted && (
+            <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-xl p-3">
+              <p className="text-xs font-semibold text-purple-800 dark:text-purple-300">
+                ☁️ ענן — {conflict.cloudCount} מטופלים
+              </p>
+              <p className="text-[11px] text-purple-600 dark:text-purple-400">עודכן: {cloudTime}</p>
+            </div>
+          )}
+          {conflict.perPatientConflicts && conflict.perPatientConflicts.length > 0 && (
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-3 space-y-1">
+              <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">קונפליקטים לפי מטופל:</p>
+              {conflict.perPatientConflicts.slice(0, 3).map((c) => (
+                <p key={c.patientId} className="text-[11px] text-amber-700 dark:text-amber-400">⚠ {c.patientName}</p>
+              ))}
+              {conflict.perPatientConflicts.length > 3 && (
+                <p className="text-[11px] text-amber-600">ועוד {conflict.perPatientConflicts.length - 3}...</p>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex border-t border-gray-200 dark:border-gray-700">
           <button
             onClick={() => resolveConflict("local")}
             className="flex-1 py-4 text-sm font-semibold text-blue-600 active:bg-blue-50 dark:active:bg-blue-900/20"
           >
-            השאר מכשיר
+            {isBudgetExhausted ? "נסה שוב לשמור" : "השאר מכשיר"}
           </button>
           <button
             onClick={() => resolveConflict("cloud")}
             className="flex-1 py-4 text-sm font-semibold text-purple-600 border-r border-gray-200 dark:border-gray-700 active:bg-purple-50 dark:active:bg-purple-900/20"
           >
-            טען מענן
+            {isBudgetExhausted ? "טען מענן" : "טען מענן"}
           </button>
         </div>
       </div>
