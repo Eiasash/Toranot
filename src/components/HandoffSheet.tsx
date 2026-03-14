@@ -126,6 +126,17 @@ function buildTextHandoff(patients: PatientEntry[], filteredPatients: PatientEnt
   if (statDone > 0 || statPending > 0) lines.push(`  🔴 סטט: ${statDone} בוצעו, ${statPending} ממתינים | 🟡 דחוף: ${urgentDone} בוצעו`);
   if (totalSafetyAlerts > 0) lines.push(`  ⚠️ ${totalSafetyAlerts} התראות בטיחות ב-${patientsWithAlerts} חולים`);
   if (patientsWithLabs > 0) lines.push(`  🔬 ${patientsWithLabs} חולים עם מעבדות מעודכנות`);
+  // GoC gap — explicit warning if critical patients have no defined GoC
+  const gocGap = filteredPatients.filter(p => {
+    const goc = p.clinicalMeta?.goalsOfCare;
+    if (goc && goc !== "unknown") return false;
+    const allT = [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)];
+    return allT.some(t => !t.done && (t.urgency === "stat" || t.urgency === "urgent"));
+  });
+  if (gocGap.length > 0) lines.push(`  ❓ מטרות טיפול לא מוגדרות (עם משימות): ${gocGap.map(p => p.name ?? p.room ?? "?").join(", ")}`);
+  // Allergy conflicts — always surface in text
+  const allergyConflicts = filteredPatients.filter(p => checkAllergyConflicts(p).length > 0);
+  if (allergyConflicts.length > 0) lines.push(`  🚨 קונפליקטי אלרגיה: ${allergyConflicts.map(p => p.name ?? p.room ?? "?").join(", ")}`);
   return lines.join("\n");
 }
 
@@ -820,6 +831,30 @@ export function HandoffSheet({ onClose, initialTab }: { onClose: () => void; ini
     });
   }, [filteredPatients, admissionEvents, shiftStartISO]);
 
+  // ── Goals-of-care gap: patients with undefined/unknown GoC AND any pending urgent/stat task ──
+  const gocGapPatients = useMemo(() =>
+    filteredPatients.filter(p => {
+      const goc = p.clinicalMeta?.goalsOfCare;
+      if (goc && goc !== "unknown") return false; // defined — skip
+      const allT = [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)];
+      return allT.some(t => !t.done && (t.urgency === "stat" || t.urgency === "urgent"));
+    }),
+    [filteredPatients]
+  );
+
+  // ── Critical drug alerts for morning report: allergy conflicts + Beers only ──
+  const criticalDrugAlerts = useMemo(() => {
+    const out: { patient: PatientEntry; allergyCount: number; beersCount: number }[] = [];
+    for (const p of filteredPatients) {
+      const allergyCount = checkAllergyConflicts(p).length;
+      const beersCount = checkBeersCriteria(p).length;
+      if (allergyCount > 0 || beersCount > 0) {
+        out.push({ patient: p, allergyCount, beersCount });
+      }
+    }
+    return out;
+  }, [filteredPatients]);
+
   // Summary stats
   const allTasks = filteredPatients.flatMap(p => [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)]);
   const pendingCount = allTasks.filter(t => !t.done).length;
@@ -1035,6 +1070,57 @@ export function HandoffSheet({ onClose, initialTab }: { onClose: () => void; ini
                 </div>
               )}
               {/* Quick overnight update — add/edit note for any patient without leaving report */}
+              {/* ── Goals-of-care gap ── */}
+              {gocGapPatients.length > 0 && (
+                <div className="bg-orange-900/20 border border-orange-700/50 rounded-xl p-3 space-y-1.5">
+                  <p className="text-xs font-bold text-orange-300">❓ מטרות טיפול לא מוגדרות — עם משימות פתוחות ({gocGapPatients.length})</p>
+                  {gocGapPatients.map(p => {
+                    const pending = [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)]
+                      .filter(t => !t.done && (t.urgency === "stat" || t.urgency === "urgent"));
+                    return (
+                      <div key={p.id} className="flex items-start gap-2 border-t border-orange-800/30 pt-1.5 first:border-0 first:pt-0">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap text-xs">
+                            <span className="font-mono text-blue-400 shrink-0">חד׳ {p.room ?? "?"}</span>
+                            <span className="font-medium text-gray-100">{p.name ?? "?"}</span>
+                            {p.flags?.includes("DNR") && <span className="text-[10px] bg-zinc-700 text-zinc-300 px-1 rounded font-mono">DNR</span>}
+                            <span className="text-gray-500 truncate text-[11px]">— {p.diagnosis}</span>
+                          </div>
+                          <p className="text-[11px] text-orange-300 mt-0.5" dir="rtl">
+                            {pending.length} משימות ממתינות ללא הגדרת מטרות טיפול
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* ── Drug safety summary ── */}
+              {criticalDrugAlerts.length > 0 && (
+                <div className="bg-red-900/20 border border-red-700/50 rounded-xl p-3 space-y-1.5">
+                  <p className="text-xs font-bold text-red-300">💊 התראות תרופתיות ({criticalDrugAlerts.length} חולים)</p>
+                  {criticalDrugAlerts.map(({ patient: p, allergyCount, beersCount }) => (
+                    <div key={p.id} className="flex items-center gap-2 flex-wrap text-xs border-t border-red-800/30 pt-1.5 first:border-0 first:pt-0">
+                      <span className="font-mono text-blue-400 shrink-0">חד׳ {p.room ?? "?"}</span>
+                      <span className="font-medium text-gray-100">{p.name ?? "?"}</span>
+                      <div className="flex gap-1 mr-auto">
+                        {allergyCount > 0 && (
+                          <span className="text-[10px] bg-red-700 text-white px-1.5 py-0.5 rounded font-bold">
+                            🚨 אלרגיה×{allergyCount}
+                          </span>
+                        )}
+                        {beersCount > 0 && (
+                          <span className="text-[10px] bg-orange-700 text-white px-1.5 py-0.5 rounded font-bold">
+                            Beers×{beersCount}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <QuickOvernightUpdate patients={filteredPatients} actedonIds={new Set(actedon.map(p => p.id))} admissionIds={newAdmissionIds} />
             </div>
           ) : view === "phlebotomy" ? (

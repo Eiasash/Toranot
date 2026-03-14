@@ -199,3 +199,8 @@ Requires Node ≥22. See `netlify.toml` for function configuration and CSP heade
 - **AdmissionMorningNote**: Inline editable note on every admission card in morning report tab. Tap "+ הוסף הערה לדוח בוקר" to add, saves to handoverNote on blur. Shows existing note with ✏️ edit button.
 - **Actedon notes now editable**: In "חולים שטיפלת בהם" section, handoverNote is now inline-editable (was read-only before).
 - **QuickOvernightUpdate**: New widget at bottom of morning report — lets you add an update to any patient NOT already listed (stable patients, lab results, brief checks). Dropdown picker + textarea, saves to handoverNote. Flows into text handoff and ISBAR automatically.
+
+### Morning Report — GoC Gap + Drug Safety Surfacing (2026-03-14)
+- **❓ GoC gap section**: Flags patients with undefined/unknown goals-of-care who have pending stat/urgent tasks. Visible in both the report UI and text/ISBAR export.
+- **💊 Drug safety strip**: Shows patients with allergy conflicts or Beers 2023 hits directly in morning report — no need to open each patient card.
+- **Text handoff**: Now includes GoC gap names and allergy conflict names in shift summary block.
