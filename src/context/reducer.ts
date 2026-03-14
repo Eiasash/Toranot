@@ -14,6 +14,7 @@ import { mergeScan } from "../engine/mergeScan";
 import { applyRules } from "../engine/rules";
 import { generateId } from "../utils/id";
 import type { ToranotCloudState } from "../cloudSync";
+import { resetSyncMetrics } from "../cloudSync";
 import { bumpRevision } from "../sync/patientMerge";
 import type { ScanDiff } from "../engine/smartOCR";
 
@@ -537,6 +538,8 @@ function innerReducer(state: PatientsState, action: Action): PatientsState {
       };
       const history = [snapshot, ...state.shiftHistory].slice(0, MAX_SHIFT_HISTORY);
       console.debug("[Toranot] Shift archived:", snapshot.label, "| total:", history.length, "| patients:", snapshot.patients.length);
+      // Reset sync conflict metrics — per-shift counters lose meaning across shifts
+      resetSyncMetrics();
       return { ...state, shiftHistory: history };
     }
 

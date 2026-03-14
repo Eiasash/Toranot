@@ -32,6 +32,8 @@ export interface SyncMetrics {
     localNewer: number;
     conflict: number;
   };
+  /** Sum of push latency in ms — divide by writes for average */
+  totalSyncLatencyMs: number;
   lastReset: number;
 }
 
@@ -41,6 +43,7 @@ function makeFreshMetrics(): SyncMetrics {
     conflicts: 0,
     retriesTotal: 0,
     mergeOutcomes: { identical: 0, remoteNewer: 0, localNewer: 0, conflict: 0 },
+    totalSyncLatencyMs: 0,
     lastReset: Date.now(),
   };
 }
@@ -65,6 +68,7 @@ export function resetSyncMetrics(): void {
 function recordWrite(): void { _metrics.writes++; }
 function recordConflict(): void { _metrics.conflicts++; }
 function recordRetry(): void { _metrics.retriesTotal++; }
+function recordSyncLatency(ms: number): void { _metrics.totalSyncLatencyMs += ms; }
 function recordMergeOutcome(kind: "identical" | "remoteNewer" | "localNewer" | "conflict"): void {
   _metrics.mergeOutcomes[kind]++;
 }
@@ -75,6 +79,10 @@ if (typeof window !== "undefined") {
   (window as unknown as Record<string, unknown>).__toranotMetrics = {
     get: () => getSyncMetrics(),
     rate: () => getConflictRate(),
+    /** Average retries per write — healthy <0.2, bad >1 */
+    depth: () => _metrics.writes === 0 ? 0 : _metrics.retriesTotal / _metrics.writes,
+    /** Average push latency ms — healthy <300ms */
+    latency: () => _metrics.writes === 0 ? 0 : Math.round(_metrics.totalSyncLatencyMs / _metrics.writes),
     reset: () => resetSyncMetrics(),
   };
 }
@@ -87,12 +95,17 @@ function startMetricsLogging(): void {
     if (_metrics.writes === 0) return;
     const rate = getConflictRate();
     const pct = (rate * 100).toFixed(1);
+    const depth = _metrics.writes === 0 ? 0 : (_metrics.retriesTotal / _metrics.writes).toFixed(2);
+    const latencyMs = _metrics.writes === 0 ? 0 : Math.round(_metrics.totalSyncLatencyMs / _metrics.writes);
+    const summary = `conflicts=${pct}% depth=${depth} latency=${latencyMs}ms writes=${_metrics.writes}`;
     if (rate > 0.15) {
-      console.warn(`[Toranot sync] ⚠️ High conflict rate: ${pct}% (${_metrics.conflicts}/${_metrics.writes} writes). Check for concurrent editors.`);
+      console.warn(`[Toranot sync] ⚠️ High contention — ${summary}. Check for concurrent editors or extend push debounce.`);
     } else if (rate > 0.05) {
-      console.info(`[Toranot sync] Elevated conflict rate: ${pct}% — normal during handoff bursts.`);
+      console.info(`[Toranot sync] Elevated contention — ${summary}`);
+    } else if (latencyMs > 300) {
+      console.warn(`[Toranot sync] High push latency — ${summary}`);
     } else {
-      console.debug(`[Toranot sync] Conflict rate: ${pct}% — healthy.`);
+      console.debug(`[Toranot sync] Healthy — ${summary}`);
     }
   }, 60_000);
 }
@@ -425,13 +438,19 @@ export function useToranotCloudSync(
 
       if (pushTimer.current) window.clearTimeout(pushTimer.current);
       pushTimer.current = window.setTimeout(async () => {
-        // Retry with exponential backoff (2.5s, 5s, 10s) on transient failures
+        // One logical write per debounce cycle — retries are implementation details
+        recordWrite();
+        setStatus("syncing");
+        const _t0 = performance.now();
+        // Retry with exponential backoff + jitter on transient failures.
+        // Jitter prevents retry storms: when N clients fail simultaneously they
+        // would otherwise all retry at the same moment without it.
+        // Delays (base + jitter): ~2.5s, ~5s, ~10s
         const MAX_RETRIES = 3;
         for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
           try {
-            setStatus("syncing");
-            recordWrite();
             await pushCloud(cloudState);
+            recordSyncLatency(performance.now() - _t0);
             lastPushedJson.current = json;
             setStatus("synced");
             setLastSync(new Date());
@@ -440,7 +459,10 @@ export function useToranotCloudSync(
             console.warn(`[Toranot] cloud push failed (attempt ${attempt + 1}/${MAX_RETRIES})`, e);
             recordRetry();
             if (attempt < MAX_RETRIES - 1) {
-              await new Promise(r => setTimeout(r, 2500 * Math.pow(2, attempt)));
+              // Exponential backoff with ±20% jitter to spread out retry storms
+              const base = 2500 * Math.pow(2, attempt);
+              const jitter = base * 0.2 * (Math.random() - 0.5);
+              await new Promise(r => setTimeout(r, Math.round(base + jitter)));
             } else {
               setStatus("error");
             }
