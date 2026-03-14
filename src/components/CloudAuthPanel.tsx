@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { signInWithPassword, signUpWithPassword, signOut, supabase } from "../cloudSync";
 import { safeGetItem, safeSetItem } from "../utils/storage";
+import { safeUpdateUser } from "../utils/authThrottle";
 
 const API_KEY_STORAGE = "toranot-anthropic-key";
 const API_KEY_CLOUD_META = "anthropic_api_key";
@@ -11,7 +12,7 @@ async function syncApiKeyToCloud() {
   const localKey = safeGetItem(API_KEY_STORAGE);
   if (!localKey) return;
   try {
-    await supabase.auth.updateUser({ data: { [API_KEY_CLOUD_META]: localKey } });
+    await safeUpdateUser(supabase, { data: { [API_KEY_CLOUD_META]: localKey } });
   } catch { /* best effort */ }
 }
 

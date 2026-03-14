@@ -22,7 +22,7 @@ import type { ScanDiff } from "../engine/smartOCR";
 // Constants
 // -----------------------------
 const MAX_EVENTS = 300;
-const MAX_SHIFT_HISTORY = 30;
+const MAX_SHIFT_HISTORY = 20;
 
 // -----------------------------
 // State

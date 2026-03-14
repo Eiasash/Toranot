@@ -3,6 +3,7 @@ import { usePatientsState, usePatientsDispatch } from "../context/PatientsContex
 import { CloudAuthPanel } from "./CloudAuthPanel";
 import { supabase } from "../cloudSync";
 import { safeGetItem, safeSetItem, safeRemoveItem } from "../utils/storage";
+import { safeUpdateUser } from "../utils/authThrottle";
 import { ConfirmModal, type ConfirmDialog } from "../App";
 import { resetShiftTimer } from "./ShiftTimer";
 
@@ -405,7 +406,7 @@ function ApiKeyPanel() {
         safeSetItem(API_KEY_STORAGE, key);
         // Also push to cloud user metadata so it persists across logins/devices
         if (supabase) {
-          supabase.auth.updateUser({ data: { anthropic_api_key: key } }).catch(() => {});
+          safeUpdateUser(supabase, { data: { anthropic_api_key: key } });
         }
       } else {
         safeRemoveItem(API_KEY_STORAGE);

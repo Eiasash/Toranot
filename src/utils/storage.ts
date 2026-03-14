@@ -238,3 +238,109 @@ export function downloadShiftBackup(
   URL.revokeObjectURL(url);
 }
 
+
+// ─────────────────────────────────────────────────────────────────────
+// Quota-aware helpers with auto-recovery and write-disable circuit breaker
+//
+// MAX_PAYLOAD_BYTES: ~2MB safety ceiling. Payloads larger than this are
+// rejected before write to prevent the QuotaExceededError entirely.
+//
+// storageDisabled: set true after repeated quota failures to stop
+// further writes and log once. Resets on page reload. Reads still work.
+// ─────────────────────────────────────────────────────────────────────
+
+const MAX_PAYLOAD_BYTES = 2 * 1024 * 1024; // 2 MB
+let storageDisabled = false;
+
+/**
+ * Attempt to trim shift-history to recover quota, then retry the write.
+ * Returns true if recovery succeeded.
+ */
+function tryQuotaRecovery(key: string, value: string): boolean {
+  const SK_SHIFT_HISTORY = "toranot-shift-history";
+  try {
+    // Trim shift history to 10 entries (half of cap) to free space
+    const raw = localStorage.getItem(SK_SHIFT_HISTORY);
+    if (raw) {
+      const parsed: unknown = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 10) {
+        localStorage.setItem(SK_SHIFT_HISTORY, JSON.stringify(parsed.slice(0, 10)));
+      }
+    }
+    // Retry the original write
+    localStorage.setItem(key, value);
+    console.warn("[storage] Quota recovered by trimming shift history.");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Safe localStorage set with:
+ *   - 2MB payload size guard (rejects before attempting write)
+ *   - QuotaExceededError recovery (trims shift history and retries once)
+ *   - storageDisabled circuit breaker after repeated failures
+ *   - Never throws
+ */
+export function safeStorageSet(key: string, value: string): boolean {
+  if (storageDisabled) return false;
+
+  const byteSize = new Blob([value]).size;
+  if (byteSize > MAX_PAYLOAD_BYTES) {
+    console.warn(
+      `[storage] safeStorageSet: payload for "${key}" is ${Math.round(byteSize / 1024)}KB — exceeds 2MB limit, skipping write.`,
+    );
+    return false;
+  }
+
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (err) {
+    const isQuota =
+      err instanceof DOMException &&
+      (err.name === "QuotaExceededError" || err.name === "NS_ERROR_DOM_QUOTA_REACHED");
+
+    if (!isQuota) {
+      console.warn(`[storage] safeStorageSet: unexpected error for "${key}":`, err);
+      return false;
+    }
+
+    // Attempt quota recovery once
+    const recovered = tryQuotaRecovery(key, value);
+    if (recovered) return true;
+
+    // Recovery failed — disable further writes to prevent error spam
+    storageDisabled = true;
+    console.warn(
+      "[storage] localStorage quota exceeded and recovery failed — writes disabled for this session. " +
+        "Restart the app or clear old shift history to re-enable.",
+    );
+    return false;
+  }
+}
+
+/**
+ * Safe localStorage get.
+ * Returns null on any error (missing key, parse error, storage unavailable).
+ * Never throws.
+ */
+export function safeStorageGet(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch (err) {
+    console.warn(`[storage] safeStorageGet: error reading "${key}":`, err);
+    return null;
+  }
+}
+
+/** Returns whether localStorage writes are currently disabled (quota circuit breaker). */
+export function isStorageDisabled(): boolean {
+  return storageDisabled;
+}
+
+/** Reset the storage disabled flag (for testing only). */
+export function _resetStorageDisabledForTest(): void {
+  storageDisabled = false;
+}

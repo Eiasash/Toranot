@@ -134,7 +134,7 @@ describe("store hydration", () => {
     expect(usePatientsStore.getState().showTomorrow).toBe(true);
   });
 
-  it("loads events from localStorage (capped at 300)", async () => {
+  it("loads events from localStorage (capped at 200)", async () => {
     const events = Array.from({ length: 350 }, (_, i) => ({
       id: `e-${i}`, type: "ADMISSION" as const, at: new Date().toISOString(),
       patientId: "pt-1", patientName: "Test", room: "101",
@@ -144,14 +144,14 @@ describe("store hydration", () => {
     expect(usePatientsStore.getState().events).toHaveLength(300);
   });
 
-  it("loads shiftHistory from localStorage (capped at 30)", async () => {
+  it("loads shiftHistory from localStorage (capped at 20)", async () => {
     const history = Array.from({ length: 40 }, (_, i) => ({
       id: `s-${i}`, date: "2025-01-01", label: `Shift ${i}`,
       patients: [], archivedAt: new Date().toISOString(),
     }));
     storage.set("toranot-shift-history", JSON.stringify(history));
     const { usePatientsStore } = await freshStore();
-    expect(usePatientsStore.getState().shiftHistory).toHaveLength(30);
+    expect(usePatientsStore.getState().shiftHistory).toHaveLength(20);
   });
 
   it("returns empty patients on corrupted JSON", async () => {

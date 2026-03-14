@@ -231,3 +231,23 @@ the patient gets `UNKNOWN_SECTION`. The import gate blocks until resolved.
 - 36 unit tests for `normalizeWardText` covering every transformation
 - Output invariants: confidence always `0..1`, section always a valid enum value
 
+
+## Reliability Hardening (2026-03-14)
+
+### LocalStorage quota protection (`utils/storage.ts`)
+- `safeStorageSet` / `safeStorageGet` — typed wrappers with 2MB payload guard
+- `storageDisabled` circuit breaker: after an unrecoverable `QuotaExceededError`, further writes are silently skipped (no error spam). Resets on page reload.
+- Auto-recovery: on first quota error, trims `toranot-shift-history` to 10 entries and retries the write before disabling.
+
+### Shift history cap reduced to 20 (`reducer.ts`, `patientsStore.ts`)
+- `MAX_SHIFT_HISTORY` lowered from 30 → 20. Prevents localStorage from growing unbounded during long shifts.
+
+### Auth throttle (`utils/authThrottle.ts`)
+- `safeUpdateUser(client, data)` — wraps `supabase.auth.updateUser()` with a 60-second minimum interval.
+- Prevents 429 Too Many Requests from repeated API key sync calls. Wired into `CloudAuthPanel` and `OverflowMenu`.
+
+### Metered DB writes (`utils/syncWrite.ts`)
+- `syncWrite(fn: () => PromiseLike<T>)` — accepts Supabase query builders (thenables, not plain Promises).
+- Records latency and conflicts into `window.__toranotMetrics` on each actual DB round-trip.
+- Wired into `pushCloud()` so metrics reflect real writes, not debounce timer ticks.
+

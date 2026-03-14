@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Action } from "./context/reducer";
 import { safeSetItem } from "./utils/storage";
+import { syncWrite } from "./utils/syncWrite";
 import { mergeWard, patientToEnvelope, prunePatientForSync, patientPayloadBytes, type PatientEnvelope } from "./sync/patientMerge";
 import type { PatientEntry } from "./types";
 
@@ -288,10 +289,12 @@ async function pushCloud(state: ToranotCloudState): Promise<void> {
     updated_at: new Date().toISOString(),
   };
 
-  const { error } = await supabase
-    .from("toranot_state")
-    .upsert(payload, { onConflict: "user_id" });
-  if (error) throw error;
+  const { error } = await syncWrite(() =>
+    supabase!
+      .from("toranot_state")
+      .upsert(payload, { onConflict: "user_id" })
+  );
+  if (error) throw new Error(error.message);
 }
 
 // ════════════════════════════════════════════════════════════

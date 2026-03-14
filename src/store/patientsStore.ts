@@ -24,7 +24,7 @@ import {
   type ShiftSnapshot,
 } from "../context/reducer";
 import type { PatientEntry, Section, Task, WardEvent, LabEntry } from "../types";
-import { safeGetItem, safeSetItem } from "../utils/storage";
+import { safeGetItem, safeSetItem, safeStorageSet } from "../utils/storage";
 import type { ScanDiff } from "../engine/smartOCR";
 import { migratePatientPhotos } from "../persistence/photoStore";
 
@@ -36,7 +36,7 @@ const SK_SCAN_MODE       = "toranot-scan-mode";
 const SK_EVENTS          = "toranot-events";
 const SK_UNASSIGNED      = "toranot-unassigned-tasks";
 const SK_SHOW_TOMORROW   = "toranot-show-tomorrow";
-const MAX_SHIFT_HISTORY  = 30;
+const MAX_SHIFT_HISTORY  = 20;
 const MAX_EVENTS         = 300;
 
 // ─── Loaders (same logic as PatientsContext, kept in sync) ───────────────────
@@ -186,10 +186,11 @@ usePatientsStore.subscribe(
 usePatientsStore.subscribe(
   (s) => s.shiftHistory,
   (shiftHistory) => {
-    const r = safeSetItem(SK_SHIFT_HISTORY, JSON.stringify(shiftHistory));
-    if (!r.ok && shiftHistory.length > 0) {
+    const json = JSON.stringify(shiftHistory);
+    const ok = safeStorageSet(SK_SHIFT_HISTORY, json);
+    if (!ok && shiftHistory.length > 0) {
       window.dispatchEvent(new CustomEvent("toranot:storage-full", {
-        detail: { message: r.message, quotaExceeded: r.quotaExceeded }
+        detail: { message: "Shift history quota exceeded", quotaExceeded: true }
       }));
     }
   },
