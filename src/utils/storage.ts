@@ -26,9 +26,9 @@ export function safeSetItem(key: string, value: string): SetItemResult {
     localStorage.setItem(key, value);
     return { ok: true };
   } catch (err) {
-    const isQuota =
-      err instanceof DOMException &&
-      (err.name === "QuotaExceededError" || err.name === "NS_ERROR_DOM_QUOTA_REACHED");
+    // Duck-type check: avoid instanceof which fails across realms (jsdom, iframes)
+    const errName = err != null && typeof err === "object" && "name" in err ? (err as { name: string }).name : "";
+    const isQuota = errName === "QuotaExceededError" || errName === "NS_ERROR_DOM_QUOTA_REACHED";
     const message = isQuota
       ? `אחסון מקומי מלא — לא ניתן לשמור "${key}". פנה מקום בדיסק או מחק משמרות ישנות.`
       : `שגיאת אחסון בלתי צפויה עבור "${key}": ${String(err)}`;
@@ -298,9 +298,9 @@ export function safeStorageSet(key: string, value: string): boolean {
     localStorage.setItem(key, value);
     return true;
   } catch (err) {
-    const isQuota =
-      err instanceof DOMException &&
-      (err.name === "QuotaExceededError" || err.name === "NS_ERROR_DOM_QUOTA_REACHED");
+    // Duck-type check: avoid instanceof which fails across realms (jsdom, iframes)
+    const errName = err != null && typeof err === "object" && "name" in err ? (err as { name: string }).name : "";
+    const isQuota = errName === "QuotaExceededError" || errName === "NS_ERROR_DOM_QUOTA_REACHED";
 
     if (!isQuota) {
       console.warn(`[storage] safeStorageSet: unexpected error for "${key}":`, err);

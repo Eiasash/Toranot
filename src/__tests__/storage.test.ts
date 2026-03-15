@@ -188,11 +188,9 @@ describe("safeStorageSet", () => {
   });
 
   it("returns false and disables storage after unrecoverable quota error", () => {
-    // Force setItem to always throw QuotaExceededError
-    const origSetItem = localStorage.setItem.bind(localStorage);
-    const spy = vi.spyOn(localStorage, "setItem").mockImplementation(() => {
-      const err = new DOMException("quota exceeded", "QuotaExceededError");
-      throw err;
+    // Spy on Storage.prototype so the mock intercepts calls from source modules too
+    const spy = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("quota exceeded", "QuotaExceededError");
     });
 
     const ok = safeStorageSet("fail-key", "value");
@@ -200,15 +198,15 @@ describe("safeStorageSet", () => {
     expect(isStorageDisabled()).toBe(true);
 
     spy.mockRestore();
-    void origSetItem; // suppress unused warning
   });
 
   it("second write is silently skipped when storageDisabled is true", () => {
-    const spy = vi.spyOn(localStorage, "setItem").mockImplementationOnce(() => {
+    // All setItem calls must throw so recovery also fails and storageDisabled kicks in
+    const spy = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
       throw new DOMException("quota", "QuotaExceededError");
     });
 
-    safeStorageSet("k1", "v1"); // triggers disable
+    safeStorageSet("k1", "v1"); // triggers disable (recovery also fails)
     spy.mockRestore();
 
     // This second call must not throw even though storage is disabled
@@ -230,7 +228,7 @@ describe("safeStorageGet", () => {
   });
 
   it("returns null when localStorage.getItem throws", () => {
-    vi.spyOn(localStorage, "getItem").mockImplementationOnce(() => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementationOnce(() => {
       throw new Error("storage unavailable");
     });
     expect(safeStorageGet("any")).toBeNull();
@@ -276,14 +274,16 @@ describe("safeStorageSet quota recovery", () => {
     const bigHistory = Array.from({ length: 25 }, (_, i) => ({ label: `S${i}` }));
     localStorage.setItem("toranot-shift-history", JSON.stringify(bigHistory));
 
-    // First setItem call throws quota, recovery trims history, second succeeds
+    // First setItem call throws quota, recovery calls go through to real localStorage
+    const origSetItem = Storage.prototype.setItem.bind(localStorage);
     let callCount = 0;
-    const spy = vi.spyOn(localStorage, "setItem").mockImplementation((_key: string, _value: string) => {
+    const spy = vi.spyOn(Storage.prototype, "setItem").mockImplementation(function(this: Storage, key: string, value: string) {
       callCount++;
       if (callCount === 1) {
         throw new DOMException("quota", "QuotaExceededError");
       }
-      // Recovery succeeded — second call is the retry, let it through
+      // Recovery calls — pass through to real localStorage
+      origSetItem(key, value);
     });
 
     // Use a small payload so the 2MB guard doesn't block
