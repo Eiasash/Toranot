@@ -99,7 +99,7 @@ if (typeof window !== "undefined") {
     rate: () => getConflictRate(),
     /** Average retries per write — healthy <0.2, bad >1 */
     depth: () => _metrics.writes === 0 ? 0 : _metrics.retriesTotal / _metrics.writes,
-    /** Average push latency ms — healthy <300ms */
+    /** Average push latency ms — healthy <800ms (cross-continental mobile) */
     latency: () => _metrics.writes === 0 ? 0 : Math.round(_metrics.totalSyncLatencyMs / _metrics.writes),
     reset: () => resetSyncMetrics(),
     /** Average patient payload size in KB */
@@ -128,7 +128,7 @@ function startMetricsLogging(): void {
       console.warn(`[Toranot sync] ⚠️ High contention — ${summary}. Check for concurrent editors or extend push debounce.`);
     } else if (rate > 0.05) {
       console.info(`[Toranot sync] Elevated contention — ${summary}`);
-    } else if (latencyMs > 300) {
+    } else if (latencyMs > 800) {
       console.warn(`[Toranot sync] High push latency — ${summary}`);
     } else {
       console.debug(`[Toranot sync] Healthy — ${summary}`);
