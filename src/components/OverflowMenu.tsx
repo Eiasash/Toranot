@@ -132,6 +132,22 @@ export function OverflowMenu({ onOpenModal }: { onOpenModal: (m: OverflowModal) 
   }, []);
 
   const [shareCopied, setShareCopied] = useState(false);
+  const [restoreState, setRestoreState] = useState<"idle" | "done" | "none">("idle");
+
+  const handleRestoreBackup = useCallback(() => {
+    setOpen(false);
+    try {
+      const raw = safeGetItem("toranot-patients-backup");
+      if (!raw) { setRestoreState("none"); setTimeout(() => setRestoreState("idle"), 3000); return; }
+      const parsed = JSON.parse(raw) as { ts: string; patients: unknown[] };
+      if (!Array.isArray(parsed.patients) || parsed.patients.length === 0) {
+        setRestoreState("none"); setTimeout(() => setRestoreState("idle"), 3000); return;
+      }
+      dispatch({ type: "IMPORT_BACKUP", patients: parsed.patients as import("../types").PatientEntry[] });
+      setRestoreState("done");
+      setTimeout(() => setRestoreState("idle"), 3000);
+    } catch { setRestoreState("none"); setTimeout(() => setRestoreState("idle"), 3000); }
+  }, [dispatch]);
 
   const handleShareClick = () => {
     setOpen(false);
@@ -354,6 +370,15 @@ export function OverflowMenu({ onOpenModal }: { onOpenModal: (m: OverflowModal) 
                   מחק הכל
                 </button>
               )}
+
+              {/* Restore from backup */}
+              <button
+                onClick={handleRestoreBackup}
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-emerald-300 active:bg-emerald-900/30 border-t border-slate-700 text-right"
+              >
+                <span className="text-base">♻️</span>
+                {restoreState === "done" ? "✅ שוחזר בהצלחה" : restoreState === "none" ? "❌ אין גיבוי" : "שחזר מגיבוי"}
+              </button>
 
               {/* API key + Cloud auth */}
               <ApiKeyPanel />

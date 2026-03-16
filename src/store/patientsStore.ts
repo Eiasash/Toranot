@@ -31,6 +31,7 @@ import { migratePatientPhotos } from "../persistence/photoStore";
 
 // ─── Storage keys (duplicated here so store is self-contained) ────────────────
 const SK_PATIENTS        = "toranot-patients";
+const SK_PATIENTS_BACKUP = "toranot-patients-backup"; // shadow copy — never wiped by CLEAR_ALL
 const SK_SHIFT_HISTORY   = "toranot-shift-history";
 const SK_DARK_MODE       = "toranot-dark";
 const SK_SCAN_MODE       = "toranot-scan-mode";
@@ -187,6 +188,10 @@ usePatientsStore.subscribe(
       window.dispatchEvent(new CustomEvent("toranot:storage-full", {
         detail: { message: r.message, quotaExceeded: r.quotaExceeded }
       }));
+    }
+    // Shadow backup — only overwrite when list is non-empty so CLEAR_ALL never kills it
+    if (patients.length > 0) {
+      safeSetItem(SK_PATIENTS_BACKUP, JSON.stringify({ ts: new Date().toISOString(), patients }));
     }
   },
 );
