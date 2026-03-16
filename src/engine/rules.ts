@@ -97,6 +97,8 @@ const COMFORT_SUPPRESSED_GROUPS = new Set([
   // Symptom-driven procedures: appropriate only on explicit order
   // retention: uses comfortRequiresExplicitTask instead of full suppression
   // bs: uses comfortRequiresExplicitTask instead of full suppression
+  "doac_bleeding",       // aggressive reversal (Andexanet, PCC, neurosurgery) — not comfort-appropriate
+  "hemoptysis",          // CTPA, bronchoscopy, ICU — not comfort-appropriate
   "cdiff",               // isolation + Vanco — hint advises
   // Delirium: NOT suppressed. Terminal agitation is core comfort care — all antipsychotic tasks allowed.
   // Withdrawal: CIWA scoring + benzo ladder are curative, not comfort
