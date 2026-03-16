@@ -223,7 +223,11 @@ async function callAIAPI(
       const data = await response.json().catch(() => ({})) as { error?: string };
       if (response.status === 500) throw new Error("מפתח Gemini לא מוגדר בשרת — פנה למנהל.");
       if (response.status === 429) throw new Error("חריגה ממגבלת Gemini. נסה שוב בעוד דקה.");
-      throw new Error(data?.error ?? `שגיאת Gemini: ${response.status}`);
+      const errMsg = typeof data?.error === "string" ? data.error
+        : typeof (data?.error as { message?: string })?.message === "string" ? (data.error as { message?: string }).message!
+        : data?.error ? JSON.stringify(data.error)
+        : `שגיאת Gemini: ${response.status}`;
+      throw new Error(errMsg);
     }
     const data = await response.json() as {
       candidates?: { content?: { parts?: { text?: string }[] } }[];
@@ -359,7 +363,7 @@ export function AIClinicalReasoning({ patient, onClose }: AIClinicalReasoningPro
       setResponse(result.replace(/^[.,;:\s*]+/, "").trim());
     } catch (err: unknown) {
       if ((err as Error).name === "AbortError") return;
-      const msg = (err as Error).message || "";
+      const msg = err instanceof Error ? err.message : typeof err === "string" ? err : JSON.stringify(err);
       if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("fetch")) {
         setError("אין חיבור לשרת. בדוק חיבור אינטרנט או נסה שוב.");
       } else if (msg.includes("timeout") || msg.includes("Timeout")) {
