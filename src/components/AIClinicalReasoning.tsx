@@ -220,13 +220,15 @@ async function callAIAPI(
       signal,
     });
     if (!response.ok) {
-      const data = await response.json().catch(() => ({})) as { error?: string };
+      const data = await response.json().catch(() => ({})) as { error?: unknown };
       if (response.status === 500) throw new Error("מפתח Gemini לא מוגדר בשרת — פנה למנהל.");
       if (response.status === 429) throw new Error("חריגה ממגבלת Gemini. נסה שוב בעוד דקה.");
-      const errMsg = typeof data?.error === "string" ? data.error
-        : typeof (data?.error as { message?: string })?.message === "string" ? (data.error as { message?: string }).message!
-        : data?.error ? JSON.stringify(data.error)
-        : `שגיאת Gemini: ${response.status}`;
+      const errRaw = data?.error;
+      const errMsg = typeof errRaw === "string" ? errRaw
+        : errRaw && typeof errRaw === "object" && "message" in errRaw && typeof (errRaw as Record<string, unknown>).message === "string"
+          ? String((errRaw as Record<string, unknown>).message)
+          : errRaw ? JSON.stringify(errRaw)
+          : `שגיאת Gemini: ${response.status}`;
       throw new Error(errMsg);
     }
     const data = await response.json() as {
