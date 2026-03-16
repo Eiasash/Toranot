@@ -25,13 +25,14 @@ interface Props {
 // "א-92 לוי שרה 75 CHF"  (short form of א-2092)
 // "70 אברהם דוד 80 UTI"  (short form of 2070)
 // Legacy: "49/2 כהן יוסף 82 pneumonia DNR"
-function parseFreestyle(text: string): Partial<{
+export function parseFreestyle(text: string): Partial<{
   room: string;
   bed: number;
   name: string;
   age: number;
   diagnosis: string;
   status: string;
+  side: "A" | "B" | "C";
 }> {
   const result: ReturnType<typeof parseFreestyle> = {};
   let remaining = text.trim();
@@ -44,42 +45,62 @@ function parseFreestyle(text: string): Partial<{
     remaining = remaining.replace(statusMatch[0], " ");
   }
 
+  // Extract section BEFORE room — "צד א/ב/ג"
+  // Must come first so "ב" in "צד ב" doesn't confuse Hebrew-letter room prefix regex
+  const sectionMatch = remaining.match(/צד\s+([אבג])/);
+  if (sectionMatch) {
+    result.side = sectionMatch[1] === "א" ? "A" : sectionMatch[1] === "ב" ? "B" : "C";
+    remaining = remaining.replace(sectionMatch[0], " ");
+  }
+
   // Extract room — try formats in order of specificity:
-  // 1. Hebrew-letter prefix: "א-92", "א 92", "א-2092"
-  const prefixMatch = remaining.match(/([א-ת])[-\s](\d{1,4})(?=\s|$)/);
-  if (prefixMatch) {
-    result.room = `${prefixMatch[1]}-${prefixMatch[2]}`;
-    remaining = remaining.replace(prefixMatch[0], " ");
-  } else {
-    // 2. Number with Hebrew-letter suffix: "2095-א", "2095א"
-    const suffixMatch = remaining.match(/(\d{1,4})[-]?([א-ת])(?=\s|$)/);
-    if (suffixMatch) {
-      result.room = `${suffixMatch[1]}-${suffixMatch[2]}`;
-      remaining = remaining.replace(suffixMatch[0], " ");
+  // 0. Explicit "חדר" keyword: "חדר 2114", "חדר2114"
+  //    MUST come before Hebrew-letter prefix match — otherwise "ר" (end of חדר) + space + digits
+  //    is mistakenly captured as a letter-prefix room (e.g. "ר-2114").
+  const hedarMatch = remaining.match(/חדר\s*(\d{1,4})(?=\s|$)/);
+  if (hedarMatch) {
+    result.room = hedarMatch[1];
+    remaining = remaining.replace(hedarMatch[0], " ");
+  }
+
+  if (!result.room) {
+    // 1. Hebrew-letter prefix: "א-92", "ב-10", "ג-15"
+    //    MUST use hyphen separator only — space is too ambiguous (matches letters inside words)
+    const prefixMatch = remaining.match(/([א-ת])-(\d{1,4})(?=\s|$)/);
+    if (prefixMatch) {
+      result.room = `${prefixMatch[1]}-${prefixMatch[2]}`;
+      remaining = remaining.replace(prefixMatch[0], " ");
     } else {
-      // 3. Plain 4-digit room: "2088"
-      const fourDigit = remaining.match(/(?:חדר\s*)?(\d{4})(?=\s|$)/);
-      if (fourDigit) {
-        result.room = fourDigit[1];
-        remaining = remaining.replace(fourDigit[0], " ");
+      // 2. Number with Hebrew-letter suffix: "2095-א", "2095א"
+      const suffixMatch = remaining.match(/(\d{1,4})[-]?([א-ת])(?=\s|$)/);
+      if (suffixMatch) {
+        result.room = `${suffixMatch[1]}-${suffixMatch[2]}`;
+        remaining = remaining.replace(suffixMatch[0], " ");
       } else {
-        // 4. Legacy room/bed: "49/2", "49-2"
-        const roomBedMatch = remaining.match(/(?:חדר\s*)?(\d{2,3})\s*[\/\-]\s*(\d)/);
-        if (roomBedMatch) {
-          result.room = roomBedMatch[1];
-          result.bed = parseInt(roomBedMatch[2]);
-          remaining = remaining.replace(roomBedMatch[0], " ");
+        // 3. Plain 4-digit room: "2088"
+        const fourDigit = remaining.match(/(\d{4})(?=\s|$)/);
+        if (fourDigit) {
+          result.room = fourDigit[1];
+          remaining = remaining.replace(fourDigit[0], " ");
         } else {
-          // 5. Plain 2-3 digit room or חדר prefix: "70", "117", "חדר 70"
-          const roomOnlyMatch = remaining.match(/(?:חדר\s+)?(\d{2,3})(?=\s|$)/);
-          if (roomOnlyMatch) {
-            result.room = roomOnlyMatch[1];
-            remaining = remaining.replace(roomOnlyMatch[0], " ");
-          }
-          const bedMatch = remaining.match(/(?:מיטה\s+)(\d)/);
-          if (bedMatch) {
-            result.bed = parseInt(bedMatch[1]);
-            remaining = remaining.replace(bedMatch[0], " ");
+          // 4. Legacy room/bed: "49/2", "49-2"
+          const roomBedMatch = remaining.match(/(\d{2,3})\s*[\/\-]\s*(\d)/);
+          if (roomBedMatch) {
+            result.room = roomBedMatch[1];
+            result.bed = parseInt(roomBedMatch[2]);
+            remaining = remaining.replace(roomBedMatch[0], " ");
+          } else {
+            // 5. Plain 2-3 digit room or חדר prefix: "70", "117", "חדר 70"
+            const roomOnlyMatch = remaining.match(/(?:חדר\s+)?(\d{2,3})(?=\s|$)/);
+            if (roomOnlyMatch) {
+              result.room = roomOnlyMatch[1];
+              remaining = remaining.replace(roomOnlyMatch[0], " ");
+            }
+            const bedMatch = remaining.match(/(?:מיטה\s+)(\d)/);
+            if (bedMatch) {
+              result.bed = parseInt(bedMatch[1]);
+              remaining = remaining.replace(bedMatch[0], " ");
+            }
           }
         }
       }
@@ -424,6 +445,7 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
     if (p.age) setAge(String(p.age));
     if (p.diagnosis) setDiagnosis(p.diagnosis);
     if (p.status) setStatus(p.status as typeof status);
+    if (p.side) setSide(p.side);
     setParsed(true);
     setShowStructured(true);
   }, [freestyle]);
