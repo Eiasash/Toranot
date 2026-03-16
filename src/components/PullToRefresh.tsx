@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 
 const PULL_THRESHOLD = 70; // px to trigger refresh
 
@@ -14,69 +14,100 @@ export function PullToRefresh({
   const touchStartY = useRef(0);
   const isPulling = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  // Track pullY in ref to avoid setState on every frame
+  const pullYRef = useRef(0);
+  const rafRef = useRef<number | null>(null);
 
-  const onTouchStart = useCallback((e: React.TouchEvent) => {
-    // Only start pull if we're scrolled to the top
-    const el = containerRef.current;
-    if (!el || el.scrollTop > 0) return;
-    touchStartY.current = e.touches[0].clientY;
-    isPulling.current = false;
+  // Detect actual scroll container (body or documentElement)
+  const getScrollTop = useCallback(() => {
+    return window.scrollY || document.documentElement.scrollTop || document.body.scrollTop;
   }, []);
 
-  const onTouchMove = useCallback((e: React.TouchEvent) => {
+  useEffect(() => {
     const el = containerRef.current;
-    if (!el || el.scrollTop > 0 || refreshing) return;
+    if (!el) return;
 
-    const dy = e.touches[0].clientY - touchStartY.current;
-    if (dy < 0) return; // scrolling up
+    const handleTouchStart = (e: TouchEvent) => {
+      if (getScrollTop() > 2) return; // only at top
+      touchStartY.current = e.touches[0].clientY;
+      isPulling.current = false;
+    };
 
-    if (!isPulling.current && dy > 10) {
-      isPulling.current = true;
-    }
+    // passive: false ONLY when we might preventDefault (pulling down from top)
+    const handleTouchMove = (e: TouchEvent) => {
+      if (getScrollTop() > 2 || refreshing) return;
 
-    if (isPulling.current) {
-      // Diminishing returns as you pull further
-      setPullY(Math.min(dy * 0.5, 100));
-      if (dy > 20) e.preventDefault();
-    }
-  }, [refreshing]);
+      const dy = e.touches[0].clientY - touchStartY.current;
+      if (dy <= 0) return; // scrolling up — no interference
 
-  const onTouchEnd = useCallback(() => {
-    if (pullY >= PULL_THRESHOLD && !refreshing) {
-      setRefreshing(true);
-      onRefresh();
-      // Reset after a brief visual delay
-      setTimeout(() => {
-        setRefreshing(false);
+      if (!isPulling.current && dy > 10) {
+        isPulling.current = true;
+      }
+
+      if (isPulling.current) {
+        e.preventDefault(); // block native scroll only when pulling
+        const newPullY = Math.min(dy * 0.5, 100);
+        pullYRef.current = newPullY;
+
+        // Batch state updates via RAF — one setState per frame max
+        if (rafRef.current === null) {
+          rafRef.current = requestAnimationFrame(() => {
+            setPullY(pullYRef.current);
+            rafRef.current = null;
+          });
+        }
+      }
+    };
+
+    const handleTouchEnd = () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      if (pullYRef.current >= PULL_THRESHOLD && !refreshing) {
+        setRefreshing(true);
+        onRefresh();
+        setTimeout(() => {
+          setRefreshing(false);
+          setPullY(0);
+          pullYRef.current = 0;
+        }, 600);
+      } else {
         setPullY(0);
-      }, 600);
-    } else {
-      setPullY(0);
-    }
-    isPulling.current = false;
-  }, [pullY, refreshing, onRefresh]);
+        pullYRef.current = 0;
+      }
+      isPulling.current = false;
+    };
+
+    // passive: true for start/end (no preventDefault needed)
+    // passive: false for move (might preventDefault when pulling)
+    el.addEventListener("touchstart", handleTouchStart, { passive: true });
+    el.addEventListener("touchmove", handleTouchMove, { passive: false });
+    el.addEventListener("touchend", handleTouchEnd, { passive: true });
+
+    return () => {
+      el.removeEventListener("touchstart", handleTouchStart);
+      el.removeEventListener("touchmove", handleTouchMove);
+      el.removeEventListener("touchend", handleTouchEnd);
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+  }, [onRefresh, refreshing, getScrollTop]);
 
   const progress = Math.min(pullY / PULL_THRESHOLD, 1);
 
   return (
-    <div
-      ref={containerRef}
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-      className="relative"
-    >
+    <div ref={containerRef} className="relative">
       {/* Pull indicator */}
       {(pullY > 0 || refreshing) && (
         <div
           className="flex items-center justify-center text-gray-400 dark:text-gray-500 overflow-hidden"
-          style={{ height: `${pullY}px`, transition: pullY === 0 ? 'height 0.2s' : undefined }}
+          style={{ height: `${pullY}px`, transition: pullY === 0 ? "height 0.2s" : undefined }}
         >
           <div
-            className={`text-xl ${refreshing ? 'animate-spin' : ''}`}
+            className={`text-xl ${refreshing ? "animate-spin" : ""}`}
             style={{ opacity: progress, transform: `rotate(${progress * 360}deg)` }}
           >
-            {refreshing ? '⟳' : progress >= 1 ? '↓' : '↻'}
+            {refreshing ? "⟳" : progress >= 1 ? "↓" : "↻"}
           </div>
         </div>
       )}
