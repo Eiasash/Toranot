@@ -27,7 +27,7 @@ export interface DrugInteraction {
 const DRUG_PATTERNS: Record<string, RegExp> = {
   // QT-prolonging
   amiodarone: /amiodarone|אמיודרון|cordarone|קורדרון/i,
-  ciprofloxacin: /ciprofloxacin|ציפרופלוקסצין|cipro|ציפרו/i,
+  ciprofloxacin: /ciprofloxacin|ציפרופלוקסצין|cipro(?!lex)|ציפרו/i,
   levofloxacin: /levofloxacin|לבופלוקסצין|levaquin/i,
   azithromycin: /azithromycin|אזיתרומיצין|zithromax/i,
   haloperidol: /haloperidol|הלופרידול|haldol|האלדול/i,
@@ -37,7 +37,7 @@ const DRUG_PATTERNS: Record<string, RegExp> = {
   // Bleeding risk
   warfarin: /warfarin|וורפרין|coumadin|קומדין/i,
   enoxaparin: /enoxaparin|אנוקספרין|clexane|קלקסן/i,
-  heparin: /heparin|הפרין/i,
+  heparin: /\bheparin\b|הפרין/i,
   apixaban: /apixaban|אפיקסבן|eliquis|אליקוויס/i,
   rivaroxaban: /rivaroxaban|ריברוקסבן|xarelto/i,
   aspirin: /aspirin|אספירין|cardioaspirin|קרדיואספירין/i,

@@ -24,6 +24,7 @@ import {
   type ShiftSnapshot,
 } from "../context/reducer";
 import type { PatientEntry, Section, Task, WardEvent, LabEntry } from "../types";
+import { SECTIONS } from "../types";
 import { safeGetItem, safeSetItem, safeStorageSet } from "../utils/storage";
 import type { ScanDiff } from "../engine/smartOCR";
 import { migratePatientPhotos } from "../persistence/photoStore";
@@ -36,6 +37,7 @@ const SK_SCAN_MODE       = "toranot-scan-mode";
 const SK_EVENTS          = "toranot-events";
 const SK_UNASSIGNED      = "toranot-unassigned-tasks";
 const SK_SHOW_TOMORROW   = "toranot-show-tomorrow";
+const SK_ACTIVE_SECTION  = "toranot-active-section";
 const MAX_SHIFT_HISTORY  = 20;
 const MAX_EVENTS         = 300;
 
@@ -72,6 +74,12 @@ function loadScanMode(): boolean {
 
 function loadShowTomorrow(): boolean {
   return safeGetItem(SK_SHOW_TOMORROW) === "true";
+}
+
+function loadActiveSection(): Section {
+  const saved = safeGetItem(SK_ACTIVE_SECTION);
+  if (saved && (SECTIONS as readonly string[]).includes(saved)) return saved as Section;
+  return "ALL";
 }
 
 function loadEvents(): WardEvent[] {
@@ -111,7 +119,7 @@ export interface PatientsStoreState {
 export const usePatientsStore = create<PatientsStoreState>()(
   subscribeWithSelector((set) => ({
     patients:        loadSavedPatients(),
-    activeSection:   "ALL" as Section,
+    activeSection:   loadActiveSection(),
     showTomorrow:    loadShowTomorrow(),
     darkMode:        loadDarkMode(),
     shiftHistory:    loadShiftHistory(),
@@ -212,6 +220,11 @@ usePatientsStore.subscribe(
 usePatientsStore.subscribe(
   (s) => s.showTomorrow,
   (v) => safeSetItem(SK_SHOW_TOMORROW, v ? "true" : "false"),
+);
+
+usePatientsStore.subscribe(
+  (s) => s.activeSection,
+  (section) => safeSetItem(SK_ACTIVE_SECTION, section),
 );
 
 usePatientsStore.subscribe(

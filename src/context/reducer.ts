@@ -589,14 +589,12 @@ function innerReducer(state: PatientsState, action: Action): PatientsState {
             return { ...nt, done: existing.done, doneTime: existing.doneTime, note: existing.note ?? null };
           }).filter(nt => {
             const existing = existingByText.get(nt.text.trim().toLowerCase());
-            return !(existing as (typeof existing & { dismissed?: boolean }) | undefined)?.dismissed;
+            return !existing?.dismissed;
           });
           // Re-include dismissed tasks (with dismissed:true) so subsequent REAPPLY_RULES
           // still has them in existingByText. Without this, dismissed tasks re-appear
           // after the second REAPPLY_RULES call because the first call dropped them.
-          const dismissedStubs = p.generatedTasks.filter(t =>
-            (t as typeof t & { dismissed?: boolean }).dismissed
-          );
+          const dismissedStubs = p.generatedTasks.filter(t => t.dismissed);
           return { ...p, generatedTasks: [...merged, ...dismissedStubs] };
         }),
       };
@@ -714,11 +712,20 @@ function innerReducer(state: PatientsState, action: Action): PatientsState {
       // better suited for morning staff review. The user can manually trigger
       // REAPPLY_RULES from the patient card if they want generated tasks.
       const admitted = { ...admittedBase, isAdmission: true };
-      if (
-        admitted.room &&
-        bedOccupiedBy(state.patients, admitted.room, admitted.section, admitted.id)
-      ) {
-        return state; // bed occupied — reject
+      const admitOccupantId = admitted.room
+        ? bedOccupiedBy(state.patients, admitted.room, admitted.section, admitted.id)
+        : null;
+      if (admitOccupantId) {
+        const admitOccupant = state.patients.find((p) => p.id === admitOccupantId);
+        const conflictEvent: WardEvent = {
+          id: generateId("ev-"),
+          type: "BED_CONFLICT",
+          at: new Date().toISOString(),
+          patientId: admitted.id,
+          patientName: admitted.name,
+          text: `מיטה ${admitted.room} תפוסה ע״י ${admitOccupant?.name ?? "חולה אחר"}`,
+        };
+        return { ...state, events: [conflictEvent, ...state.events].slice(0, MAX_EVENTS) };
       }
       const event: WardEvent = {
         id: generateId("ev-"),
@@ -850,20 +857,21 @@ function innerReducer(state: PatientsState, action: Action): PatientsState {
 const REVISION_EXEMPT_ACTIONS = new Set([
   "IMPORT_CLOUD_STATE",
   "IMPORT_TEXT",
-  "RESCAN_TEXT",
-  "MERGE_SCAN",
   "RESTORE_SHIFT",
   "SET_SECTION",
   "ARCHIVE_SHIFT",
   "SYNC_SHIFT_HISTORY",
   "SYNC_PATIENTS",
   "LOG_EVENT",
-  "SET_SCAN_MODE",
-  "SET_DARK_MODE",
-  "SET_SHOW_TOMORROW",
+  "TOGGLE_SCAN_MODE",
+  "TOGGLE_DARK_MODE",
+  "TOGGLE_SHOW_TOMORROW",
   "ADD_UNASSIGNED_TASK",
-  "REMOVE_UNASSIGNED_TASK",
   "TOGGLE_UNASSIGNED_TASK",
+  "MERGE_PATIENTS_FROM_REMOTE",
+  "DISMISS_SCAN_DIFF",
+  "DELETE_SHIFT",
+  "CLEAR_ALL",
 ]);
 
 export function reducer(state: PatientsState, action: Action): PatientsState {

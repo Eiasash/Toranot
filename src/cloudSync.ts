@@ -210,25 +210,21 @@ async function getUserId(): Promise<string | null> {
 
 /**
  * Returns auth headers for proxy calls.
- * Priority: Supabase JWT > VITE_API_SECRET shared secret > null.
+ * Uses Supabase JWT exclusively — API_SECRET is server-side only.
  */
 export async function getProxyAuthHeaders(): Promise<Record<string, string> | null> {
   if (supabase) {
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.access_token) return { "Authorization": `Bearer ${session.access_token}` };
   }
-  // Fallback: shared secret (set as VITE_API_SECRET in Netlify env vars)
-  const apiSecret = import.meta.env.VITE_API_SECRET as string | undefined;
-  if (apiSecret) return { "x-api-secret": apiSecret };
   return null;
 }
 
 /**
  * Async proxy availability check.
- * Returns true when user is logged in OR a shared API secret is configured.
+ * Returns true when user is logged in with a valid Supabase session.
  */
 export async function isProxyAvailableAsync(): Promise<boolean> {
-  if (import.meta.env.VITE_API_SECRET) return true;
   if (!supabase) return false;
   const { data: { session } } = await supabase.auth.getSession();
   return !!session?.access_token;

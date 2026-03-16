@@ -23,7 +23,7 @@ vi.mock("@supabase/supabase-js", () => ({
 
 vi.stubEnv("VITE_SUPABASE_URL", "https://fake.supabase.co");
 vi.stubEnv("VITE_SUPABASE_ANON_KEY", "anon-key");
-vi.stubEnv("VITE_API_SECRET", "");
+// VITE_API_SECRET removed — auth is Supabase JWT only (server-side API_SECRET stays in Netlify env)
 
 // ─── Module imports (dynamic to run after mocks are in place) ─────────────────
 
