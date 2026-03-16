@@ -33,7 +33,7 @@ export function SectionTabs() {
                 border-b-2 transition-colors
                 ${isActive
                   ? "border-blue-600 text-blue-700 dark:text-blue-400"
-                  : "border-transparent text-gray-500 active:bg-gray-50 dark:active:bg-gray-800"
+                  : "border-transparent text-gray-500 dark:text-gray-400 active:bg-gray-50 dark:active:bg-gray-800"
                 }
               `}
             >

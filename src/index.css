@@ -27,6 +27,8 @@ html.dark {
 body {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   direction: rtl;
+  background-color: #ffffff;
+  color: #111827; /* gray-900 — explicit so dark mode override is clean */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

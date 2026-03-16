@@ -9,10 +9,12 @@ const DIRECT_API_URL = "https://api.anthropic.com/v1/messages";
 import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
 import { generateId } from "../utils/id";
 
-const SIDE_TO_SECTION: Record<"A" | "B" | "C", PatientSection> = {
+const SIDE_TO_SECTION: Record<"A" | "B" | "C" | "REHAB" | "UNKNOWN", PatientSection> = {
   A: "SIDE_A",
   B: "SIDE_B",
   C: "SIDE_C",
+  REHAB: "REHAB",
+  UNKNOWN: "UNKNOWN_SECTION",
 };
 
 interface Props {
@@ -379,7 +381,7 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
 
   const [freestyle, setFreestyle] = useState("");
   const [showStructured, setShowStructured] = useState(false);
-  const [side, setSide] = useState<"A" | "B" | "C">("A");
+  const [side, setSide] = useState<"A" | "B" | "C" | "REHAB" | "UNKNOWN">("A");
   const [room, setRoom] = useState("");
   const [bed, setBed] = useState<1 | 2 | 3>(1);
   const [name, setName] = useState("");
@@ -515,6 +517,8 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
   const isStandaloneRoom = !room.trim().includes("/");
 
   function isDuplicateBed(): boolean {
+    // UNKNOWN_SECTION: no duplicate check (multiple unknowns are expected)
+    if (side === "UNKNOWN") return false;
     const section = SIDE_TO_SECTION[side];
     const roomStr = isStandaloneRoom ? room.trim() : `${room.trim()}/${bed}`;
     return patients.some((p: PatientEntry) => p.section === section && p.room === roomStr);
@@ -528,7 +532,8 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
     }
 
     if (isDuplicateBed()) {
-      const sideLabel = side === "A" ? "א" : side === "B" ? "ב" : "ג";
+      const sideLabelMap: Record<string, string> = { A: "א", B: "ב", C: "ג", REHAB: "שיקום", UNKNOWN: "לא ידוע" };
+      const sideLabel = sideLabelMap[side] ?? side;
       const roomLabel = isStandaloneRoom ? room.trim() : `מיטה ${bed} בחדר ${room}`;
       setError(`${roomLabel} (צד ${sideLabel}) כבר תפוס/ה`);
       return;
@@ -716,10 +721,12 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
             <div className="flex gap-2">
               <div className="flex-1">
                 <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">צד *</label>
-                <select value={side} onChange={(e) => setSide(e.target.value as "A" | "B" | "C")} className={inputCls}>
+                <select value={side} onChange={(e) => setSide(e.target.value as "A" | "B" | "C" | "REHAB" | "UNKNOWN")} className={inputCls}>
                   <option value="A">צד א</option>
                   <option value="B">צד ב</option>
                   <option value="C">צד ג</option>
+                  <option value="REHAB">שיקום</option>
+                  <option value="UNKNOWN">לא ידוע</option>
                 </select>
               </div>
               <div className="flex-1">
