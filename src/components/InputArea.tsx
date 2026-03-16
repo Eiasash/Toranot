@@ -1,8 +1,9 @@
 import { useState, lazy, Suspense } from "react";
-import { usePatientsDispatch } from "../context/PatientsContext";
+import { usePatientsDispatch, usePatientsState } from "../context/PatientsContext";
 import { ParsePreview } from "./ParsePreview";
 import { parsePatientList } from "../parser/parsePatientList";
 import { InlineErrorBoundary } from "./InlineErrorBoundary";
+import type { PatientSection } from "../types";
 // Lazy — Scanner pulls in camera API code; AddAdmissionModal pulls in AI extraction
 const Scanner = lazy(() => import("./Scanner").then(m => ({ default: m.Scanner })));
 const AddAdmissionModal = lazy(() => import("./AddAdmissionModal").then(m => ({ default: m.AddAdmissionModal })));
@@ -27,6 +28,12 @@ export function InputArea() {
   const [preview, setPreview] = useState<{ text: string; patients: PatientEntry[] } | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
   const dispatch = usePatientsDispatch();
+  const { activeSection } = usePatientsState();
+  // Map activeSection to a Scanner sectionHint (only real patient sections)
+  const PATIENT_SECTIONS = new Set(["SIDE_A", "SIDE_B", "SIDE_C", "REHAB", "MONITOR"]);
+  const sectionHint = PATIENT_SECTIONS.has(activeSection)
+    ? activeSection as Exclude<PatientSection, "UNKNOWN_SECTION" | "ALL">
+    : undefined;
 
   /** Parse text → show preview instead of committing immediately */
   function triggerPreview(importText?: string) {
@@ -143,6 +150,7 @@ export function InputArea() {
         <Scanner
           onTextExtracted={(t) => triggerPreview(t)}
           onCancel={() => setMode("choose")}
+          sectionHint={sectionHint}
         />
       </Suspense>
         </InlineErrorBoundary>
