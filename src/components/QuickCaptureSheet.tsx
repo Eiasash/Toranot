@@ -20,9 +20,18 @@ function detectUrgency(text: string): Urgency {
   return "routine";
 }
 
-// Try to extract room from "52/1" "52-1" "חדר 52" "חד' 52" patterns
+// Try to extract room from "70" "א-92" "2088" "52/1" "52-1" "חדר 52" "חד' 52" patterns
 function extractRoom(text: string): string | null {
-  // Prefer keeping bed when present, to avoid ambiguous matches.
+  // Try Hebrew-letter prefix: "א-92", "א 92"
+  const prefixMatch = text.match(/([א-ת])[-\s](\d{1,4})(?=\s|$)/);
+  if (prefixMatch) return `${prefixMatch[1]}-${prefixMatch[2]}`;
+  // Try number with Hebrew suffix: "2095-א", "92א"
+  const suffixMatch = text.match(/(\d{1,4})[-]?([א-ת])(?=\s|$)/);
+  if (suffixMatch) return `${suffixMatch[1]}-${suffixMatch[2]}`;
+  // Try 4-digit plain room: "2088"
+  const fourDigit = text.match(/\b(\d{4})\b/);
+  if (fourDigit) return fourDigit[1];
+  // Legacy: room/bed format "52/1"
   const m = text.match(
     /(?:חד[ר']?\s*'?(\d{2,3})(?:\s*[\/\-]\s*(\d))?|\b(\d{2,3})\s*[\/\-]\s*(\d)\b)/,
   );
@@ -34,6 +43,8 @@ function extractRoom(text: string): string | null {
 }
 
 function normRoom(s: string): string {
+  // For rooms with Hebrew letter (prefix or suffix), preserve the dash
+  if (/[א-ת]/.test(s)) return s.replace(/\s+/g, "").replace(/([א-ת])(\d)/g, "$1-$2").replace(/(\d)([א-ת])/g, "$1-$2");
   return s.replace(/\s+/g, "").replace(/-/g, "/");
 }
 

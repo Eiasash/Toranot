@@ -118,6 +118,14 @@ describe("detectSectionFromRoom", () => {
     expect(detectSectionFromRoom("55/1")).toBeNull();
   });
 
+  it("returns null for 4-digit and letter-prefix room numbers", () => {
+    expect(detectSectionFromRoom("2088")).toBeNull();
+    expect(detectSectionFromRoom("א-92")).toBeNull();
+    expect(detectSectionFromRoom("2095-א")).toBeNull();
+    expect(detectSectionFromRoom("70")).toBeNull();
+    expect(detectSectionFromRoom("117")).toBeNull();
+  });
+
   it("returns null for null input", () => {
     expect(detectSectionFromRoom(null)).toBeNull();
   });

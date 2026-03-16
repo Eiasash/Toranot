@@ -21,8 +21,10 @@ interface Props {
 }
 
 // ── Freestyle parser ──
-// "49/2 כהן יוסף 82 pneumonia DNR"
-// "חדר 53 מיטה 1 לוי שרה בת 75 CHF"
+// "2088 כהן יוסף 82 pneumonia DNR"
+// "א-92 לוי שרה 75 CHF"  (short form of א-2092)
+// "70 אברהם דוד 80 UTI"  (short form of 2070)
+// Legacy: "49/2 כהן יוסף 82 pneumonia DNR"
 function parseFreestyle(text: string): Partial<{
   room: string;
   bed: number;
@@ -42,22 +44,45 @@ function parseFreestyle(text: string): Partial<{
     remaining = remaining.replace(statusMatch[0], " ");
   }
 
-  // Extract room/bed: "49/2", "49-2", "חדר 49 מיטה 2"
-  const roomBedMatch = remaining.match(/(?:חדר\s*)?(\d{2,3})\s*[\/\-]\s*(\d)/);
-  if (roomBedMatch) {
-    result.room = roomBedMatch[1];
-    result.bed = parseInt(roomBedMatch[2]);
-    remaining = remaining.replace(roomBedMatch[0], " ");
+  // Extract room — try formats in order of specificity:
+  // 1. Hebrew-letter prefix: "א-92", "א 92", "א-2092"
+  const prefixMatch = remaining.match(/([א-ת])[-\s](\d{1,4})(?=\s|$)/);
+  if (prefixMatch) {
+    result.room = `${prefixMatch[1]}-${prefixMatch[2]}`;
+    remaining = remaining.replace(prefixMatch[0], " ");
   } else {
-    const roomOnlyMatch = remaining.match(/(?:חדר\s+)(\d{2,3})/);
-    if (roomOnlyMatch) {
-      result.room = roomOnlyMatch[1];
-      remaining = remaining.replace(roomOnlyMatch[0], " ");
-    }
-    const bedMatch = remaining.match(/(?:מיטה\s+)(\d)/);
-    if (bedMatch) {
-      result.bed = parseInt(bedMatch[1]);
-      remaining = remaining.replace(bedMatch[0], " ");
+    // 2. Number with Hebrew-letter suffix: "2095-א", "2095א"
+    const suffixMatch = remaining.match(/(\d{1,4})[-]?([א-ת])(?=\s|$)/);
+    if (suffixMatch) {
+      result.room = `${suffixMatch[1]}-${suffixMatch[2]}`;
+      remaining = remaining.replace(suffixMatch[0], " ");
+    } else {
+      // 3. Plain 4-digit room: "2088"
+      const fourDigit = remaining.match(/(?:חדר\s*)?(\d{4})(?=\s|$)/);
+      if (fourDigit) {
+        result.room = fourDigit[1];
+        remaining = remaining.replace(fourDigit[0], " ");
+      } else {
+        // 4. Legacy room/bed: "49/2", "49-2"
+        const roomBedMatch = remaining.match(/(?:חדר\s*)?(\d{2,3})\s*[\/\-]\s*(\d)/);
+        if (roomBedMatch) {
+          result.room = roomBedMatch[1];
+          result.bed = parseInt(roomBedMatch[2]);
+          remaining = remaining.replace(roomBedMatch[0], " ");
+        } else {
+          // 5. Plain 2-3 digit room or חדר prefix: "70", "117", "חדר 70"
+          const roomOnlyMatch = remaining.match(/(?:חדר\s+)?(\d{2,3})(?=\s|$)/);
+          if (roomOnlyMatch) {
+            result.room = roomOnlyMatch[1];
+            remaining = remaining.replace(roomOnlyMatch[0], " ");
+          }
+          const bedMatch = remaining.match(/(?:מיטה\s+)(\d)/);
+          if (bedMatch) {
+            result.bed = parseInt(bedMatch[1]);
+            remaining = remaining.replace(bedMatch[0], " ");
+          }
+        }
+      }
     }
   }
 
@@ -207,7 +232,8 @@ CRITICAL HALLUCINATION PREVENTION:
 - Copy values EXACTLY as written. Do NOT interpret or reformat numbers.
 - If a value is unclear, return null — never guess.
 - age MUST be 18-120. Outside this range → null.
-- bed MUST be 1, 2, or 3. If unclear → null.
+- Room format: plain number (70, 117, 2088) or with Hebrew letter prefix/suffix (א-92, 2095-א). Return as-is.
+- bed: only for legacy 2-3 digit rooms with explicit bed (e.g. 49/2). For standalone room numbers → null.
 - meds: only drugs explicitly named in document, max 8. Never infer unlisted drugs.
 
 The JSON must have this exact shape:
@@ -215,7 +241,7 @@ The JSON must have this exact shape:
   "name": "patient full name in Hebrew or as written",
   "age": number or null,
   "diagnosis": "primary + secondary diagnoses, comma separated, concise",
-  "room": "room number as string e.g. 49 or null",
+  "room": "room number as string e.g. 70 or א-92 or 2088 or null",
   "bed": number or null,
   "status": "" | "DNR" | "DNI" | "DNR/DNI",
   "meds": ["list of relevant chronic/home medications, max 8"],
@@ -455,15 +481,20 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
 
   function validate(): string | null {
     if (!side) return "יש לבחור צד";
-    if (!room.trim() || isNaN(Number(room.trim()))) return "יש להזין מספר חדר תקין";
+    const r = room.trim();
+    // Accept: "70", "2088", "א-92", "2095-א", "92א", legacy "49/2"
+    if (!r || !/^(?:[א-ת][-]\d{1,4}|\d{1,4}[-]?[א-ת]|\d{1,4}|\d{2,3}\/\d)$/.test(r)) return "יש להזין מספר חדר תקין";
     if (!name.trim()) return "יש להזין שם מטופל";
     if (!diagnosis.trim()) return "יש להזין אבחנה";
     return null;
   }
 
+  /** Is the room a standalone identifier (no separate bed needed)? Legacy format uses room/bed (49/2). */
+  const isStandaloneRoom = !room.trim().includes("/");
+
   function isDuplicateBed(): boolean {
     const section = SIDE_TO_SECTION[side];
-    const roomStr = room.trim().includes("/") ? room.trim() : `${room.trim()}/${bed}`;
+    const roomStr = isStandaloneRoom ? room.trim() : `${room.trim()}/${bed}`;
     return patients.some((p: PatientEntry) => p.section === section && p.room === roomStr);
   }
 
@@ -475,12 +506,14 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
     }
 
     if (isDuplicateBed()) {
-      setError(`מיטה ${bed} בחדר ${room} (צד ${side === "A" ? "א" : side === "B" ? "ב" : "ג"}) כבר תפוסה`);
+      const sideLabel = side === "A" ? "א" : side === "B" ? "ב" : "ג";
+      const roomLabel = isStandaloneRoom ? room.trim() : `מיטה ${bed} בחדר ${room}`;
+      setError(`${roomLabel} (צד ${sideLabel}) כבר תפוס/ה`);
       return;
     }
 
     const section = SIDE_TO_SECTION[side];
-    const roomStr = room.trim().includes("/") ? room.trim() : `${room.trim()}/${bed}`;
+    const roomStr = isStandaloneRoom ? room.trim() : `${room.trim()}/${bed}`;
     const parsedAge = age.trim() ? parseInt(age.trim()) : null;
 
     const patient: PatientEntry = {
@@ -626,7 +659,7 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
               value={freestyle}
               onChange={(e) => { setFreestyle(e.target.value); setParsed(false); }}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleFreestyleParse(); } }}
-              placeholder={"49/2 כהן יוסף 82 pneumonia DNR"}
+              placeholder={"70 כהן יוסף 82 pneumonia DNR"}
               dir="auto"
               rows={2}
               autoFocus
@@ -642,7 +675,7 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
             </button>
           </div>
           <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
-            דוגמאות: &quot;49/2 כהן יוסף 82 pneumonia DNR&quot; · &quot;חדר 53 מיטה 1 לוי שרה בת 75 CHF&quot;
+            דוגמאות: &quot;70 כהן יוסף 82 pneumonia DNR&quot; · &quot;א-92 לוי שרה בת 75 CHF&quot;
           </p>
         </div>
 
@@ -669,16 +702,18 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
               </div>
               <div className="flex-1">
                 <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">חדר *</label>
-                <input type="number" value={room} onChange={(e) => setRoom(e.target.value)} placeholder="49" className={inputCls} />
+                <input type="text" inputMode="numeric" value={room} onChange={(e) => setRoom(e.target.value)} placeholder="70" className={inputCls} />
               </div>
-              <div className="w-24">
-                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">מיטה *</label>
-                <select value={bed} onChange={(e) => setBed(Number(e.target.value) as 1 | 2 | 3)} className={inputCls}>
-                  <option value={1}>1</option>
-                  <option value={2}>2</option>
-                  <option value={3}>3</option>
-                </select>
-              </div>
+              {!isStandaloneRoom && (
+                <div className="w-24">
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">מיטה</label>
+                  <select value={bed} onChange={(e) => setBed(Number(e.target.value) as 1 | 2 | 3)} className={inputCls}>
+                    <option value={1}>1</option>
+                    <option value={2}>2</option>
+                    <option value={3}>3</option>
+                  </select>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-2">

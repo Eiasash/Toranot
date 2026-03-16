@@ -59,7 +59,7 @@ function getSpeechRecognition(): SpeechRecognitionConstructor | null {
 
 // ── Parse structured Hebrew clinical commands ──
 
-const ROOM_PATTERN = /(?:מיטה|חדר|מטה|bed)\s*(\d{1,3}(?:[/\\]\d)?)/i;
+const ROOM_PATTERN = /(?:מיטה|חדר|מטה|bed)\s*(\d{1,4}(?:[-][א-ת])?(?:[/\\]\d)?)/i;
 const TEMP_PATTERN = /(?:חום|טמפרטורה|temp)\s*([\d]{2}[.,]?\d?)/i;
 const GLUCOSE_PATTERN = /(?:סוכר|גלוקוז|sugar|glucose)\s*(\d{2,3})/i;
 const BP_PATTERN = /(?:לחץ\s*(?:דם)?|BP)\s*(\d{2,3})[/\\](\d{2,3})/i;

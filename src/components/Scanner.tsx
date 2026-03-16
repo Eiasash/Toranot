@@ -50,7 +50,8 @@ Look for any indication of ward section in headers, titles, or annotations:
 - If multiple sections appear on one page, output each header before its patients.
 
 WHAT TO EXTRACT PER PATIENT:
-- Room/bed number (any format: 49/2, 49-3, ניטור 1, bed 3, חדר 12, etc.)
+- Room/bed number (any format: 70, 88, א-92, 2088, 2092-א, ניטור 1, legacy: 49/2, 49-3, bed 3, חדר 12, etc.)
+  Ward lists may show short form (e.g. 70 instead of 2070) — keep as written.
 - Full name (Hebrew as written)
 - Age (number)
 - Diagnosis (keep English medical terms: CHF, UTI, COPD, AKI, PNEUMONIA, etc.)
@@ -69,11 +70,13 @@ ROOM NAME AGE DIAGNOSIS FLAGS | STATUS/NOTES | תורן: ON_CALL_TASKS | מחר:
 
 Example:
 צד ב
-49/2 כהן אביבה 64 דלקת ריאות | מצב יציב; BiPAP | תורן: תרביות דם בערב; ABG | מחר: צילום חזה
-52/2 גולדנברג צפורה 93 CHF DNR | | תורן: | מחר:
+70 כהן אביבה 64 דלקת ריאות | מצב יציב; BiPAP | תורן: תרביות דם בערב; ABG | מחר: צילום חזה
+א-92 גולדנברג צפורה 93 CHF DNR | | תורן: | מחר:
 
 OCR RECOVERY:
+- Room numbers: plain digits (70, 117, 2088), Hebrew-letter prefix (א-92), suffix (2095-א), or legacy room/bed (49/2)
 - Room "49|2" or "49\\2" → normalize to "49/2"
+- Room "א 92" or "א-92" → normalize to "א-92"
 - Keep English medical abbreviations as-is: CT, MRI, ABG, BiPAP, IV, NPO
 - Ages are numbers 0-120 next to Hebrew names
 - "ד\\"ר" / "דר" = doctor reference, not patient data

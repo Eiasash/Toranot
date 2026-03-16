@@ -41,6 +41,81 @@ describe("parsePatientList", () => {
       expect(result).toHaveLength(1);
       expect(result[0].room).toBe("101");
     });
+
+    // ── New SZMC room format ──
+
+    it('recognizes plain 2-digit room "70"', () => {
+      const result = parsePatientList("70 כהן יוסף 82");
+      expect(result).toHaveLength(1);
+      expect(result[0].room).toBe("70");
+      expect(result[0].name).toBe("כהן יוסף");
+    });
+
+    it('recognizes 3-digit room "117"', () => {
+      const result = parsePatientList("117 לוי שרה 75 CHF");
+      expect(result).toHaveLength(1);
+      expect(result[0].room).toBe("117");
+      expect(result[0].name).toBe("לוי שרה");
+    });
+
+    it('recognizes Hebrew-letter prefix room "א-92"', () => {
+      const result = parsePatientList("א-92 גולדנברג צפורה 93 UTI");
+      expect(result).toHaveLength(1);
+      expect(result[0].room).toBe("א-92");
+      expect(result[0].name).toBe("גולדנברג צפורה");
+    });
+
+    it('recognizes Hebrew-letter prefix room with space "א 95"', () => {
+      const result = parsePatientList("א 95 שוויקי יהודית 91");
+      expect(result).toHaveLength(1);
+      expect(result[0].room).toBe("א-95");
+      expect(result[0].name).toBe("שוויקי יהודית");
+    });
+
+    it('recognizes 4-digit room "2088"', () => {
+      const result = parsePatientList("2088 אברהם דוד 80");
+      expect(result).toHaveLength(1);
+      expect(result[0].room).toBe("2088");
+      expect(result[0].name).toBe("אברהם דוד");
+    });
+
+    it('recognizes 4-digit room with Hebrew suffix "2095-א"', () => {
+      const result = parsePatientList("2095-א לוי שרה 78");
+      expect(result).toHaveLength(1);
+      expect(result[0].room).toBe("2095-א");
+      expect(result[0].name).toBe("לוי שרה");
+    });
+
+    it("parses mixed new and legacy rooms in same list", () => {
+      const text = `צד ב
+70 כהן יוסף 82 PNEUMONIA
+א-92 לוי שרה 75 CHF
+צד א
+49/2 אברהם דוד 80 UTI`;
+      const result = parsePatientList(text);
+      expect(result).toHaveLength(3);
+      expect(result[0].room).toBe("70");
+      expect(result[1].room).toBe("א-92");
+      expect(result[2].room).toBe("49/2");
+    });
+
+    it("parses actual SZMC ward list format", () => {
+      const text = `צד ב
+70 אסרף אברהם 87 RETENTION 2CO
+71 בן שמעון דוד 89 HYPERNATREMIA DNR DNI
+76 שוויקי סמיחה 75 Dyspnea CHF RIGHT PLEURAL EFFUSION
+78 חיט ולדימיר 77 pancytopenia
+80 בליגסקי מרינה 89 Falls
+86 חזלט חיים 95 Aspiration pneumonia DNR/DNI
+88 ויינר פיוטר 94 hypernatremic PNEUMONIA DNR/DNI
+א-92 אביסרור חיים 96 HEMATOMA ILIOPSOAS CLL S/P crif`;
+      const result = parsePatientList(text);
+      expect(result).toHaveLength(8);
+      expect(result[0].room).toBe("70");
+      expect(result[0].name).toBe("אסרף אברהם");
+      expect(result[7].room).toBe("א-92");
+      expect(result[7].name).toBe("אביסרור חיים");
+    });
   });
 
   describe("section headers", () => {

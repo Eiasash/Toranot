@@ -2,6 +2,18 @@
 
 ## Recent Changes
 
+### Room format update — SZMC new ward numbering
+
+**New room format support across all input paths**
+- Parser now accepts: plain numbers (70, 117, 2088), Hebrew-letter prefix (א-92, א-95), Hebrew-letter suffix (2095-א), alongside legacy room/bed (49/2, 55/1)
+- Space-separated letter rooms auto-normalized: "א 92" → "א-92"
+- AddAdmissionModal: text input (was `type="number"`), bed selector hidden for standalone rooms, freestyle parser handles all formats
+- Scanner OCR prompt updated with new format examples and normalization rules
+- VoiceInput: room pattern extended to 4-digit + letter variants
+- QuickCaptureSheet: extractRoom and normRoom handle letter-prefix/suffix rooms
+- Validation accepts all formats; legacy room/bed still fully supported
+- 8 new parser tests including actual SZMC ward list format test
+
 ### Phase 1 — Clinical correctness and parser safety ($(date))
 
 **AKI staging fix (KDIGO correctness)**

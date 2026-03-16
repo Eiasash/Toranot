@@ -250,7 +250,7 @@ export function detectSectionFromHeader(headerText: string): PatientSection | nu
   const cleaned = raw.replace(/[:：\-–—]+/g, " ").trim();
 
   // Check if this looks like a patient line (has room number + name pattern)
-  // e.g., "ניטור 3 כהן יוסף" or "49/1 לוי שרה"
+  // e.g., "ניטור 3 כהן יוסף" or "70 לוי שרה" or "א-92 אברהם דוד" or legacy "49/1 לוי שרה"
   if (/\d+.*[א-ת]/.test(cleaned)) return null;
 
   // Primary: match against canonical alias table (SECTION_ALIASES)
@@ -269,7 +269,7 @@ export function detectSectionFromHeader(headerText: string): PatientSection | nu
 /**
  * Infer section from a room string.
  * NOTE: Room numbers do NOT determine sections!
- * - Regular rooms (49/1, 52/2, etc.) can belong to ANY section
+ * - Regular rooms (70, א-92, 2088, legacy 49/1, 52/2, etc.) can belong to ANY section
  * - ניטור rooms can belong to צד א, צד ב, or צד ג
  * - שיקום is its own section but uses regular room numbers
  * 

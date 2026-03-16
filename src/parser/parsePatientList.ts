@@ -52,7 +52,7 @@ export function normalizeWardText(raw: string): string {
   //    ｜ U+FF5C FULLWIDTH VERTICAL LINE
   text = text.replace(/[¦│ǀ｜]/g, "|");
 
-  // 4. Dash variants → ASCII hyphen-minus (used in room numbers: 49-3, ניטור-1)
+  // 4. Dash variants → ASCII hyphen-minus (used in room numbers: 49-3, א-92, ניטור-1)
   //    — U+2014 EM DASH   – U+2013 EN DASH   ‒ U+2012 FIGURE DASH
   //    ― U+2015 HORIZONTAL BAR   ‑ U+2011 NON-BREAKING HYPHEN
   //    − U+2212 MINUS SIGN
@@ -252,22 +252,42 @@ function parsePatientLine(
   const tokens = cleaned.split(/\s+/).filter(Boolean);
   if (tokens.length === 0) return null;
 
-  // First token(s): room/bed code (supports 49-3, 55/1, ניטור-1, ניטור 1, etc.)
+  // First token(s): room/bed code
+  // New SZMC format: plain numbers (70, 117, 120) or Hebrew-letter prefix (א-92, א-95)
+  // Legacy format: 49-3, 55/1, ניטור-1, ניטור 1, חדר-12
   let room: string | null = null;
   let idx = 0;
 
   const ROOM_PATTERN =
-    /^(?:\d{1,4}[-/]\d{1,2}|\d{1,4}[א-ת]?|ניטור[-]?\d{1,2}|חדר[-]?\d{1,3})$/;
+    /^(?:\d{1,4}[-/]\d{1,2}|[א-ת][-]\d{1,3}|\d{1,4}[-]?[א-ת]|\d{1,4}|ניטור[-]?\d{1,2}|חדר[-]?\d{1,3})$/;
 
   if (ROOM_PATTERN.test(tokens[0])) {
     room = tokens[0];
     idx = 1;
   } else if (
+    // Handle "א 92" as two tokens → "א-92" (Hebrew letter prefix + number)
+    /^[א-ת]$/.test(tokens[0]) &&
+    tokens.length > 1 &&
+    /^\d{1,3}$/.test(tokens[1]) &&
+    // Must NOT be a section header keyword (ניטור, חדר already handled above)
+    !/^(?:ב|ג)$/.test(tokens[0]) // avoid swallowing "ב" / "ג" from section headers
+  ) {
+    room = `${tokens[0]}-${tokens[1]}`;
+    idx = 2;
+  } else if (
+    // Handle "2095 א" as two tokens (number + Hebrew letter suffix)
+    /^\d{1,4}$/.test(tokens[0]) &&
+    tokens.length > 1 &&
+    /^[א-ת]$/.test(tokens[1])
+  ) {
+    room = `${tokens[0]}-${tokens[1]}`;
+    idx = 2;
+  } else if (
     /^(?:ניטור|חדר)$/.test(tokens[0]) &&
     tokens.length > 1 &&
-    /^\d{1,3}$/.test(tokens[1])
+    /^\d{1,4}$/.test(tokens[1])
   ) {
-    // Handle "ניטור 1" as two tokens
+    // Handle "ניטור 1" or "חדר 2000" as two tokens
     room = `${tokens[0]} ${tokens[1]}`;
     idx = 2;
   }
