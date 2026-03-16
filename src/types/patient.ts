@@ -1,7 +1,7 @@
 // Single source of truth for your top-level navigation sections.
 // "Rehab" is NOT a filter. It's its own section.
 
-export const SECTIONS = ["ALL", "SIDE_A", "SIDE_B", "SIDE_C", "REHAB", "MONITOR"] as const;
+export const SECTIONS = ["ALL", "SIDE_A", "SIDE_B", "SIDE_C", "REHAB", "MONITOR", "UNKNOWN_SECTION"] as const;
 export type Section = (typeof SECTIONS)[number];
 
 // Sections that patients can actually belong to (ALL is view-only filter)
@@ -17,6 +17,7 @@ export const SECTION_LABEL: Record<Section, string> = {
   SIDE_C: "צד ג",
   REHAB: "שיקום",
   MONITOR: "ניטור",
+  UNKNOWN_SECTION: "לא ידוע",
 };
 
 // Label for the UNKNOWN_SECTION state — shown in preview/warning UI

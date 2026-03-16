@@ -14,42 +14,41 @@ export function PullToRefresh({
   const touchStartY = useRef(0);
   const isPulling = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  // Track pullY in ref to avoid setState on every frame
   const pullYRef = useRef(0);
   const rafRef = useRef<number | null>(null);
+  // Keep refreshing state accessible in stable listeners without re-registering
+  const refreshingRef = useRef(false);
+  refreshingRef.current = refreshing;
 
-  // Detect actual scroll container (body or documentElement)
   const getScrollTop = useCallback(() => {
     return window.scrollY || document.documentElement.scrollTop || document.body.scrollTop;
   }, []);
+
+  // Stable onRefresh ref so listeners don't re-register when parent re-renders
+  const onRefreshRef = useRef(onRefresh);
+  onRefreshRef.current = onRefresh;
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
     const handleTouchStart = (e: TouchEvent) => {
-      if (getScrollTop() > 2) return; // only at top
+      if (getScrollTop() > 2) return;
       touchStartY.current = e.touches[0].clientY;
       isPulling.current = false;
     };
 
-    // passive: false ONLY when we might preventDefault (pulling down from top)
     const handleTouchMove = (e: TouchEvent) => {
-      if (getScrollTop() > 2 || refreshing) return;
+      if (getScrollTop() > 2 || refreshingRef.current) return;
 
       const dy = e.touches[0].clientY - touchStartY.current;
-      if (dy <= 0) return; // scrolling up — no interference
+      if (dy <= 0) return;
 
-      if (!isPulling.current && dy > 10) {
-        isPulling.current = true;
-      }
+      if (!isPulling.current && dy > 10) isPulling.current = true;
 
       if (isPulling.current) {
-        e.preventDefault(); // block native scroll only when pulling
-        const newPullY = Math.min(dy * 0.5, 100);
-        pullYRef.current = newPullY;
-
-        // Batch state updates via RAF — one setState per frame max
+        e.preventDefault();
+        pullYRef.current = Math.min(dy * 0.5, 100);
         if (rafRef.current === null) {
           rafRef.current = requestAnimationFrame(() => {
             setPullY(pullYRef.current);
@@ -64,10 +63,12 @@ export function PullToRefresh({
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
       }
-      if (pullYRef.current >= PULL_THRESHOLD && !refreshing) {
+      if (pullYRef.current >= PULL_THRESHOLD && !refreshingRef.current) {
+        refreshingRef.current = true;
         setRefreshing(true);
-        onRefresh();
+        onRefreshRef.current();
         setTimeout(() => {
+          refreshingRef.current = false;
           setRefreshing(false);
           setPullY(0);
           pullYRef.current = 0;
@@ -79,8 +80,6 @@ export function PullToRefresh({
       isPulling.current = false;
     };
 
-    // passive: true for start/end (no preventDefault needed)
-    // passive: false for move (might preventDefault when pulling)
     el.addEventListener("touchstart", handleTouchStart, { passive: true });
     el.addEventListener("touchmove", handleTouchMove, { passive: false });
     el.addEventListener("touchend", handleTouchEnd, { passive: true });
@@ -91,13 +90,14 @@ export function PullToRefresh({
       el.removeEventListener("touchend", handleTouchEnd);
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
-  }, [onRefresh, refreshing, getScrollTop]);
+  // Stable: only runs once on mount — all state accessed via refs
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [getScrollTop]);
 
   const progress = Math.min(pullY / PULL_THRESHOLD, 1);
 
   return (
     <div ref={containerRef} className="relative">
-      {/* Pull indicator */}
       {(pullY > 0 || refreshing) && (
         <div
           className="flex items-center justify-center text-gray-400 dark:text-gray-500 overflow-hidden"
@@ -111,7 +111,6 @@ export function PullToRefresh({
           </div>
         </div>
       )}
-
       {children}
     </div>
   );
