@@ -16,8 +16,10 @@
 
 **Handoff sheet improvements**
 - ISBAR tab removed
-- New admissions sort by admission time (oldest first via scannedAt), not room order
+- New admissions sort by admission time (oldest first via scannedAt) in both visual cards and text output
 - Dead code removed (~110 lines)
+- Photo attachments for new admissions in handoff: camera (single shot), gallery (multi-select), AI analysis with "add to handoff note" action
+- PhotoAttachments component rewritten: separate camera/gallery buttons, multi-file gallery, AI image analysis via /api/claude, compact mode for handoff cards, max 10 photos
 
 **Simulation test suite (104 scenarios)**
 - Full ward simulation: 35 patients across 5 sections (א/ב/ג/שיקום/ניטור)

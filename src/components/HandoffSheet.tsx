@@ -11,6 +11,7 @@ import {
 } from "../engine/drugSafety";
 import { calculateLabDeltas } from "../engine/labDelta";
 import { buildPhlebotomyList, buildPhlebotomyText, TUBE_EMOJI, TUBE_LABEL, type TubeColour } from "../utils/phlebotomy";
+import { PhotoAttachments } from "./PhotoAttachments";
 
 // ─── Text generation (copy/WhatsApp — unchanged) ────────────────────────────
 
@@ -83,7 +84,9 @@ function buildTextHandoff(patients: PatientEntry[], filteredPatients: PatientEnt
   const timeStr = now.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
   // Only explicitly admitted patients count as "new admissions".
   // Patients from דף תורן scan (scannedAt) are existing ward patients — never new admissions.
-  const newAdmissions = filteredPatients.filter(p => p.isAdmission);
+  const newAdmissions = filteredPatients
+    .filter(p => p.isAdmission)
+    .sort((a, b) => (a.scannedAt ?? "").localeCompare(b.scannedAt ?? ""));
   const lines: string[] = [
     `📋 ${oncallOnly ? "מסירת תורן" : "סיכום משמרת"} — ${dateStr} ${timeStr}`,
     `${"─".repeat(35)}`,
@@ -263,6 +266,11 @@ function PatientCard({ p, isNew, dispatch }: { p: PatientEntry; isNew: boolean; 
               </button>
             )}
           </div>
+        )}
+
+        {/* Photo attachments for new admissions */}
+        {isNew && dispatch && (
+          <PhotoAttachments patient={p} compact />
         )}
 
         {/* Status chips */}
