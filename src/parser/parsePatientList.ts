@@ -268,9 +268,7 @@ function parsePatientLine(
     // Handle "א 92" as two tokens → "א-92" (Hebrew letter prefix + number)
     /^[א-ת]$/.test(tokens[0]) &&
     tokens.length > 1 &&
-    /^\d{1,3}$/.test(tokens[1]) &&
-    // Must NOT be a section header keyword (ניטור, חדר already handled above)
-    !/^(?:ב|ג)$/.test(tokens[0]) // avoid swallowing "ב" / "ג" from section headers
+    /^\d{1,3}$/.test(tokens[1])
   ) {
     room = `${tokens[0]}-${tokens[1]}`;
     idx = 2;

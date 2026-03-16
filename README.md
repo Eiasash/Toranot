@@ -5,14 +5,27 @@
 ### Room format update — SZMC new ward numbering
 
 **New room format support across all input paths**
-- Parser now accepts: plain numbers (70, 117, 2088), Hebrew-letter prefix (א-92, א-95), Hebrew-letter suffix (2095-א), alongside legacy room/bed (49/2, 55/1)
+- Parser now accepts: plain numbers (70, 117, 2088), Hebrew-letter prefix (א-92, א-95, ב-10, ג-15), Hebrew-letter suffix (2095-א), alongside legacy room/bed (49/2, 55/1)
 - Space-separated letter rooms auto-normalized: "א 92" → "א-92"
+- CRITICAL: room letter prefix (א, ב, ג) does NOT determine patient section — only headers (צד ב, etc.) assign sections
 - AddAdmissionModal: text input (was `type="number"`), bed selector hidden for standalone rooms, freestyle parser handles all formats
 - Scanner OCR prompt updated with new format examples and normalization rules
 - VoiceInput: room pattern extended to 4-digit + letter variants
 - QuickCaptureSheet: extractRoom and normRoom handle letter-prefix/suffix rooms
 - Validation accepts all formats; legacy room/bed still fully supported
-- 8 new parser tests including actual SZMC ward list format test
+
+**Handoff sheet improvements**
+- ISBAR tab removed
+- New admissions sort by admission time (oldest first via scannedAt), not room order
+- Dead code removed (~110 lines)
+
+**Simulation test suite (104 scenarios)**
+- Full ward simulation: 35 patients across 5 sections (א/ב/ג/שיקום/ניטור)
+- Real SZMC ward list from 15/03/2026 with pipe-separated tasks
+- Age-room disambiguation (7 scenarios)
+- Section independence from room prefix (critical regression tests)
+- 100x stress test for deterministic parsing
+- Edge cases: BOM, malformed lines, Hebrew letter confusion
 
 ### Phase 1 — Clinical correctness and parser safety ($(date))
 
