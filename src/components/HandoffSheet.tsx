@@ -251,11 +251,15 @@ function PatientCard({ p, isNew, dispatch }: { p: PatientEntry; isNew: boolean; 
               </div>
             ) : p.handoverNote ? (
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] font-semibold text-teal-400 uppercase tracking-wide">📌 סיכום למסירה</span>
-                  <button onClick={() => { setSummaryDraft(p.handoverNote ?? ""); setEditingSummary(true); }} className="text-[10px] text-teal-400 active:text-teal-300">✏️ ערוך</button>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[10px] font-bold text-teal-400 uppercase tracking-wider">📌 סיכום למסירה</span>
+                  <button onClick={() => { setSummaryDraft(p.handoverNote ?? ""); setEditingSummary(true); }} className="text-[10px] text-teal-400 active:text-teal-300">✏️</button>
                 </div>
-                <p className="text-xs text-teal-200 leading-relaxed whitespace-pre-wrap" dir="auto">{p.handoverNote}</p>
+                <div className="space-y-1" dir="rtl">
+                  {p.handoverNote.split(/\n/).filter(l => l.trim()).map((line, i) => (
+                    <p key={i} className="text-xs text-teal-100 leading-relaxed">{line}</p>
+                  ))}
+                </div>
               </div>
             ) : (
               <button
@@ -465,17 +469,29 @@ function AdmissionMorningNote({ patient }: { patient: PatientEntry | undefined }
     );
   }
 
+  // Parse handover note into display lines — split on ". " or newlines for readability
+  const noteLines = patient.handoverNote
+    ? patient.handoverNote.split("\n").filter(l => l.trim())
+    : [];
+
   return (
-    <div className="mt-1.5">
+    <div className="mt-2">
       {patient.handoverNote ? (
-        <div className="flex items-start gap-1.5">
-          <p className="text-[11px] text-teal-200 leading-snug flex-1" dir="rtl">📋 {patient.handoverNote}</p>
-          <button onClick={() => { setDraft(patient.handoverNote ?? ""); setEditing(true); }} className="text-[10px] text-gray-500 shrink-0 active:text-gray-300">✏️</button>
+        <div className="bg-teal-950/60 border border-teal-800/50 rounded-lg px-3 py-2">
+          <div className="flex items-start justify-between gap-2 mb-1.5">
+            <span className="text-[10px] font-bold text-teal-400 uppercase tracking-wider">📋 סיכום מסירה</span>
+            <button onClick={() => { setDraft(patient.handoverNote ?? ""); setEditing(true); }} className="text-[10px] text-gray-500 shrink-0 active:text-gray-300">✏️</button>
+          </div>
+          <div className="space-y-1" dir="rtl">
+            {noteLines.map((line, i) => (
+              <p key={i} className="text-xs text-teal-100 leading-relaxed">{line}</p>
+            ))}
+          </div>
         </div>
       ) : (
         <button
           onClick={() => { setDraft(""); setEditing(true); }}
-          className="text-[10px] text-teal-600 active:text-teal-400 py-0.5"
+          className="text-[11px] text-teal-600 active:text-teal-400 py-0.5 border border-teal-800/40 rounded-lg px-2 w-full text-center"
         >
           + הוסף הערה לדוח בוקר
         </button>
@@ -893,16 +909,32 @@ export function HandoffSheet({ onClose, initialTab }: { onClose: () => void; ini
                     if (e.type !== "ADMISSION") return null;
                     const admPatient = filteredPatients.find(p => p.id === e.patientId)
                       ?? patients.find(p => p.id === e.patientId);
+                    const admTime = new Date(e.at).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
+                    const admDate = new Date(e.at).toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit" });
+                    const statusTags = admPatient?.status ?? [];
                     return (
-                      <div key={e.id} className="border-t border-teal-800/30 pt-2 first:border-0 first:pt-0">
-                        <div className="text-xs flex gap-2 items-center">
-                          <span className="text-gray-400 font-mono shrink-0">חד׳ {e.room ?? "?"}</span>
-                          <span className="text-gray-200 font-medium">{e.patientName ?? "?"}</span>
-                          {admPatient?.diagnosis && (
-                            <span className="text-gray-500 truncate text-[11px]">— {admPatient.diagnosis}</span>
-                          )}
-                          <span className="text-gray-500 mr-auto shrink-0 text-[10px]">
-                            {new Date(e.at).toLocaleString("he-IL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                      <div key={e.id} className="bg-gray-900/60 border border-teal-800/40 rounded-xl p-3 space-y-1.5">
+                        {/* Patient header row */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-baseline gap-2 flex-wrap">
+                              {e.room && (
+                                <span className="font-mono text-xs font-bold text-teal-400 bg-teal-900/40 rounded px-1.5 py-0.5 shrink-0">
+                                  {e.room}
+                                </span>
+                              )}
+                              <span className="font-bold text-white text-sm leading-tight">{e.patientName ?? "?"}</span>
+                              {admPatient?.age && <span className="text-xs text-gray-400">({admPatient.age})</span>}
+                              {statusTags.map((s, i) => (
+                                <span key={i} className="text-[10px] bg-zinc-800 text-zinc-300 border border-zinc-700 rounded px-1.5 py-0.5 font-mono">{s}</span>
+                              ))}
+                            </div>
+                            {admPatient?.diagnosis && (
+                              <p className="text-xs text-blue-300 mt-0.5 leading-snug">{admPatient.diagnosis}</p>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-gray-500 shrink-0 text-left">
+                            {admDate}<br/>{admTime}
                           </span>
                         </div>
                         <AdmissionMorningNote patient={admPatient} />
@@ -952,9 +984,13 @@ export function HandoffSheet({ onClose, initialTab }: { onClose: () => void; ini
                             {t.note && <span className="text-green-400">→ {t.note}</span>}
                           </div>
                         ))}
-                        {notes.length > 0 && notes.map((n, i) => (
-                          <div key={i} className="text-[11px] text-amber-300">📝 {n}</div>
-                        ))}
+                        {notes.length > 0 && (
+                          <div className="mt-1 space-y-0.5">
+                            {notes.map((n, i) => (
+                              <div key={i} className="text-xs text-amber-200 leading-relaxed">📝 {n}</div>
+                            ))}
+                          </div>
+                        )}
                         <AdmissionMorningNote patient={p} />
                       </div>
                     );
