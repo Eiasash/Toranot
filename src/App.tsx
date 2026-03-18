@@ -100,6 +100,55 @@ export type ConfirmDialog =
     }
   | { type: "clear" };
 
+// Typed confirmation modal for destructive CLEAR_ALL — requires typing "מחק" to unlock
+function ClearConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+  const [typed, setTyped] = useState("");
+  const confirmed = typed.trim() === "מחק";
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center px-4 pb-8 sm:pb-0 bg-black/40 animate-modal-backdrop">
+      <div className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden animate-modal-up">
+        <div className="px-5 pt-5 pb-4 space-y-3">
+          <div className="text-2xl">🗑️</div>
+          <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">מחיקת כל המטופלים</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            פעולה זו בלתי הפיכה. גיבוי אוטומטי נשמר ב"שחזור מגיבוי" בתפריט.
+          </p>
+          <div>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+              כתוב <span className="font-bold text-red-600">מחק</span> לאישור:
+            </label>
+            <input
+              type="text"
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+              dir="rtl"
+              autoFocus
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+              placeholder="מחק"
+            />
+          </div>
+        </div>
+        <div className="flex border-t border-gray-200 dark:border-gray-700">
+          <button onClick={onCancel} className="flex-1 py-4 text-sm text-gray-600 dark:text-gray-400 active:bg-gray-50 dark:active:bg-gray-800">
+            ביטול
+          </button>
+          <button
+            onClick={confirmed ? onConfirm : undefined}
+            disabled={!confirmed}
+            className={`flex-1 py-4 text-sm font-bold border-r border-gray-200 dark:border-gray-700 transition-colors ${
+              confirmed
+                ? "text-red-600 active:bg-red-50 dark:active:bg-red-900/20"
+                : "text-gray-300 dark:text-gray-600 cursor-not-allowed"
+            }`}
+          >
+            מחק הכל
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ConfirmModal({
   dialog,
   onConfirm,
@@ -112,27 +161,7 @@ export function ConfirmModal({
   if (dialog.type === "none") return null;
 
   if (dialog.type === "clear") {
-    return (
-      <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center px-4 pb-8 sm:pb-0 bg-black/40 animate-modal-backdrop">
-        <div className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden animate-modal-up">
-          <div className="px-5 pt-5 pb-4">
-            <div className="text-2xl mb-2">🗑️</div>
-            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">מחיקת כל המטופלים</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              פעולה זו בלתי הפיכה. ודא שארכבת את המשמרת להיסטוריה לפני המחיקה.
-            </p>
-          </div>
-          <div className="flex border-t border-gray-200 dark:border-gray-700">
-            <button onClick={onCancel} className="flex-1 py-4 text-sm text-gray-600 dark:text-gray-400 active:bg-gray-50 dark:active:bg-gray-800">
-              ביטול
-            </button>
-            <button onClick={onConfirm} className="flex-1 py-4 text-sm font-bold text-red-600 border-r border-gray-200 dark:border-gray-700 active:bg-red-50 dark:active:bg-red-900/20">
-              מחק הכל
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+    return <ClearConfirmModal onConfirm={onConfirm} onCancel={onCancel} />;
   }
 
   // archive dialog

@@ -27,6 +27,8 @@ html.dark {
 body {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   direction: rtl;
+  background-color: #ffffff;
+  color: #111827; /* gray-900 — explicit so dark mode override is clean */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -242,7 +244,7 @@ body {
 }
 .animate-card-in {
   animation: card-in 0.2s ease-out;
-  will-change: transform, opacity;
+  /* No will-change: browser only promotes layer during 0.2s — no permanent GPU cost */
 }
 
 /* Modal overlay fade + slide-up from bottom */
@@ -266,6 +268,7 @@ body {
 main {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y; /* tell browser: vertical scroll only, no interference */
 }
 
 /* Reduce motion for users who prefer it */

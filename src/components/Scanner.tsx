@@ -1,6 +1,8 @@
 import { useState, useRef } from "react";
 import { safeGetItem, safeSetItem, safeRemoveItem } from "../utils/storage";
 import { getProxyAuthHeaders } from "../cloudSync";
+import type { PatientSection } from "../types";
+import { SECTION_LABEL } from "../types";
 
 // -----------------------------
 // Constants
@@ -25,6 +27,7 @@ const IMAGE_JPEG_QUALITY = 0.82;
 interface ScannerProps {
   onTextExtracted: (text: string) => void;
   onCancel: () => void;
+  sectionHint?: Exclude<PatientSection, "UNKNOWN_SECTION" | "ALL">;
 }
 
 type ScanState =
@@ -126,7 +129,7 @@ async function fetchWithRetry(
   return lastResponse!;
 }
 
-async function runClaudeOCR(file: File, apiKey: string): Promise<string> {
+async function runClaudeOCR(file: File, apiKey: string, sectionHint?: string): Promise<string> {
   const base64 = await fileToBase64(file);
   const VALID_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
   type ImageMediaType = (typeof VALID_TYPES)[number];
@@ -142,7 +145,12 @@ async function runClaudeOCR(file: File, apiKey: string): Promise<string> {
         role: "user",
         content: [
           { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
-          { type: "text", text: OCR_PROMPT },
+          { type: "text", text: sectionHint
+            ? OCR_PROMPT.replace(
+                "If no section is identifiable, output \"צד א\" as default.",
+                `If no section is identifiable, default to "${sectionHint}" (this page is from that section).`
+              )
+            : OCR_PROMPT },
         ],
       },
     ],
@@ -318,7 +326,7 @@ function ApiKeySetup({ onSaved }: { onSaved: () => void }) {
   );
 }
 
-export function Scanner({ onTextExtracted, onCancel }: ScannerProps) {
+export function Scanner({ onTextExtracted, onCancel, sectionHint }: ScannerProps) {
   const [state, setState] = useState<ScanState>({ step: "idle" });
   const [showKeySetup, setShowKeySetup] = useState(!getStoredKey());
   const [editingKey, setEditingKey] = useState(false);
@@ -348,20 +356,27 @@ export function Scanner({ onTextExtracted, onCancel }: ScannerProps) {
       : raw;
   }
 
+  // Map PatientSection to section label and normalizeAndGroupBySection index
+  const SECTION_IDX: Record<string, number> = {
+    SIDE_A: 0, SIDE_B: 1, SIDE_C: 2, REHAB: 3, MONITOR: 4,
+  };
+  const hintLabel = sectionHint ? SECTION_LABEL[sectionHint as keyof typeof SECTION_LABEL] : undefined;
+  const hintIdx = sectionHint ? (SECTION_IDX[sectionHint] ?? 0) : 0;
+
   async function runOcr(file: File, imageUrl: string, progress?: { current: number; total: number }) {
     const apiKey = getStoredKey();
     if (!apiKey) { setShowKeySetup(true); return; }
     setState({ step: "scanning", imageUrl, progress });
     try {
-      const text = await runClaudeOCR(file, apiKey);
-      setState({ step: "done", imageUrl, text });
+      const text = await runClaudeOCR(file, apiKey, hintLabel);
+      setState({ step: "done", imageUrl, text: normalizeAndGroupBySection(text, hintIdx) });
     } catch (err) {
       URL.revokeObjectURL(imageUrl);
       setState({ step: "error", message: formatOcrError(err) });
     }
   }
 
-  function normalizeAndGroupBySection(rawText: string): string {
+  function normalizeAndGroupBySection(rawText: string, defaultSectionIdx = 0): string {
     const lines = rawText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     const sections: Array<{ header: string; items: string[] }> = [
       { header: "צד א", items: [] },
@@ -392,7 +407,7 @@ export function Scanner({ onTextExtracted, onCancel }: ScannerProps) {
       return null;
     }
 
-    let current = 0;
+    let current = defaultSectionIdx;
     for (const line of lines) {
       const h = matchHeader(line);
       if (h !== null) { current = h; continue; }
@@ -420,7 +435,7 @@ export function Scanner({ onTextExtracted, onCancel }: ScannerProps) {
       const { file, imageUrl } = items[i];
       setState({ step: "scanning", imageUrl, progress: { current: i + 1, total: items.length } });
       try {
-        const text = await runClaudeOCR(file, apiKey);
+        const text = await runClaudeOCR(file, apiKey, hintLabel);
         texts.push(text);
       } catch (err) {
         console.warn(`OCR failed for page ${i + 1}:`, err);
@@ -435,7 +450,7 @@ export function Scanner({ onTextExtracted, onCancel }: ScannerProps) {
       return;
     }
 
-    const merged = normalizeAndGroupBySection(texts.join("\n"));
+    const merged = normalizeAndGroupBySection(texts.join("\n"), hintIdx);
     const warningPrefix = errors.length > 0
       ? `⚠️ ${errors.length} דפים נכשלו:\n${errors.join("\n")}\n\n`
       : "";

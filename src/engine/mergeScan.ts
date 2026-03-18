@@ -111,10 +111,13 @@ export function mergeScan(
     if (candidates.length === 1) return candidates[0];
     if (candidates.length === 0) return null;
 
-    // If multiple: try to narrow safely.
+    // If multiple: section match MUST be checked first.
+    // SZMC side B and side C share room number ranges — age-first matching
+    // causes cross-section consumption (side C patient consumed by side B import).
     return (
-      pickUnique(candidates, (p) => p.age === np.age) ??
       pickUnique(candidates, (p) => p.section === np.section) ??
+      pickUnique(candidates, (p) => p.section === np.section && p.age === np.age) ??
+      pickUnique(candidates, (p) => p.age === np.age) ??
       null
     );
   };

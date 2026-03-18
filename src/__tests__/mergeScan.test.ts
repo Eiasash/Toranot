@@ -307,5 +307,58 @@ describe("mergeScan", () => {
       const cohen = merged.find(p => p.name === "כהן יוסף")!;
       expect(cohen.order).toBe(5);
     });
+
+    it("importing side B does NOT consume same room+name+age patient from side C", () => {
+      // SZMC: side B and side C share room number ranges.
+      // Patient Cohen age 78 exists in side B room 72 AND side C room 72.
+      // Importing side B must not consume (and thus delete) the side C patient.
+      const makeP = (id: string, section: PatientEntry["section"], room: string, name: string, age: number): PatientEntry => ({
+        id,
+        section,
+        date: "01/01/2025",
+        room,
+        name,
+        age,
+        diagnosis: "hyponatremia",
+        flags: [],
+        status: [],
+        tomorrowNotes: [],
+        tasks: [],
+        generatedTasks: [],
+        notes: [],
+        scannedAt: new Date().toISOString(),
+        confidence: 1,
+        order: 0,
+      });
+
+      const existing: PatientEntry[] = [
+        makeP("b-72", "SIDE_B", "72", "כהן יוסף", 78),
+        makeP("c-72", "SIDE_C", "72", "כהן יוסף", 78), // same room+name+age, different section
+        makeP("c-80", "SIDE_C", "80", "לוי שרה", 65),
+      ];
+
+      // Incoming = side B scan only
+      const incoming: PatientEntry[] = [
+        makeP("b-72-new", "SIDE_B", "72", "כהן יוסף", 78),
+      ];
+
+      const merged = mergeScan(existing, incoming);
+
+      // Side C patient must survive
+      const sideC72 = merged.find(p => p.id === "c-72");
+      expect(sideC72).toBeDefined();
+      expect(sideC72?.section).toBe("SIDE_C");
+
+      // Side C other patient must also survive
+      expect(merged.find(p => p.id === "c-80")).toBeDefined();
+
+      // Side B patient must be merged (keep old id)
+      const sideB72 = merged.find(p => p.section === "SIDE_B" && p.room === "72");
+      expect(sideB72).toBeDefined();
+      expect(sideB72?.id).toBe("b-72"); // old id preserved
+
+      // Total: 3 patients (1 merged side B + 2 surviving side C)
+      expect(merged).toHaveLength(3);
+    });
   });
 });

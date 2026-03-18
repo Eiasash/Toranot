@@ -9,10 +9,12 @@ const DIRECT_API_URL = "https://api.anthropic.com/v1/messages";
 import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
 import { generateId } from "../utils/id";
 
-const SIDE_TO_SECTION: Record<"A" | "B" | "C", PatientSection> = {
+const SIDE_TO_SECTION: Record<"A" | "B" | "C" | "REHAB" | "UNKNOWN", PatientSection> = {
   A: "SIDE_A",
   B: "SIDE_B",
   C: "SIDE_C",
+  REHAB: "REHAB",
+  UNKNOWN: "UNKNOWN_SECTION",
 };
 
 interface Props {
@@ -25,13 +27,14 @@ interface Props {
 // "א-92 לוי שרה 75 CHF"  (short form of א-2092)
 // "70 אברהם דוד 80 UTI"  (short form of 2070)
 // Legacy: "49/2 כהן יוסף 82 pneumonia DNR"
-function parseFreestyle(text: string): Partial<{
+export function parseFreestyle(text: string): Partial<{
   room: string;
   bed: number;
   name: string;
   age: number;
   diagnosis: string;
   status: string;
+  side: "A" | "B" | "C";
 }> {
   const result: ReturnType<typeof parseFreestyle> = {};
   let remaining = text.trim();
@@ -44,42 +47,62 @@ function parseFreestyle(text: string): Partial<{
     remaining = remaining.replace(statusMatch[0], " ");
   }
 
+  // Extract section BEFORE room — "צד א/ב/ג"
+  // Must come first so "ב" in "צד ב" doesn't confuse Hebrew-letter room prefix regex
+  const sectionMatch = remaining.match(/צד\s+([אבג])/);
+  if (sectionMatch) {
+    result.side = sectionMatch[1] === "א" ? "A" : sectionMatch[1] === "ב" ? "B" : "C";
+    remaining = remaining.replace(sectionMatch[0], " ");
+  }
+
   // Extract room — try formats in order of specificity:
-  // 1. Hebrew-letter prefix: "א-92", "א 92", "א-2092"
-  const prefixMatch = remaining.match(/([א-ת])[-\s](\d{1,4})(?=\s|$)/);
-  if (prefixMatch) {
-    result.room = `${prefixMatch[1]}-${prefixMatch[2]}`;
-    remaining = remaining.replace(prefixMatch[0], " ");
-  } else {
-    // 2. Number with Hebrew-letter suffix: "2095-א", "2095א"
-    const suffixMatch = remaining.match(/(\d{1,4})[-]?([א-ת])(?=\s|$)/);
-    if (suffixMatch) {
-      result.room = `${suffixMatch[1]}-${suffixMatch[2]}`;
-      remaining = remaining.replace(suffixMatch[0], " ");
+  // 0. Explicit "חדר" keyword: "חדר 2114", "חדר2114"
+  //    MUST come before Hebrew-letter prefix match — otherwise "ר" (end of חדר) + space + digits
+  //    is mistakenly captured as a letter-prefix room (e.g. "ר-2114").
+  const hedarMatch = remaining.match(/חדר\s*(\d{1,4})(?=\s|$)/);
+  if (hedarMatch) {
+    result.room = hedarMatch[1];
+    remaining = remaining.replace(hedarMatch[0], " ");
+  }
+
+  if (!result.room) {
+    // 1. Hebrew-letter prefix: "א-92", "ב-10", "ג-15"
+    //    MUST use hyphen separator only — space is too ambiguous (matches letters inside words)
+    const prefixMatch = remaining.match(/([א-ת])-(\d{1,4})(?=\s|$)/);
+    if (prefixMatch) {
+      result.room = `${prefixMatch[1]}-${prefixMatch[2]}`;
+      remaining = remaining.replace(prefixMatch[0], " ");
     } else {
-      // 3. Plain 4-digit room: "2088"
-      const fourDigit = remaining.match(/(?:חדר\s*)?(\d{4})(?=\s|$)/);
-      if (fourDigit) {
-        result.room = fourDigit[1];
-        remaining = remaining.replace(fourDigit[0], " ");
+      // 2. Number with Hebrew-letter suffix: "2095-א", "2095א"
+      const suffixMatch = remaining.match(/(\d{1,4})[-]?([א-ת])(?=\s|$)/);
+      if (suffixMatch) {
+        result.room = `${suffixMatch[1]}-${suffixMatch[2]}`;
+        remaining = remaining.replace(suffixMatch[0], " ");
       } else {
-        // 4. Legacy room/bed: "49/2", "49-2"
-        const roomBedMatch = remaining.match(/(?:חדר\s*)?(\d{2,3})\s*[\/\-]\s*(\d)/);
-        if (roomBedMatch) {
-          result.room = roomBedMatch[1];
-          result.bed = parseInt(roomBedMatch[2]);
-          remaining = remaining.replace(roomBedMatch[0], " ");
+        // 3. Plain 4-digit room: "2088"
+        const fourDigit = remaining.match(/(\d{4})(?=\s|$)/);
+        if (fourDigit) {
+          result.room = fourDigit[1];
+          remaining = remaining.replace(fourDigit[0], " ");
         } else {
-          // 5. Plain 2-3 digit room or חדר prefix: "70", "117", "חדר 70"
-          const roomOnlyMatch = remaining.match(/(?:חדר\s+)?(\d{2,3})(?=\s|$)/);
-          if (roomOnlyMatch) {
-            result.room = roomOnlyMatch[1];
-            remaining = remaining.replace(roomOnlyMatch[0], " ");
-          }
-          const bedMatch = remaining.match(/(?:מיטה\s+)(\d)/);
-          if (bedMatch) {
-            result.bed = parseInt(bedMatch[1]);
-            remaining = remaining.replace(bedMatch[0], " ");
+          // 4. Legacy room/bed: "49/2", "49-2"
+          const roomBedMatch = remaining.match(/(\d{2,3})\s*[\/\-]\s*(\d)/);
+          if (roomBedMatch) {
+            result.room = roomBedMatch[1];
+            result.bed = parseInt(roomBedMatch[2]);
+            remaining = remaining.replace(roomBedMatch[0], " ");
+          } else {
+            // 5. Plain 2-3 digit room or חדר prefix: "70", "117", "חדר 70"
+            const roomOnlyMatch = remaining.match(/(?:חדר\s+)?(\d{2,3})(?=\s|$)/);
+            if (roomOnlyMatch) {
+              result.room = roomOnlyMatch[1];
+              remaining = remaining.replace(roomOnlyMatch[0], " ");
+            }
+            const bedMatch = remaining.match(/(?:מיטה\s+)(\d)/);
+            if (bedMatch) {
+              result.bed = parseInt(bedMatch[1]);
+              remaining = remaining.replace(bedMatch[0], " ");
+            }
           }
         }
       }
@@ -358,7 +381,7 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
 
   const [freestyle, setFreestyle] = useState("");
   const [showStructured, setShowStructured] = useState(false);
-  const [side, setSide] = useState<"A" | "B" | "C">("A");
+  const [side, setSide] = useState<"A" | "B" | "C" | "REHAB" | "UNKNOWN">("A");
   const [room, setRoom] = useState("");
   const [bed, setBed] = useState<1 | 2 | 3>(1);
   const [name, setName] = useState("");
@@ -424,6 +447,7 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
     if (p.age) setAge(String(p.age));
     if (p.diagnosis) setDiagnosis(p.diagnosis);
     if (p.status) setStatus(p.status as typeof status);
+    if (p.side) setSide(p.side);
     setParsed(true);
     setShowStructured(true);
   }, [freestyle]);
@@ -493,6 +517,8 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
   const isStandaloneRoom = !room.trim().includes("/");
 
   function isDuplicateBed(): boolean {
+    // UNKNOWN_SECTION: no duplicate check (multiple unknowns are expected)
+    if (side === "UNKNOWN") return false;
     const section = SIDE_TO_SECTION[side];
     const roomStr = isStandaloneRoom ? room.trim() : `${room.trim()}/${bed}`;
     return patients.some((p: PatientEntry) => p.section === section && p.room === roomStr);
@@ -506,7 +532,8 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
     }
 
     if (isDuplicateBed()) {
-      const sideLabel = side === "A" ? "א" : side === "B" ? "ב" : "ג";
+      const sideLabelMap: Record<string, string> = { A: "א", B: "ב", C: "ג", REHAB: "שיקום", UNKNOWN: "לא ידוע" };
+      const sideLabel = sideLabelMap[side] ?? side;
       const roomLabel = isStandaloneRoom ? room.trim() : `מיטה ${bed} בחדר ${room}`;
       setError(`${roomLabel} (צד ${sideLabel}) כבר תפוס/ה`);
       return;
@@ -694,10 +721,12 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
             <div className="flex gap-2">
               <div className="flex-1">
                 <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">צד *</label>
-                <select value={side} onChange={(e) => setSide(e.target.value as "A" | "B" | "C")} className={inputCls}>
+                <select value={side} onChange={(e) => setSide(e.target.value as "A" | "B" | "C" | "REHAB" | "UNKNOWN")} className={inputCls}>
                   <option value="A">צד א</option>
                   <option value="B">צד ב</option>
                   <option value="C">צד ג</option>
+                  <option value="REHAB">שיקום</option>
+                  <option value="UNKNOWN">לא ידוע</option>
                 </select>
               </div>
               <div className="flex-1">
