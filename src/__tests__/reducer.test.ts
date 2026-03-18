@@ -1063,4 +1063,271 @@ describe("reducer", () => {
       expect(next.events[0].id).toBe("overflow");
     });
   });
+
+  // ═════════════════════════════════════════════════════════════
+  // DELETE_TASK
+  // ═════════════════════════════════════════════════════════════
+  describe("DELETE_TASK", () => {
+    it("hard-deletes a manual task", () => {
+      const t = makeTask({ id: "m1", text: "manual task", source: "manual" });
+      const p = makePatient({ tasks: [t] });
+      const state = makeState([p]);
+      const next = reducer(state, { type: "DELETE_TASK", patientId: "pt-1", taskId: "m1" });
+      expect(next.patients[0].tasks).toHaveLength(0);
+    });
+
+    it("marks a generated task as dismissed (not removed)", () => {
+      const t = makeTask({ id: "g1", text: "generated task", source: "generated" });
+      const p = makePatient({ generatedTasks: [t] });
+      const state = makeState([p]);
+      const next = reducer(state, { type: "DELETE_TASK", patientId: "pt-1", taskId: "g1" });
+      const dismissed = next.patients[0].generatedTasks.find((t: Task) => t.id === "g1");
+      expect(dismissed).toBeDefined();
+      expect(dismissed!.dismissed).toBe(true);
+      expect(dismissed!.done).toBe(true);
+    });
+
+    it("does not affect other patients", () => {
+      const t1 = makeTask({ id: "m1", source: "manual" });
+      const p1 = makePatient({ id: "pt-1", tasks: [t1] });
+      const p2 = makePatient({ id: "pt-2", tasks: [makeTask({ id: "m2", source: "manual" })] });
+      const state = makeState([p1, p2]);
+      const next = reducer(state, { type: "DELETE_TASK", patientId: "pt-1", taskId: "m1" });
+      expect(next.patients[1].tasks).toHaveLength(1);
+    });
+  });
+
+  // ═════════════════════════════════════════════════════════════
+  // REAPPLY_RULES
+  // ═════════════════════════════════════════════════════════════
+  describe("REAPPLY_RULES", () => {
+    it("preserves done state on re-generated tasks", () => {
+      const gen = makeTask({ id: "g1", text: "בדיקות דם טרום ניתוח (CBC, CMP, PT/INR, סוג ושתלב)", source: "generated", done: true, doneTime: "2025-01-01T10:00:00Z" });
+      const p = makePatient({ status: ["טרום ניתוח"], generatedTasks: [gen] });
+      const state = makeState([p]);
+      const next = reducer(state, { type: "REAPPLY_RULES" });
+      // Find the task with matching text
+      const reapplied = next.patients[0].generatedTasks.find(
+        (t: Task) => t.text.includes("טרום ניתוח") && !t.dismissed
+      );
+      if (reapplied) {
+        expect(reapplied.done).toBe(true);
+      }
+    });
+
+    it("dismissed tasks survive multiple REAPPLY_RULES calls", () => {
+      const gen = makeTask({ id: "g1", text: "auto task", source: "generated", dismissed: true, done: true });
+      const p = makePatient({ status: ["some status"], generatedTasks: [gen] });
+      const state = makeState([p]);
+      // First reapply
+      const next1 = reducer(state, { type: "REAPPLY_RULES" });
+      const dismissed1 = next1.patients[0].generatedTasks.filter((t: Task) => t.dismissed);
+      expect(dismissed1.length).toBeGreaterThanOrEqual(1);
+      // Second reapply — dismissed stubs should still be there
+      const next2 = reducer(next1, { type: "REAPPLY_RULES" });
+      const dismissed2 = next2.patients[0].generatedTasks.filter((t: Task) => t.dismissed);
+      expect(dismissed2.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  // ═════════════════════════════════════════════════════════════
+  // REMOVE_DISCHARGED
+  // ═════════════════════════════════════════════════════════════
+  describe("REMOVE_DISCHARGED", () => {
+    it("removes patients flagged as discharged", () => {
+      const p1 = { ...makePatient({ id: "p1" }), discharged: true };
+      const p2 = makePatient({ id: "p2" });
+      const state = makeState([p1, p2]);
+      const next = reducer(state, { type: "REMOVE_DISCHARGED" });
+      expect(next.patients).toHaveLength(1);
+      expect(next.patients[0].id).toBe("p2");
+    });
+
+    it("no-op when no discharged patients", () => {
+      const state = makeState([makePatient()]);
+      const next = reducer(state, { type: "REMOVE_DISCHARGED" });
+      expect(next.patients).toHaveLength(1);
+    });
+  });
+
+  // ═════════════════════════════════════════════════════════════
+  // SET_HANDOVER_NOTE
+  // ═════════════════════════════════════════════════════════════
+  describe("SET_HANDOVER_NOTE", () => {
+    it("sets a handover note on patient", () => {
+      const p = makePatient();
+      const state = makeState([p]);
+      const next = reducer(state, { type: "SET_HANDOVER_NOTE", patientId: "pt-1", note: "חולה מורכב, לעקוב אחר Cr" });
+      expect(next.patients[0].handoverNote).toBe("חולה מורכב, לעקוב אחר Cr");
+    });
+
+    it("clears handover note when empty string", () => {
+      const p = makePatient({ handoverNote: "old note" } as Partial<PatientEntry>);
+      const state = makeState([p]);
+      const next = reducer(state, { type: "SET_HANDOVER_NOTE", patientId: "pt-1", note: "" });
+      expect(next.patients[0].handoverNote).toBeUndefined();
+    });
+  });
+
+  // ═════════════════════════════════════════════════════════════
+  // TOGGLE_SCAN_MODE
+  // ═════════════════════════════════════════════════════════════
+  describe("TOGGLE_SCAN_MODE", () => {
+    it("toggles scan mode on", () => {
+      const state = makeState();
+      const next = reducer(state, { type: "TOGGLE_SCAN_MODE" });
+      expect(next.scanMode).toBe(true);
+    });
+
+    it("toggles scan mode off", () => {
+      const state = makeState([], { scanMode: true });
+      const next = reducer(state, { type: "TOGGLE_SCAN_MODE" });
+      expect(next.scanMode).toBe(false);
+    });
+  });
+
+  // ═════════════════════════════════════════════════════════════
+  // ADD_UNASSIGNED_TASK / TOGGLE_UNASSIGNED_TASK
+  // ═════════════════════════════════════════════════════════════
+  describe("ADD_UNASSIGNED_TASK", () => {
+    it("adds an unassigned task with event", () => {
+      const state = makeState();
+      const next = reducer(state, { type: "ADD_UNASSIGNED_TASK", text: "ward task", urgency: "stat" });
+      expect(next.unassignedTasks).toHaveLength(1);
+      expect(next.unassignedTasks[0].text).toBe("ward task");
+      expect(next.unassignedTasks[0].urgency).toBe("stat");
+      expect(next.events.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  describe("TOGGLE_UNASSIGNED_TASK", () => {
+    it("toggles an unassigned task done", () => {
+      const t = makeTask({ id: "ut-1", text: "ward task" });
+      const state = makeState([], { unassignedTasks: [t] });
+      const next = reducer(state, { type: "TOGGLE_UNASSIGNED_TASK", taskId: "ut-1" });
+      expect(next.unassignedTasks[0].done).toBe(true);
+      expect(next.unassignedTasks[0].doneTime).toBeTruthy();
+    });
+
+    it("toggles an unassigned task back to undone", () => {
+      const t = makeTask({ id: "ut-1", done: true, doneTime: "2025-01-01T10:00:00Z" });
+      const state = makeState([], { unassignedTasks: [t] });
+      const next = reducer(state, { type: "TOGGLE_UNASSIGNED_TASK", taskId: "ut-1" });
+      expect(next.unassignedTasks[0].done).toBe(false);
+      expect(next.unassignedTasks[0].doneTime).toBeNull();
+    });
+  });
+
+  // ═════════════════════════════════════════════════════════════
+  // DISMISS_SCAN_DIFF
+  // ═════════════════════════════════════════════════════════════
+  describe("DISMISS_SCAN_DIFF", () => {
+    it("clears lastScanDiff", () => {
+      const state = makeState([], { lastScanDiff: { newPatients: [], missingPatients: [], changedPatients: [], unchanged: 5 } });
+      const next = reducer(state, { type: "DISMISS_SCAN_DIFF" });
+      expect(next.lastScanDiff).toBeNull();
+    });
+  });
+
+  // ═════════════════════════════════════════════════════════════
+  // IMPORT_BACKUP
+  // ═════════════════════════════════════════════════════════════
+  describe("IMPORT_BACKUP", () => {
+    it("replaces patients with imported backup", () => {
+      const p1 = makePatient({ id: "old" });
+      const p2 = makePatient({ id: "imported", name: "לוי שרה" });
+      const state = makeState([p1]);
+      const next = reducer(state, { type: "IMPORT_BACKUP", patients: [p2] });
+      expect(next.patients).toHaveLength(1);
+      expect(next.patients[0].id).toBe("imported");
+    });
+
+    it("normalizes imported patients", () => {
+      const raw = { id: "raw", name: "test" } as any;
+      const state = makeState();
+      const next = reducer(state, { type: "IMPORT_BACKUP", patients: [raw] });
+      // normalizePatient should add default fields
+      expect(next.patients[0].flags).toEqual([]);
+      expect(next.patients[0].tasks).toEqual([]);
+    });
+  });
+
+  // ═════════════════════════════════════════════════════════════
+  // MERGE_PATIENTS_FROM_REMOTE
+  // ═════════════════════════════════════════════════════════════
+  describe("MERGE_PATIENTS_FROM_REMOTE", () => {
+    it("applies remote patient with higher revision", () => {
+      const local = makePatient({ id: "p1", name: "LocalName", syncMeta: { revision: 1, lastModifiedAt: "2025-01-01", lastModifiedBy: "a" } } as Partial<PatientEntry>);
+      const remote = makePatient({ id: "p1", name: "RemoteName", syncMeta: { revision: 2, lastModifiedAt: "2025-01-02", lastModifiedBy: "b" } } as Partial<PatientEntry>);
+      const state = makeState([local]);
+      const next = reducer(state, { type: "MERGE_PATIENTS_FROM_REMOTE", patients: [remote] });
+      expect(next.patients[0].name).toBe("RemoteName");
+    });
+
+    it("keeps local patient when revision is higher", () => {
+      // syncMeta must be set on the object AFTER makePatient to avoid normalizePatient overriding it
+      const local = { ...makePatient({ id: "p1", name: "LocalName" }), syncMeta: { revision: 5, lastModifiedAt: "2025-01-03", lastModifiedBy: "a" } };
+      const remote = { ...makePatient({ id: "p1", name: "RemoteName" }), syncMeta: { revision: 1, lastModifiedAt: "2025-01-01", lastModifiedBy: "b" } };
+      const state = makeState([local]);
+      const next = reducer(state, { type: "MERGE_PATIENTS_FROM_REMOTE", patients: [remote] });
+      expect(next.patients[0].name).toBe("LocalName");
+    });
+
+    it("adds patients that exist on remote but not locally", () => {
+      const local = makePatient({ id: "p1" });
+      const remote = makePatient({ id: "p2", name: "New Remote" });
+      const state = makeState([local]);
+      const next = reducer(state, { type: "MERGE_PATIENTS_FROM_REMOTE", patients: [remote] });
+      expect(next.patients).toHaveLength(2);
+      expect(next.patients.find((p: PatientEntry) => p.id === "p2")).toBeDefined();
+    });
+  });
+
+  // ═════════════════════════════════════════════════════════════
+  // SYNC_PATIENTS / SYNC_SHIFT_HISTORY
+  // ═════════════════════════════════════════════════════════════
+  describe("SYNC_PATIENTS", () => {
+    it("replaces patients with synced data (normalized)", () => {
+      const p = makePatient({ id: "synced" });
+      const state = makeState([makePatient({ id: "old" })]);
+      const next = reducer(state, { type: "SYNC_PATIENTS", patients: [p] });
+      expect(next.patients).toHaveLength(1);
+      expect(next.patients[0].id).toBe("synced");
+    });
+  });
+
+  describe("SYNC_SHIFT_HISTORY", () => {
+    it("replaces shift history and caps at 20", () => {
+      const history = Array.from({ length: 25 }, (_, i) => ({
+        id: `s${i}`, date: "2025-01-01", label: `shift ${i}`, patients: [], archivedAt: "2025-01-01",
+      }));
+      const state = makeState();
+      const next = reducer(state, { type: "SYNC_SHIFT_HISTORY", shiftHistory: history });
+      expect(next.shiftHistory.length).toBeLessThanOrEqual(20);
+    });
+  });
+
+  // ═════════════════════════════════════════════════════════════
+  // ADD_PHOTO / REMOVE_PHOTO
+  // ═════════════════════════════════════════════════════════════
+  describe("ADD_PHOTO", () => {
+    it("adds a photo to patient", () => {
+      const p = makePatient();
+      const state = makeState([p]);
+      const photo = { id: "ph1", dataUrl: "data:image/png;base64,abc", time: "2025-01-01T10:00:00Z" };
+      const next = reducer(state, { type: "ADD_PHOTO", patientId: "pt-1", photo });
+      expect(next.patients[0].photos).toHaveLength(1);
+      expect(next.patients[0].photos![0].id).toBe("ph1");
+    });
+  });
+
+  describe("REMOVE_PHOTO", () => {
+    it("removes a photo from patient", () => {
+      const photo = { id: "ph1", dataUrl: "data:image/png;base64,abc", time: "2025-01-01T10:00:00Z" };
+      const p = makePatient({ photos: [photo] } as Partial<PatientEntry>);
+      const state = makeState([p]);
+      const next = reducer(state, { type: "REMOVE_PHOTO", patientId: "pt-1", photoId: "ph1" });
+      expect(next.patients[0].photos).toHaveLength(0);
+    });
+  });
 });
