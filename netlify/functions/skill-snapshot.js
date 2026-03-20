@@ -40,7 +40,7 @@ export async function handler(event) {
     const { data: stateRow, error: stateErr } = await supabase
       .from('toranot_state')
       .select('state, updated_at')
-      .eq('id', TORANOT_USER_ID)
+      .eq('user_id', TORANOT_USER_ID)
       .single();
     const patients = stateRow?.state?.patients ?? [];
     const patientCount = patients.length;
