@@ -146,14 +146,14 @@ function buildPatientContext(patient: PatientEntry): string {
   }
 
   const openTasks = [...patient.tasks, ...patient.generatedTasks]
-    .filter((t) => !t.done)
+    .filter((t) => !t.done && !t.dismissed)
     .map((t) => `[${t.urgency}] ${t.text}`);
   if (openTasks.length > 0) {
     parts.push(`משימות פתוחות:\n${openTasks.join("\n")}`);
   }
 
   const doneTasks = [...patient.tasks, ...patient.generatedTasks]
-    .filter((t) => t.done)
+    .filter((t) => t.done && !t.dismissed)
     .map((t) => t.text);
   if (doneTasks.length > 0) {
     parts.push(`בוצע: ${doneTasks.join(", ")}`);
