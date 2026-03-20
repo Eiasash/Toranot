@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git push origin main)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git pull --rebase origin main)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(npx vitest run)",
+      "Bash(npx vite build)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'if echo \"$CLAUDE_TOOL_INPUT\" | grep -q \"push origin main\" 2>/dev/null; then echo \"[skill-hook] Deploy pushed — run /toranot-update-skill to sync skill file\"; fi'"
+          }
+        ]
+      }
+    ]
+  }
+}
