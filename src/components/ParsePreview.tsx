@@ -147,13 +147,13 @@ export function ParsePreview({ patients: initialPatients, onConfirm, onCancel }:
 
   const sections = groupBySection(patients);
   const totalTasks = patients.reduce(
-    (sum, p) => sum + p.tasks.length + p.generatedTasks.length,
+    (sum, p) => sum + p.tasks.length + p.generatedTasks.filter(t => !t.dismissed).length,
     0,
   );
   const statCount = patients.reduce(
     (sum, p) =>
       sum +
-      [...p.tasks, ...p.generatedTasks].filter(
+      [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)].filter(
         (t) => !t.done && t.urgency === "stat",
       ).length,
     0,
@@ -214,7 +214,7 @@ export function ParsePreview({ patients: initialPatients, onConfirm, onCancel }:
             </div>
 
             {pts.map((p) => {
-              const allTasks = [...p.tasks, ...p.generatedTasks];
+              const allTasks = [...p.tasks, ...p.generatedTasks.filter(t => !t.dismissed)];
               const pending = allTasks.filter((t) => !t.done);
               const statTasks = pending.filter((t) => t.urgency === "stat");
               const urgentTasks = pending.filter((t) => t.urgency === "urgent");

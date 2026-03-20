@@ -9,6 +9,9 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
+[functions."toranot-keepalive"]
+  schedule = "0 6 */5 * *"
+
 [functions."claude"]
   included_files = []
 

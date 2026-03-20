@@ -2,7 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import "./index.css";
-import { installDebugInterceptors } from "./components/DebugConsole";
+import { installDebugInterceptors } from "./utils/debugLog";
 
 // Install debug log interceptors before anything else
 installDebugInterceptors();

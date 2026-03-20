@@ -1,0 +1,37 @@
+name: Toranot Weekly Audit
+on:
+  schedule:
+    - cron: '0 5 * * 1'  # Monday 5am UTC (7am Jerusalem)
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Run tests
+        run: npx vitest run
+
+      - name: Build and check bundle size
+        run: |
+          BUILD_OUT=$(npx vite build 2>&1)
+          echo "$BUILD_OUT"
+          SIZE=$(echo "$BUILD_OUT" | grep "dist/assets/index-" | grep "\.js " | grep -oP '[\d.]+\s*kB' | head -1 | grep -oP '[\d.]+')
+          echo "Bundle size: ${SIZE} kB"
+          if [ "$(echo "$SIZE > 140" | bc -l)" = "1" ]; then
+            echo "::error::Bundle size ${SIZE} kB exceeds 140 kB limit"
+            exit 1
+          fi
