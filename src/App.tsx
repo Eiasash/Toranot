@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, Component, type ErrorInfo, lazy, Suspense } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef, Component, type ErrorInfo, lazy, Suspense } from "react";
 import { PatientsProvider } from "./context/PatientsContext";
 import { createHandoff, pullHandoff, type ToranotCloudState } from "./cloudSync";
 import { safeSetItem } from "./utils/storage";
@@ -20,6 +20,7 @@ const QuickCaptureSheet = lazy(() => import("./components/QuickCaptureSheet").th
 import { requestNotificationPermission } from "./utils/taskReminders";
 import { startReminderScheduler, resyncReminders, stopReminderScheduler } from "./reminders/reminderScheduler";
 import { formatScanDiffSummary } from "./engine/smartOCR";
+import { buildShiftContinuity } from "./engine/shiftContinuity";
 import { OverflowMenu } from "./components/OverflowMenu";
 const ShiftHandoffModal = lazy(() => import("./components/ShiftHandoffModal").then(m => ({ default: m.ShiftHandoffModal })));
 const SharedShiftPanel  = lazy(() => import("./components/SharedShiftPanel").then(m => ({ default: m.SharedShiftPanel })));
@@ -46,6 +47,42 @@ function ScanDiffBanner() {
         onClick={() => dispatch({ type: "DISMISS_SCAN_DIFF" })}
         className="text-blue-600 dark:text-blue-400 text-xs px-2 py-0.5 rounded border border-blue-300 dark:border-blue-600 active:opacity-70 shrink-0"
         aria-label="סגור הודעת שינויים"
+      >
+        סגור
+      </button>
+    </div>
+  );
+}
+
+function ShiftContinuityBanner() {
+  const { patients, shiftHistory } = usePatientsState();
+  const [dismissed, setDismissed] = useState(false);
+
+  const continuityMap = useMemo(
+    () => buildShiftContinuity(patients, shiftHistory),
+    [patients, shiftHistory]
+  );
+
+  if (dismissed || continuityMap.size === 0) return null;
+
+  const entries = [...continuityMap.entries()];
+  const withNotes = entries.filter(([, ctx]) => ctx.handoverNote);
+  const withTasks = entries.filter(([, ctx]) => ctx.openTasks.length > 0);
+
+  return (
+    <div
+      role="status"
+      className="w-full lg:max-w-6xl lg:mx-auto mx-0 px-3 py-2 bg-purple-50 dark:bg-purple-900/20 border-b border-purple-200 dark:border-purple-700 flex items-center justify-between gap-2 text-sm"
+    >
+      <span className="text-purple-800 dark:text-purple-300 font-medium" dir="rtl">
+        📋 {continuityMap.size} חולים עם הקשר ממשמרת קודמת
+        {withNotes.length > 0 && ` · ${withNotes.length} עם הערות`}
+        {withTasks.length > 0 && ` · ${withTasks.length} עם משימות פתוחות`}
+      </span>
+      <button
+        onClick={() => setDismissed(true)}
+        className="text-purple-600 dark:text-purple-400 text-xs px-2 py-0.5 rounded border border-purple-300 dark:border-purple-600 active:opacity-70 shrink-0"
+        aria-label="סגור הודעת המשכיות"
       >
         סגור
       </button>
@@ -614,6 +651,7 @@ function AppInner() {
 
       <ShiftProgress />
       <ScanDiffBanner />
+      <ShiftContinuityBanner />
 
       <div className="w-full lg:max-w-6xl lg:mx-auto">
         <InputArea />

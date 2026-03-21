@@ -35,6 +35,22 @@
 - 13 new falls risk tests
 - 13 new shift integrity tests
 - 15 new lab trend tests
+- 11 new shift continuity tests
+
+**Phase 6.1 — Engines wired into visible UI:**
+- ACBBadge pill on PatientCard (color-coded: ACB 5, ACB 3)
+- FallsRiskBadge pill on PatientCard
+- LabTrendArrows after LabBadges (Cr↑↑ K+↑ colored glyphs)
+- ShiftContinuityBanner in App.tsx — surfaces previous on-call notes/tasks on import
+
+**Phase 6.2 — PatientCard split:**
+- Extracted PatientCardAlerts.tsx (170 LOC) from PatientCard
+- PatientCard.tsx reduced from 1233 to 1178 LOC
+- Each alert sub-component independently memoized
+
+**Phase 6.3 — Self-healing:**
+- errorReporter.ts: global window.onerror + onunhandledrejection -> POST to toranot_errors
+- Rate-limited (5/session). Wired in main.tsx.
 
 ### Room format update — SZMC new ward numbering
 

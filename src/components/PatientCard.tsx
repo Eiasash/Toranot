@@ -5,12 +5,8 @@ import { SECTIONS, SECTION_LABEL } from "../types";
 import { TaskItem } from "./TaskItem";
 import { usePatientsDispatch } from "../context/PatientsContext";
 import { useScanMode, useShowTomorrow } from "../store/patientsStore";
-import { LabBadges, AddLabForm } from "./LabTracker";
-import { DrugSafetyAlerts } from "./DrugSafetyAlerts";
-import { IVProtocolAlerts } from "./IVProtocolAlerts";
+import { PatientCardAlerts } from "./PatientCardAlerts";
 import { PhotoAttachments } from "./PhotoAttachments";
-import { MedFlagBadges } from "./MedFlags";
-import { generateHints } from "../engine/hints";
 import { showUndoToast } from "./UndoToast";
 import { InlineErrorBoundary } from "./InlineErrorBoundary";
 // Lazy-loaded — only fetched when user opens the corresponding panel
@@ -109,6 +105,12 @@ function TaskProgress({ done, total }: { done: number; total: number }) {
     </span>
   );
 }
+
+
+
+
+
+
 
 /** Inline handover note that persists across shifts */
 function HandoverNoteInline({ patient }: { patient: PatientEntry }) {
@@ -212,7 +214,6 @@ function PatientCardBase({ patient }: { patient: PatientEntry }) {
   const [showTemplates, setShowTemplates] = useState(false);
   const [showLabForm, setShowLabForm] = useState(false);
   const [showLabChart, setShowLabChart] = useState(false);
-  const [showHints, setShowHints] = useState(false);
   const [showNurseTemplates, setShowNurseTemplates] = useState(false);
   const [showAI, setShowAI] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -640,62 +641,10 @@ function PatientCardBase({ patient }: { patient: PatientEntry }) {
         </div>
       )}
 
-      {/* Lab sparklines */}
-      <LabBadges patient={patient} />
+      {/* Clinical alerts — extracted to PatientCardAlerts (Phase 6.2) */}
+      <PatientCardAlerts patient={patient} showLabForm={showLabForm} onToggleLabForm={() => setShowLabForm(false)} />
 
-      {/* Medication safety flags */}
-      <MedFlagBadges patient={patient} />
 
-      {/* Drug interaction & renal dose warnings */}
-      <DrugSafetyAlerts patient={patient} />
-
-      {/* IV Protocol alerts — matched from patient data against SZMC protocols */}
-      <IVProtocolAlerts patient={patient} />
-
-      {/* Clinical hints — diagnosis-based FYI, NOT tasks */}
-      {(() => {
-        const hints = generateHints(patient);
-        if (hints.length === 0) return null;
-        return (
-          <div>
-            <button
-              type="button"
-              onClick={() => setShowHints((v) => !v)}
-              className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 active:bg-gray-100"
-              aria-expanded={showHints}
-              aria-label="הנחיות רקע קליניות"
-            >
-              💡 הנחיות רקע ({hints.length}) {showHints ? "▴" : "▾"}
-            </button>
-            {showHints && (
-              <div className="mt-2 space-y-2">
-                {hints.map((h, i) => (
-                  <div
-                    key={i}
-                    className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5"
-                  >
-                    <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      {h.emoji} {h.title}
-                    </div>
-                    <ul className="space-y-0.5">
-                      {h.tips.map((tip, j) => (
-                        <li
-                          key={j}
-                          className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed pr-3"
-                          dir="auto"
-                          style={{ unicodeBidi: "plaintext" }}
-                        >
-                          • {tip}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })()}
 
       {/* AI + key tools — always visible on desktop, inside כלים on mobile */}
       <div className="hidden sm:flex gap-1.5 flex-wrap">
@@ -782,10 +731,6 @@ function PatientCardBase({ patient }: { patient: PatientEntry }) {
         )}
         </div>
       </details>
-
-      {showLabForm && (
-        <AddLabForm patient={patient} onClose={() => setShowLabForm(false)} />
-      )}
 
       {/* Lab trend charts */}
       {showLabChart && (
