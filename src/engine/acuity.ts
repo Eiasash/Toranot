@@ -20,6 +20,8 @@
 import type { PatientEntry } from "../types";
 import { checkDrugInteractions } from "./drugSafety";
 import { calculateLabDeltas } from "./labDelta";
+import { calculateACB } from "./anticholinergicBurden";
+import { calculateFallsRisk } from "./fallsRisk";
 
 export interface AcuityBreakdown {
   score: number;
@@ -65,6 +67,15 @@ export function calculateAcuity(patient: PatientEntry): AcuityBreakdown {
   // Active scenarios (status lines that triggered generated tasks)
   const activeScenarios = patient.generatedTasks.filter((t) => !t.done && !t.dismissed).length;
 
+  // Anticholinergic burden (geriatric-specific delirium risk)
+  const acb = calculateACB(patient);
+  const acbHigh = acb.severity === "high" ? 1 : 0;
+  const acbModerate = acb.severity === "moderate" ? 1 : 0;
+
+  // Falls risk composite
+  const falls = calculateFallsRisk(patient);
+  const fallsHigh = falls.severity === "high" ? 1 : 0;
+
   const components = [
     { label: "סטט פתוחים", count: statCount, weight: 5, subtotal: statCount * 5 },
     { label: "דחופים פתוחים", count: urgentCount, weight: 3, subtotal: urgentCount * 3 },
@@ -74,6 +85,9 @@ export function calculateAcuity(patient: PatientEntry): AcuityBreakdown {
     { label: "דדליין קרוב (<30 דק׳)", count: approachingDeadlines, weight: 3, subtotal: approachingDeadlines * 3 },
     { label: "מעבדות קריטיות", count: criticalLabs, weight: 4, subtotal: criticalLabs * 4 },
     { label: "מעבדות חריגות", count: warningLabs, weight: 2, subtotal: warningLabs * 2 },
+    { label: "נטל אנטיכולינרגי גבוה", count: acbHigh, weight: 3, subtotal: acbHigh * 3 },
+    { label: "נטל אנטיכולינרגי בינוני", count: acbModerate, weight: 1, subtotal: acbModerate * 1 },
+    { label: "סיכון נפילה גבוה", count: fallsHigh, weight: 2, subtotal: fallsHigh * 2 },
     { label: "תרחישים פעילים", count: activeScenarios, weight: 1, subtotal: activeScenarios * 1 },
   ].filter((c) => c.count > 0);
 

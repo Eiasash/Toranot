@@ -343,3 +343,111 @@ export function calculateLabDeltas(patient: PatientEntry): LabDelta[] {
     return a.label.localeCompare(b.label);
   });
 }
+
+// ─────────────────────────────────────────────────────────────────────
+// Lab Trend — rate-of-change computation
+//
+// Cr 1.2→1.5 over 3 days ≠ Cr 1.2→1.5 in 6 hours.
+// This function computes Δ/day and provides trend arrows.
+// ─────────────────────────────────────────────────────────────────────
+
+export type TrendArrow = "↑↑" | "↑" | "→" | "↓" | "↓↓";
+
+export interface LabTrend {
+  label: string;
+  values: Array<{ value: number; time: string }>;
+  ratePerDay: number;       // absolute change per 24h
+  arrow: TrendArrow;
+  /** Hebrew one-liner, e.g. "Cr עולה 0.4/יום — מהיר" */
+  summary: string;
+}
+
+/**
+ * Classify rate of change into trend arrow.
+ * Thresholds are lab-specific where defined, otherwise use generic.
+ */
+const RATE_THRESHOLDS: Record<string, { fast: number; slow: number }> = {
+  Cr:      { fast: 0.3, slow: 0.1 },   // >0.3/day = fast rise
+  "K+":    { fast: 0.5, slow: 0.2 },
+  Na:      { fast: 4.0, slow: 1.5 },
+  Hb:      { fast: 1.5, slow: 0.5 },
+  WBC:     { fast: 5.0, slow: 2.0 },
+  PLT:     { fast: 30,  slow: 10 },
+  CRP:     { fast: 50,  slow: 20 },
+  Lactate: { fast: 1.0, slow: 0.3 },
+  INR:     { fast: 0.5, slow: 0.2 },
+  Glucose: { fast: 80,  slow: 30 },
+};
+
+function classifyTrendArrow(label: string, ratePerDay: number): TrendArrow {
+  const thresholds = RATE_THRESHOLDS[label] ?? { fast: 999, slow: 0.01 };
+  const absRate = Math.abs(ratePerDay);
+  if (absRate < thresholds.slow) return "→";
+  if (ratePerDay > 0) {
+    return absRate >= thresholds.fast ? "↑↑" : "↑";
+  }
+  return absRate >= thresholds.fast ? "↓↓" : "↓";
+}
+
+/**
+ * Compute rate-of-change trends for all labs on a patient.
+ * Requires ≥2 values per lab with distinct timestamps.
+ * Uses the two most recent values for the rate computation
+ * (not baseline→latest, which can span days and mask acute changes).
+ */
+export function calculateLabTrends(patient: PatientEntry): LabTrend[] {
+  const labs = patient.labs ?? [];
+  if (labs.length < 2) return [];
+
+  const grouped = new Map<string, LabEntry[]>();
+  for (const l of labs) {
+    const arr = grouped.get(l.label) ?? [];
+    arr.push(l);
+    grouped.set(l.label, arr);
+  }
+
+  const trends: LabTrend[] = [];
+
+  for (const [label, entries] of grouped) {
+    if (entries.length < 2) continue;
+
+    const sorted = [...entries].sort(
+      (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
+    );
+
+    // Use last two values for acute rate
+    const prev = sorted[sorted.length - 2];
+    const curr = sorted[sorted.length - 1];
+    const hoursElapsed =
+      (new Date(curr.time).getTime() - new Date(prev.time).getTime()) / 3.6e6;
+
+    // Skip if timestamps are identical or inverted
+    if (hoursElapsed <= 0) continue;
+
+    const delta = curr.value - prev.value;
+    const ratePerDay = (delta / hoursElapsed) * 24;
+    const arrow = classifyTrendArrow(label, ratePerDay);
+
+    let speed = "";
+    if (arrow === "↑↑" || arrow === "↓↓") speed = "מהיר";
+    else if (arrow === "↑" || arrow === "↓") speed = "איטי";
+    else speed = "יציב";
+
+    const direction = ratePerDay > 0 ? "עולה" : ratePerDay < 0 ? "יורד" : "יציב";
+    const summary =
+      arrow === "→"
+        ? `${label} ${speed}`
+        : `${label} ${direction} ${Math.abs(ratePerDay).toFixed(2)}/יום — ${speed}`;
+
+    trends.push({
+      label,
+      values: sorted.map((e) => ({ value: e.value, time: e.time })),
+      ratePerDay,
+      arrow,
+      summary,
+    });
+  }
+
+  // Sort by absolute rate descending (fastest-changing labs first)
+  return trends.sort((a, b) => Math.abs(b.ratePerDay) - Math.abs(a.ratePerDay));
+}

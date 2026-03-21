@@ -12,6 +12,9 @@
 [functions."toranot-keepalive"]
   schedule = "0 6 */5 * *"
 
+[functions."self-audit"]
+  schedule = "0 5 * * 1"
+
 [functions."claude"]
   included_files = []
 
@@ -48,6 +51,11 @@
 [[redirects]]
   from = "/api/github-pat"
   to = "/.netlify/functions/github-pat"
+  status = 200
+
+[[redirects]]
+  from = "/api/self-audit"
+  to = "/.netlify/functions/self-audit"
   status = 200
 
 # ── SPA catch-all — must be LAST redirect ──

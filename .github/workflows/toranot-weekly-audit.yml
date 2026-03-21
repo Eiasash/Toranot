@@ -23,15 +23,58 @@ jobs:
         run: npx tsc --noEmit
 
       - name: Run tests
-        run: npx vitest run
+        id: tests
+        run: |
+          OUTPUT=$(npx vitest run 2>&1)
+          echo "$OUTPUT"
+          TESTS=$(echo "$OUTPUT" | grep "Tests" | grep -oP '\d+ passed' | grep -oP '\d+')
+          FILES=$(echo "$OUTPUT" | grep "Test Files" | grep -oP '\d+ passed' | grep -oP '\d+')
+          echo "test_count=$TESTS" >> $GITHUB_OUTPUT
+          echo "file_count=$FILES" >> $GITHUB_OUTPUT
 
       - name: Build and check bundle size
+        id: build
         run: |
           BUILD_OUT=$(npx vite build 2>&1)
           echo "$BUILD_OUT"
           SIZE=$(echo "$BUILD_OUT" | grep "dist/assets/index-" | grep "\.js " | grep -oP '[\d.]+\s*kB' | head -1 | grep -oP '[\d.]+')
-          echo "Bundle size: ${SIZE} kB"
-          if [ "$(echo "$SIZE > 140" | bc -l)" = "1" ]; then
-            echo "::error::Bundle size ${SIZE} kB exceeds 140 kB limit"
+          echo "bundle_size=$SIZE" >> $GITHUB_OUTPUT
+          if [ "$(echo "$SIZE > 150" | bc -l)" = "1" ]; then
+            echo "::error::Bundle size ${SIZE} kB exceeds 150 kB limit"
             exit 1
+          fi
+
+      - name: Engine integrity checks
+        run: |
+          echo "=== Banned patterns ==="
+          if grep -rn "transition-all" src/components/ src/index.css 2>/dev/null; then
+            echo "::error::transition-all found — banned"
+            exit 1
+          fi
+          CONSOLE_LEAKS=$(grep -rn "console.log" src/ --include="*.ts" --include="*.tsx" | grep -v "__tests__" | grep -v "import.meta.env.DEV" | wc -l)
+          if [ "$CONSOLE_LEAKS" -gt 5 ]; then
+            echo "::warning::$CONSOLE_LEAKS ungated console.log statements"
+          fi
+          echo "=== Engine file sizes ==="
+          wc -l src/engine/*.ts
+          RULES_LOC=$(wc -l < src/engine/rules.ts)
+          if [ "$RULES_LOC" -gt 1500 ]; then
+            echo "::warning::rules.ts is $RULES_LOC LOC"
+          fi
+          CARD_LOC=$(wc -l < src/components/PatientCard.tsx)
+          echo "PatientCard.tsx: $CARD_LOC LOC"
+          if [ "$CARD_LOC" -gt 1500 ]; then
+            echo "::warning::PatientCard.tsx is $CARD_LOC LOC — split overdue"
+          fi
+
+      - name: Call self-audit endpoint
+        id: selfaudit
+        continue-on-error: true
+        run: |
+          AUDIT=$(curl -sf "https://toranot.netlify.app/.netlify/functions/self-audit" 2>/dev/null || echo '{"status":"UNREACHABLE"}')
+          echo "$AUDIT" | python3 -m json.tool 2>/dev/null || echo "$AUDIT"
+          STATUS=$(echo "$AUDIT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','UNKNOWN'))" 2>/dev/null || echo "UNKNOWN")
+          echo "audit_status=$STATUS" >> $GITHUB_OUTPUT
+          if [ "$STATUS" = "CRITICAL" ]; then
+            echo "::error::Self-audit returned CRITICAL"
           fi

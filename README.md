@@ -2,6 +2,29 @@
 
 ## Recent Changes
 
+### Phase 6 — Self-healing infrastructure + clinical safety engines (2026-03-21)
+
+**New clinical engines:**
+- `anticholinergicBurden.ts` — cumulative ACB scoring (34 drugs, Boustani 2008 scale). Score ≥3 → delirium risk badge. Scans all patient text fields for drug mentions.
+- `fallsRisk.ts` — composite falls risk score (age, ACB, psychotropics, benzos, opioids, delirium, mobility, recent falls, orthostatic, polypharmacy). High risk = benzo/opioid prescribing warning.
+- `shiftIntegrity.ts` — pre-flight handoff check: open STAT tasks, admissions without handover notes, unreviewed AKI, overdue tasks, critical drug interactions.
+- `labDelta.ts` — added `calculateLabTrends()` with Δ/day rate-of-change computation and trend arrows (↑↑ ↑ → ↓ ↓↓). Lab-specific thresholds for Cr, K+, Na, Hb, WBC, PLT, CRP, Lactate, INR, Glucose.
+
+**Acuity engine upgraded:**
+- Now includes ACB burden (high=+3, moderate=+1) and falls risk (high=+2) in the composite acuity score.
+
+**Self-healing infrastructure:**
+- `netlify/functions/self-audit.js` — autonomous engine health checks (patient data consistency, task dismissal rate, lab data integrity, backup health, config validation, token usage). Runs weekly via cron + on-demand.
+- Token usage tracking — fire-and-forget Supabase logging on every Claude API call. Monthly counters per provider in `toranot_config`.
+- Supabase migration: `increment_token_usage` RPC function.
+- Enhanced `.github/workflows/toranot-weekly-audit.yml` — engine integrity checks (banned patterns, console.log leaks, file size monitoring), self-audit endpoint call, generated audit report.
+
+**Tests: 1695 passing (51 files)**
+- 14 new ACB scoring tests
+- 13 new falls risk tests
+- 13 new shift integrity tests
+- 15 new lab trend tests
+
 ### Room format update — SZMC new ward numbering
 
 **New room format support across all input paths**
