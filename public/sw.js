@@ -33,6 +33,9 @@ self.addEventListener("install", (event) => {
 });
 
 // ── Activate ──
+// In-memory store for persisted due tasks (sent from app via PERSIST_DUE_TASKS)
+let _persistedDueTasks = [];
+
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     Promise.all([
@@ -45,14 +48,34 @@ self.addEventListener("activate", (event) => {
       ),
       self.clients.claim(),
     ]).then(() => {
+      // Notify clients of SW update
       self.clients.matchAll().then((clients) => {
         clients.forEach((client) => {
           client.postMessage({ type: "SW_UPDATED", version: CACHE_VERSION });
         });
       });
+      // Check persisted due tasks on activation — fire any overdue
+      checkPersistedDueTasks();
     }),
   );
 });
+
+function checkPersistedDueTasks() {
+  const now = Date.now();
+  for (const t of _persistedDueTasks) {
+    if (!t.dueAt) continue;
+    const dueTime = new Date(t.dueAt).getTime();
+    if (dueTime <= now) {
+      self.registration.showNotification(`⏰ ${t.patientName || "חולה"}`, {
+        body: `${t.taskText} — עבר הזמן!`,
+        icon: "./icon-192.png",
+        tag: `overdue-${t.taskId}`,
+        requireInteraction: true,
+        vibrate: [300, 100, 300, 100, 300],
+      });
+    }
+  }
+}
 
 // ── Cross-Origin Isolation headers ──
 // Needed for SharedArrayBuffer (Tesseract.js OCR). Clones the response
@@ -346,9 +369,15 @@ self.addEventListener("message", (event) => {
     self.registration.showNotification(title, {
       body: body ?? "",
       icon: "./icon-192.png",
+      tag: data.tag ?? "task-reminder",
       requireInteraction: true,
       vibrate: [300, 100, 300, 100, 300],
     });
+  }
+
+  // ── Persist due tasks for activation-time checks ──
+  if (type === "PERSIST_DUE_TASKS" && Array.isArray(data.tasks)) {
+    _persistedDueTasks = data.tasks;
   }
 });
 

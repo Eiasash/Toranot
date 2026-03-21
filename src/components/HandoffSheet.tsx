@@ -60,6 +60,8 @@ function formatPatient(p: PatientEntry): string {
 }
 
 import { getShiftStart } from "../utils/shiftTime";
+import { ShiftEndGuard } from "./ShiftEndGuard";
+import { HandoverTemplateChips } from "./HandoverTemplateChips";
 
 function isOncallRelevant(p: PatientEntry, shiftStart: Date): boolean {
   const shiftISO = shiftStart.toISOString();
@@ -235,6 +237,10 @@ function PatientCard({ p, isNew, dispatch }: { p: PatientEntry; isNew: boolean; 
           <div className="bg-teal-900/20 border border-teal-700/40 rounded-lg p-2">
             {editingSummary ? (
               <div className="space-y-1.5">
+                <HandoverTemplateChips
+                  patient={p}
+                  onInsert={(text) => setSummaryDraft(prev => prev + text)}
+                />
                 <textarea
                   value={summaryDraft}
                   onChange={e => setSummaryDraft(e.target.value)}
@@ -450,6 +456,10 @@ function AdmissionMorningNote({ patient }: { patient: PatientEntry | undefined }
   if (editing) {
     return (
       <div className="mt-1.5">
+        <HandoverTemplateChips
+          patient={patient}
+          onInsert={(text) => setDraft(prev => prev + text)}
+        />
         <textarea
           // eslint-disable-next-line jsx-a11y/no-autofocus
           autoFocus
@@ -851,6 +861,9 @@ export function HandoffSheet({ onClose, initialTab }: { onClose: () => void; ini
             </button>
           ))}
         </div>
+
+        {/* Shift integrity check banner */}
+        <ShiftEndGuard patients={patients} />
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto">

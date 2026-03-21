@@ -43,6 +43,8 @@ export function startReminderScheduler(): void {
   // Also re-check on visibility restored and window focus
   document.addEventListener("visibilitychange", onVisibility);
   window.addEventListener("focus", runCheck);
+  // Restore persisted due tasks and fire any that became overdue while app was closed
+  restoreAndCheckOverdue();
 }
 
 /** Stop the scheduler and clear all tracked state. */
@@ -64,6 +66,7 @@ export function stopReminderScheduler(): void {
 export function resyncReminders(patients: PatientEntry[]): void {
   _patients = patients;
   pruneNotifiedMap();
+  persistDueTasks();
   runCheck();
 }
 
@@ -140,6 +143,17 @@ function fireNotification(d: DueTask): void {
 
   if ("vibrate" in navigator) navigator.vibrate([300, 100, 300, 100, 300]);
 
+  // Prefer SW showNotification (works when tab is backgrounded on Android)
+  if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({
+      type: "TASK_REMINDER",
+      title,
+      body,
+      tag: `task-due-${d.taskId}`,
+    });
+    return;
+  }
+
   if ("Notification" in window && Notification.permission === "granted") {
     try {
       const n = new Notification(title, {
@@ -149,15 +163,71 @@ function fireNotification(d: DueTask): void {
         requireInteraction: true,
       } as NotificationOptions);
       setTimeout(() => n.close(), 60_000);
-      return;
-    } catch { /* fall through to SW */ }
+    } catch { /* fall through */ }
   }
+}
 
-  if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
-    navigator.serviceWorker.controller.postMessage({
-      type: "TASK_REMINDER",
-      title,
-      body,
-    });
-  }
+// ─── Persistence — survive page reload ───────────────────────────────────────
+//
+// Stores due-task timestamps in localStorage. On next app boot, any tasks that
+// became overdue while the app was closed will fire immediately.
+// Also posts to SW so it can check on its own activation events.
+
+const STORAGE_KEY = "toranot_due_tasks";
+
+interface PersistedDueTask {
+  taskId: string;
+  patientName: string;
+  taskText: string;
+  dueAt: string;
+}
+
+function persistDueTasks(): void {
+  try {
+    const dueTasks: PersistedDueTask[] = [];
+    for (const p of _patients) {
+      const allTasks = [...p.tasks, ...p.generatedTasks];
+      for (const t of allTasks) {
+        if (t.done || !t.dueAt) continue;
+        dueTasks.push({
+          taskId: t.id,
+          patientName: p.name ?? "חולה",
+          taskText: t.text,
+          dueAt: t.dueAt,
+        });
+      }
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(dueTasks));
+
+    // Also send to SW for checking on activation
+    if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: "PERSIST_DUE_TASKS",
+        tasks: dueTasks,
+      });
+    }
+  } catch { /* localStorage full — non-fatal */ }
+}
+
+function restoreAndCheckOverdue(): void {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const tasks: PersistedDueTask[] = JSON.parse(raw);
+    const now = Date.now();
+    for (const t of tasks) {
+      const dueTime = new Date(t.dueAt).getTime();
+      if (dueTime <= now && !notifiedAt.has(t.taskId)) {
+        // This task was due while app was closed — fire immediately
+        fireNotification({
+          taskId: t.taskId,
+          patientName: t.patientName,
+          taskText: t.taskText,
+          dueAt: t.dueAt,
+          lastNotifiedAt: 0,
+        });
+        notifiedAt.set(t.taskId, now);
+      }
+    }
+  } catch { /* corrupt data — ignore */ }
 }

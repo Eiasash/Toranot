@@ -19,6 +19,14 @@
 - Supabase migration: `increment_token_usage` RPC function.
 - Enhanced `.github/workflows/toranot-weekly-audit.yml` — engine integrity checks (banned patterns, console.log leaks, file size monitoring), self-audit endpoint call, generated audit report.
 
+**P0 components:**
+- `ShiftEndGuard.tsx` — pre-flight handoff integrity banner in HandoffSheet. Shows open STAT tasks, admissions without handover notes, unreviewed AKI, overdue tasks. Collapsible issues list with acknowledge button for critical issues.
+- SW push notifications persist across page reload — due tasks saved to localStorage + posted to SW. On app restart, overdue tasks fire immediately. SW checks persisted tasks on activation.
+
+**P2 components:**
+- `HandoverTemplateChips.tsx` — quick-insert snippet chips above handover note textarea. Context-aware: shows GOC chip when DNR flagged, fever chip when חום in diagnosis, falls chip when נפילה present. 13 templates total (5 contextual + 8 default).
+- Chips wired into both new-admission handover edit and morning report note editor.
+
 **Tests: 1695 passing (51 files)**
 - 14 new ACB scoring tests
 - 13 new falls risk tests
