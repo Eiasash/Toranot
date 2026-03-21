@@ -158,7 +158,9 @@ function gatherDrugText(patient: PatientEntry): string {
     ...patient.flags,
     ...(patient.notes ?? []),
     ...(patient.planNotes ?? []),
+    ...(patient.medications ?? []),
     patient.diagnosis ?? "",
+    patient.handoverNote ?? "",
   ].join(" ");
 }
 
@@ -808,13 +810,14 @@ export function checkAllergyConflicts(patient: PatientEntry): AllergyWarning[] {
   const allergies = (patient as PatientEntry & { allergies?: string[] }).allergies;
   if (!allergies || allergies.length === 0) return [];
 
-  // Collect all drug text from tasks, generated tasks, notes, and planNotes
+  // Collect all drug text from tasks, generated tasks, notes, planNotes, and medications
   const allText = [
     ...patient.tasks.map(t => t.text),
     ...patient.generatedTasks.map(t => t.text),
     ...(patient.notes ?? []),
     ...(patient.planNotes ?? []),
     ...(patient.status ?? []),
+    ...(patient.medications ?? []),
   ].join(" ");
 
   if (!allText.trim()) return [];

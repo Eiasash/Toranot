@@ -19,6 +19,7 @@ const QRSync            = lazy(() => import("./components/QRSync").then(m => ({ 
 const QuickCaptureSheet = lazy(() => import("./components/QuickCaptureSheet").then(m => ({ default: m.QuickCaptureSheet })));
 import { requestNotificationPermission } from "./utils/taskReminders";
 import { startReminderScheduler, resyncReminders, stopReminderScheduler } from "./reminders/reminderScheduler";
+import { persistAllPatientLabs, restorePatientLabs } from "./persistence/labPersistence";
 import { formatScanDiffSummary } from "./engine/smartOCR";
 import { buildShiftContinuity } from "./engine/shiftContinuity";
 import { OverflowMenu } from "./components/OverflowMenu";
@@ -568,6 +569,26 @@ function AppInner() {
   const [modal, setModal] = useState<Modal>("none");
   const { patients, activeSection } = usePatientsState();
   const dispatch = usePatientsDispatch();
+
+  // ── Lab persistence: save on change, restore on import ──────────────
+  // Persist labs to Supabase whenever patients change (fire-and-forget)
+  const prevPatientCountRef = useRef(patients.length);
+  useEffect(() => {
+    persistAllPatientLabs(patients);
+  }, [patients]);
+
+  // Restore historical labs after import (patient count increased = likely import)
+  useEffect(() => {
+    if (patients.length > prevPatientCountRef.current && patients.length > 0) {
+      // Patients were imported — restore historical labs for those without
+      restorePatientLabs(patients).then((labsMap) => {
+        if (labsMap.size > 0) {
+          dispatch({ type: "HYDRATE_LABS", labsByPatientId: labsMap });
+        }
+      });
+    }
+    prevPatientCountRef.current = patients.length;
+  }, [patients.length, dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     requestNotificationPermission().then(({ showCaveat }) => {

@@ -90,6 +90,7 @@ function buildTextCorpus(patient: PatientEntry): string {
   if (patient.notes) for (const n of patient.notes) parts.push(n);
   if (patient.tomorrowNotes) for (const n of patient.tomorrowNotes) parts.push(n);
   if (patient.planNotes) for (const n of patient.planNotes) parts.push(n);
+  if (patient.medications) for (const m of patient.medications) parts.push(m);
   return parts.join(" ");
 }
 

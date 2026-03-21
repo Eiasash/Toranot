@@ -149,6 +149,11 @@ export type PatientEntry = {
   // Known drug allergies (e.g., ["penicillin", "sulfa"])
   allergies?: string[];
 
+  // Structured medication list — one drug per entry (e.g., ["Omeprazole 20mg", "Metoprolol 50mg"])
+  // Fed to ACB, falls risk, drug interaction, Beers engines for accurate scoring.
+  // Populated via MedicationInput paste (from תיק אשפוז home med list).
+  medications?: string[];
+
   // Display order within section (lower = higher on list)
   order?: number;
 

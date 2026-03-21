@@ -226,6 +226,59 @@ export async function handler(event) {
       });
     }
 
+    // ── 8. Snapshot diff — compare to last audit ────────────────────────
+    let previousSnapshot = null;
+    let trends = [];
+    try {
+      const { data: prevData } = await supabase
+        .from('toranot_config')
+        .select('value')
+        .eq('key', 'previous_audit_snapshot')
+        .single();
+      previousSnapshot = prevData?.value ?? null;
+    } catch { /* first audit — no previous */ }
+
+    const currentSnapshot = {
+      patients: patients.length,
+      totalTasks,
+      dismissalRate: totalTasks > 0 ? dismissedTasks / totalTasks : 0,
+      backupCount: backupCount ?? 0,
+      recentErrorCount: recentErrors.length,
+      openStatTasks,
+      labEntries: patients.reduce((sum, p) => sum + (p.labs?.length ?? 0), 0),
+      medListCount: patients.filter(p => (p.medications?.length ?? 0) > 0).length,
+    };
+
+    if (previousSnapshot) {
+      const prev = previousSnapshot;
+      const diff = (label, curr, old, unit = '', warnThreshold = null) => {
+        const delta = curr - old;
+        if (delta === 0) return null;
+        const sign = delta > 0 ? '+' : '';
+        const entry = { metric: label, previous: old, current: curr, delta: `${sign}${delta}${unit}` };
+        if (warnThreshold !== null && Math.abs(delta) >= warnThreshold) {
+          findings.push({
+            severity: "warning",
+            area: "trend",
+            message: `${label}: ${sign}${delta}${unit} since last audit (${old} → ${curr})`,
+          });
+        }
+        return entry;
+      };
+
+      const t = [
+        diff("patients", currentSnapshot.patients, prev.patients ?? 0, '', 15),
+        diff("totalTasks", currentSnapshot.totalTasks, prev.totalTasks ?? 0, '', 100),
+        diff("dismissalRate", Math.round(currentSnapshot.dismissalRate * 100), Math.round((prev.dismissalRate ?? 0) * 100), '%', 15),
+        diff("backupCount", currentSnapshot.backupCount, prev.backupCount ?? 0),
+        diff("recentErrors", currentSnapshot.recentErrorCount, prev.recentErrorCount ?? 0, '', 10),
+        diff("openStatTasks", currentSnapshot.openStatTasks, prev.openStatTasks ?? 0, '', 5),
+        diff("labEntries", currentSnapshot.labEntries, prev.labEntries ?? 0),
+        diff("patientsWithMeds", currentSnapshot.medListCount, prev.medListCount ?? 0),
+      ].filter(Boolean);
+      trends = t;
+    }
+
     // ── Build report ──────────────────────────────────────────────────────
     const criticalCount = findings.filter(f => f.severity === "critical").length;
     const warningCount = findings.filter(f => f.severity === "warning").length;
@@ -244,23 +297,34 @@ export async function handler(event) {
         lastStateUpdate: lastUpdate,
         tokenUsage,
         recentErrorCount: recentErrors.length,
+        labEntries: currentSnapshot.labEntries,
+        patientsWithMedList: currentSnapshot.medListCount,
       },
+      trends,
       findings,
       autoFixes,
       engineInvariants: ENGINE_INVARIANTS,
     };
 
-    // ── Persist audit result ──────────────────────────────────────────────
+    // ── Persist audit result + snapshot for next diff ──────────────────
     try {
       await supabase.from('toranot_config').upsert({
         key: 'last_audit',
-        value: JSON.stringify({
+        value: {
           at: report.auditAt,
           status: report.status,
           findingsCount: findings.length,
           criticalCount,
           warningCount,
-        }),
+          trendCount: trends.length,
+        },
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'key' });
+
+      // Save current snapshot for next audit's diff
+      await supabase.from('toranot_config').upsert({
+        key: 'previous_audit_snapshot',
+        value: currentSnapshot,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'key' });
     } catch { /* non-fatal */ }

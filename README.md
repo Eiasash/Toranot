@@ -52,6 +52,16 @@
 - errorReporter.ts: global window.onerror + onunhandledrejection -> POST to toranot_errors
 - Rate-limited (5/session). Wired in main.tsx.
 
+**Phase 6.4 — Structured medications + persistent labs + snapshot diffing:**
+- Structured medication list: `medications?: string[]` on PatientEntry with SET_MEDICATIONS action.
+  MedicationInput component: paste-friendly textarea with live ACB preview, auto-parse newlines/commas.
+  MedCountBadge pill in PatientCard header. All 4 engines (ACB, falls, drugSafety, allergy) scan meds.
+- Persistent labs: `toranot_labs` Supabase table keyed by patient name+room. Labs persist across shift
+  archives. On import, patients without labs get hydrated from historical data. HYDRATE_LABS action.
+- Self-audit snapshot diffing: compares current metrics against previous audit. Detects trends in
+  patient count, task volume, dismissal rate, error count. Warns when metrics spike. Previous snapshot
+  stored in toranot_config for next run.
+
 ### Room format update — SZMC new ward numbering
 
 **New room format support across all input paths**

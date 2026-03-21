@@ -63,6 +63,7 @@ function buildCorpus(patient: PatientEntry): string {
   for (const t of patient.tasks) parts.push(t.text);
   for (const t of patient.generatedTasks) parts.push(t.text);
   if (patient.notes) for (const n of patient.notes) parts.push(n);
+  if (patient.medications) for (const m of patient.medications) parts.push(m);
   return parts.join(" ");
 }
 

@@ -95,6 +95,7 @@ export function normalizePatient(p: RawPatient): PatientEntry {
     notes: Array.isArray(p.notes) ? p.notes : [],
     labs: Array.isArray(p.labs) ? p.labs : [],
     allergies: Array.isArray(p.allergies) ? p.allergies : [],
+    medications: Array.isArray((p as PatientEntry).medications) ? (p as PatientEntry).medications : [],
     order: typeof p.order === "number" ? p.order : 0,
     // Phase 1: ensure structured clinical metadata is always present.
     // Prevents renal/comfort logic from crashing on old localStorage records.
@@ -132,7 +133,9 @@ export type Action =
   | { type: "ADD_NOTE"; patientId: string; text: string }
   | { type: "REMOVE_NOTE"; patientId: string; index: number }
   | { type: "ADD_LAB"; patientId: string; lab: LabEntry }
+  | { type: "HYDRATE_LABS"; labsByPatientId: Map<string, LabEntry[]> }
   | { type: "SET_HANDOVER_NOTE"; patientId: string; note: string }
+  | { type: "SET_MEDICATIONS"; patientId: string; medications: string[] }
   | { type: "ADD_PHOTO"; patientId: string; photo: import("../types").PatientPhoto }
   | { type: "REMOVE_PHOTO"; patientId: string; photoId: string }
   | { type: "REORDER_PATIENT"; patientId: string; direction: "up" | "down" }
@@ -430,12 +433,32 @@ function innerReducer(state: PatientsState, action: Action): PatientsState {
         ),
       };
 
+    case "HYDRATE_LABS":
+      return {
+        ...state,
+        patients: state.patients.map((p) => {
+          const historical = action.labsByPatientId.get(p.id);
+          if (!historical || (p.labs?.length ?? 0) > 0) return p; // don't overwrite existing
+          return { ...p, labs: historical };
+        }),
+      };
+
     case "SET_HANDOVER_NOTE":
       return {
         ...state,
         patients: state.patients.map((p) =>
           p.id === action.patientId
             ? { ...p, handoverNote: action.note || undefined }
+            : p,
+        ),
+      };
+
+    case "SET_MEDICATIONS":
+      return {
+        ...state,
+        patients: state.patients.map((p) =>
+          p.id === action.patientId
+            ? { ...p, medications: action.medications.filter(m => m.trim()) }
             : p,
         ),
       };

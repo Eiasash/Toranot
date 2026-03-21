@@ -6,6 +6,7 @@ import { TaskItem } from "./TaskItem";
 import { usePatientsDispatch } from "../context/PatientsContext";
 import { useScanMode, useShowTomorrow } from "../store/patientsStore";
 import { PatientCardAlerts } from "./PatientCardAlerts";
+import { MedicationInput, MedCountBadge } from "./MedicationInput";
 import { PhotoAttachments } from "./PhotoAttachments";
 import { showUndoToast } from "./UndoToast";
 import { InlineErrorBoundary } from "./InlineErrorBoundary";
@@ -214,6 +215,7 @@ function PatientCardBase({ patient }: { patient: PatientEntry }) {
   const [showTemplates, setShowTemplates] = useState(false);
   const [showLabForm, setShowLabForm] = useState(false);
   const [showLabChart, setShowLabChart] = useState(false);
+  const [showMeds, setShowMeds] = useState(false);
   const [showNurseTemplates, setShowNurseTemplates] = useState(false);
   const [showAI, setShowAI] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -529,11 +531,12 @@ function PatientCardBase({ patient }: { patient: PatientEntry }) {
       </div>
 
       {/* Flags */}
-      {patient.flags.length > 0 && (
+      {(patient.flags.length > 0 || (patient.medications?.length ?? 0) > 0) && (
         <div className="flex flex-wrap gap-1.5">
           {patient.flags.map((f) => (
             <FlagBadge key={f} flag={f} />
           ))}
+          <MedCountBadge patient={patient} />
         </div>
       )}
 
@@ -678,6 +681,16 @@ function PatientCardBase({ patient }: { patient: PatientEntry }) {
             📈 Lab Trend
           </button>
         )}
+        <button
+          onClick={() => setShowMeds(!showMeds)}
+          className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${
+            showMeds
+              ? "bg-violet-600 text-white border-violet-600"
+              : "border-violet-200 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/30 text-violet-800 dark:text-violet-300"
+          } active:bg-violet-100`}
+        >
+          💊 תרופות{(patient.medications?.length ?? 0) > 0 ? ` (${patient.medications!.length})` : ""}
+        </button>
       </div>
 
       {/* Quick action buttons — collapsed by default (mobile), all tools */}
@@ -729,8 +742,23 @@ function PatientCardBase({ patient }: { patient: PatientEntry }) {
             📈 תרשים
           </button>
         )}
+        <button
+          onClick={() => setShowMeds(!showMeds)}
+          className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${
+            showMeds
+              ? "bg-violet-600 text-white border-violet-600"
+              : "border-violet-200 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/30 text-violet-800 dark:text-violet-300"
+          } active:bg-violet-100`}
+        >
+          💊 תרופות{(patient.medications?.length ?? 0) > 0 ? ` (${patient.medications!.length})` : ""}
+        </button>
         </div>
       </details>
+
+      {/* Medication list input */}
+      {showMeds && (
+        <MedicationInput patient={patient} onClose={() => setShowMeds(false)} />
+      )}
 
       {/* Lab trend charts */}
       {showLabChart && (
