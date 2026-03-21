@@ -1,6 +1,7 @@
 -- Token usage tracking: increment monthly counters per provider
 -- Called fire-and-forget from claude.ts and gemini.ts after each API call.
--- Value column is jsonb — no ::text cast needed.
+-- Uses upsert on toranot_config with key = 'token_usage_YYYY-MM_provider'
+-- Column `value` is jsonb — no ::text cast needed.
 
 CREATE OR REPLACE FUNCTION increment_token_usage(
   p_month text,
