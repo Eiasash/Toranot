@@ -27,7 +27,10 @@
 - `HandoverTemplateChips.tsx` — quick-insert snippet chips above handover note textarea. Context-aware: shows GOC chip when DNR flagged, fever chip when חום in diagnosis, falls chip when נפילה present. 13 templates total (5 contextual + 8 default).
 - Chips wired into both new-admission handover edit and morning report note editor.
 
-**Tests: 1695 passing (51 files)**
+**Shift continuity:**
+- `shiftContinuity.ts` — cross-references imported patients against the most recent archived shift. Surfaces previous on-call's handover notes, open tasks, and flags. Room + name fuzzy matching handles OCR variations.
+
+**Tests: 1706 passing (52 files)**
 - 14 new ACB scoring tests
 - 13 new falls risk tests
 - 13 new shift integrity tests
