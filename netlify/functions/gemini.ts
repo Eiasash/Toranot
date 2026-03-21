@@ -160,6 +160,36 @@ export default async (req: Request, _context: Context) => {
   const text = await upstream.text();
   if (!upstream.ok) logUpstreamError("gemini", upstream.status, text);
 
+  // ── Token usage tracking (fire-and-forget) ─────────────────────────────
+  if (upstream.ok) {
+    try {
+      const parsed = JSON.parse(text);
+      const usage = parsed?.usageMetadata;
+      if (usage?.promptTokenCount || usage?.candidatesTokenCount) {
+        const sbUrl = Netlify.env.get("SUPABASE_URL") || Netlify.env.get("VITE_SUPABASE_URL");
+        const sbKey = Netlify.env.get("SUPABASE_SERVICE_KEY") || Netlify.env.get("VITE_SUPABASE_ANON_KEY");
+        if (sbUrl && sbKey) {
+          const now = new Date();
+          const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+          fetch(`${sbUrl}/rest/v1/rpc/increment_token_usage`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "apikey": sbKey,
+              "Authorization": `Bearer ${sbKey}`,
+            },
+            body: JSON.stringify({
+              p_month: month,
+              p_provider: "gemini",
+              p_input: usage.promptTokenCount ?? 0,
+              p_output: usage.candidatesTokenCount ?? 0,
+            }),
+          }).catch(() => {});
+        }
+      }
+    } catch { /* skip tracking */ }
+  }
+
   return new Response(text, {
     status: upstream.status,
     headers: {
