@@ -51,7 +51,7 @@ git pull --rebase origin main && git push origin main
 Report:
 - Commit SHA
 - TypeScript: clean / N errors
-- Tests: N/1038 passing
+- Tests: N/~1,727 passing
 - Build: success / fail
 - CI/CD: GitHub Actions will run typecheck → test → build → deploy
 - Live URL: https://toranot.netlify.app
