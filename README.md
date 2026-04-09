@@ -338,3 +338,4 @@ the patient gets `UNKNOWN_SECTION`. The import gate blocks until resolved.
 - Records latency and conflicts into `window.__toranotMetrics` on each actual DB round-trip.
 - Wired into `pushCloud()` so metrics reflect real writes, not debounce timer ticks.
 
+<!-- env refresh Thu Apr  9 14:59:59 UTC 2026 -->
