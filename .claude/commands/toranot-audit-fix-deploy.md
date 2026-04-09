@@ -10,7 +10,7 @@ Repo: github.com/Eiasash/Toranot
 Live: https://toranot.netlify.app
 Netlify site ID: 85d12386-b960-4f65-bee8-80e210ecd683
 Stack: React 19 + TypeScript + Tailwind CSS 4 + Zustand 5 + Vite 7
-Tests: 1640 tests, 47 files
+Tests: ~1,727 tests, 54 files
 Bundle target: <140KB
 
 ---
@@ -18,7 +18,7 @@ Bundle target: <140KB
 ## MANDATORY WORKFLOW — AFTER EVERY CHANGE
 ```
 1. npx tsc --noEmit                    — zero TypeScript errors
-2. npx vitest run                      — ALL 1640 tests must pass, zero failures
+2. npx vitest run                      — ALL ~1,727 tests must pass, zero failures
 3. npx vite build                      — must succeed, bundle must be <140KB
 4. Update README.md                    — Recent Changes section
 5. git add -A && git commit -m "..."   — see push procedure
@@ -138,7 +138,7 @@ npx vite build 2>&1 | grep -E "dist/|kB|KB"
 ### E. Test suite
 ```bash
 npx vitest run 2>&1 | tail -20
-# Must show: 1640 passed, 0 failed
+# Must show: ~1,727 passed, 0 failed
 # If count changed — update SKILL.md test count
 ```
 
@@ -439,7 +439,7 @@ jobs:
 ## PHASE 5 — SKILL FILE UPDATE
 
 After all changes committed and deployed, update `SKILL.md` (toranot-dev):
-- Update test count if changed (currently 1640 / 47 files)
+- Update test count if changed (currently ~1,727 / 54 files)
 - Update bundle size if changed (currently ~138KB)
 - Add any new gotchas discovered
 - Add new components to §1 repo structure
@@ -463,4 +463,4 @@ Then run `/toranot-update-skill` to verify self-consistency.
 - Never filter planNotes/tomorrowNotes into trigger matching
 - Never count dismissed tasks in aggregations
 - Never store GitHub PAT — remove from remote URL immediately after push
-- Test count must be verified after every change — 1640 is the baseline
+- Test count must be verified after every change — ~1,727 is the baseline
