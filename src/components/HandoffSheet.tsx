@@ -28,16 +28,17 @@ function formatPatient(p: PatientEntry): string {
   const header = [p.room, p.name, p.age ? `(${p.age})` : null].filter(Boolean).join(" ");
   const dischargedMarker = p.discharged ? " 🏠 שוחרר" : "";
   lines.push(`■ ${header}${dischargedMarker}`);
+  // Functional status first — clinical presentation style (age + baseline before diagnosis)
+  const baselineParts: string[] = [];
+  if (p.clinicalMeta?.baselineCognition) baselineParts.push({ oriented: "צלול", mci: "MCI", dementia: "דמנציה", unknown: "" }[p.clinicalMeta.baselineCognition]);
+  if (p.clinicalMeta?.baselineMobility) baselineParts.push({ independent: "עצמאי", walker: "הליכון", wheelchair: "כסא גלגלים", bedbound: "מרותק למיטה" }[p.clinicalMeta.baselineMobility]);
+  if (p.clinicalMeta?.livingArrangement) baselineParts.push({ independent: "גר עצמאי", with_family: "עם משפחה", assisted_living: "דיור מוגן", nursing_home: "מוסד סיעודי" }[p.clinicalMeta.livingArrangement]);
+  if (p.clinicalMeta?.admissionSource) baselineParts.push({ ed: "מיון", community: "קהילה", transfer: "העברה ממחלקה", nursing_home: "הגיע ממוסד", rehab: "שיקום" }[p.clinicalMeta.admissionSource]);
+  if (baselineParts.filter(Boolean).length > 0) lines.push(`  🏠 תפקוד: ${baselineParts.filter(Boolean).join(" | ")}`);
+  if (p.clinicalMeta?.isolation?.length) lines.push(`  ⚠️ בידוד: ${p.clinicalMeta.isolation.join(", ")}`);
   const severity = [p.diagnosis, ...p.flags].filter(Boolean).join(" | ");
   if (severity) lines.push(`  אבחנה: ${severity}`);
   if (p.status.length > 0) lines.push(`  מצב: ${p.status.join(", ")}`);
-  // Isolation + baseline for morning team
-  if (p.clinicalMeta?.isolation?.length) lines.push(`  ⚠️ בידוד: ${p.clinicalMeta.isolation.join(", ")}`);
-  const baselineParts: string[] = [];
-  if (p.clinicalMeta?.baselineMobility) baselineParts.push({ independent: "עצמאי", walker: "הליכון", wheelchair: "כסא גלגלים", bedbound: "מרותק" }[p.clinicalMeta.baselineMobility]);
-  if (p.clinicalMeta?.baselineCognition && p.clinicalMeta.baselineCognition !== "oriented") baselineParts.push({ oriented: "", mci: "MCI", dementia: "דמנציה", unknown: "" }[p.clinicalMeta.baselineCognition]);
-  if (p.clinicalMeta?.livingArrangement && p.clinicalMeta.livingArrangement !== "independent") baselineParts.push({ independent: "", with_family: "עם משפחה", assisted_living: "דיור מוגן", nursing_home: "מוסד" }[p.clinicalMeta.livingArrangement]);
-  if (baselineParts.filter(Boolean).length > 0) lines.push(`  תפקוד: ${baselineParts.filter(Boolean).join(" | ")}`);
   const labSummary = formatLabsForHandoff(p);
   if (labSummary) lines.push(`  🔬 ${labSummary}`);
   if (pending.length > 0) {
@@ -106,10 +107,16 @@ function buildTextHandoff(patients: PatientEntry[], filteredPatients: PatientEnt
     lines.push(`🆕 קבלות תורן ${shiftDateStr} (${newAdmissions.length}):`);
     for (const p of newAdmissions) {
       const header = [p.room, p.name, p.age ? `(${p.age})` : null].filter(Boolean).join(" ");
+      // Functional baseline in admission summary line
+      const funcParts: string[] = [];
+      if (p.clinicalMeta?.baselineCognition && p.clinicalMeta.baselineCognition !== "oriented" && p.clinicalMeta.baselineCognition !== "unknown") funcParts.push({ oriented: "", mci: "MCI", dementia: "דמנציה", unknown: "" }[p.clinicalMeta.baselineCognition]);
+      if (p.clinicalMeta?.baselineMobility && p.clinicalMeta.baselineMobility !== "independent") funcParts.push({ independent: "", walker: "הליכון", wheelchair: "כסא גלגלים", bedbound: "מרותק" }[p.clinicalMeta.baselineMobility]);
+      if (p.clinicalMeta?.livingArrangement && p.clinicalMeta.livingArrangement !== "independent") funcParts.push({ independent: "", with_family: "עם משפחה", assisted_living: "דיור מוגן", nursing_home: "מוסד" }[p.clinicalMeta.livingArrangement]);
+      const funcStr = funcParts.filter(Boolean).length > 0 ? `, ${funcParts.filter(Boolean).join("/")}` : "";
       const dx = p.diagnosis ? ` — ${p.diagnosis}` : "";
       const st = p.status.length > 0 ? ` [${p.status.join("/")}]` : "";
       const admTime = p.scannedAt ? ` 🕐${new Date(p.scannedAt).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })}` : "";
-      lines.push(`  • ${header}${dx}${st}${admTime}`);
+      lines.push(`  • ${header}${funcStr}${dx}${st}${admTime}`);
     }
     lines.push(`${"─".repeat(35)}`);
   }
@@ -213,6 +220,35 @@ function PatientCard({ p, isNew, dispatch }: { p: PatientEntry; isNew: boolean; 
             {p.discharged && <span className="text-xs bg-gray-700 text-gray-300 rounded px-1.5 py-0.5">🏠 שוחרר</span>}
             {isNew && <span className="text-xs bg-teal-700 text-teal-100 rounded px-1.5 py-0.5 font-medium">קבלה חדשה</span>}
           </div>
+          {/* Functional status — first thing after name, clinical presentation style */}
+          {(p.clinicalMeta?.baselineMobility || p.clinicalMeta?.baselineCognition || p.clinicalMeta?.livingArrangement) && (
+            <div className="flex gap-1 mt-0.5 flex-wrap items-center">
+              <span className="text-[10px] text-teal-500 font-semibold shrink-0">🏠</span>
+              {p.clinicalMeta?.baselineCognition && (
+                <span className={`text-[10px] rounded px-1.5 py-0 ${p.clinicalMeta.baselineCognition === "dementia" ? "bg-purple-800 text-purple-200 font-bold" : p.clinicalMeta.baselineCognition === "mci" ? "bg-purple-900/50 text-purple-300" : "bg-gray-700 text-gray-300"}`}>
+                  {{ oriented: "צלול", mci: "MCI", dementia: "דמנציה", unknown: "" }[p.clinicalMeta.baselineCognition]}
+                </span>
+              )}
+              {p.clinicalMeta?.baselineMobility && (
+                <span className={`text-[10px] rounded px-1.5 py-0 ${p.clinicalMeta.baselineMobility === "bedbound" ? "bg-red-900/50 text-red-300 font-bold" : p.clinicalMeta.baselineMobility === "wheelchair" ? "bg-amber-900/40 text-amber-300" : "bg-gray-700 text-gray-300"}`}>
+                  {{ independent: "עצמאי", walker: "הליכון", wheelchair: "כסא גלגלים", bedbound: "מרותק" }[p.clinicalMeta.baselineMobility]}
+                </span>
+              )}
+              {p.clinicalMeta?.livingArrangement && (
+                <span className={`text-[10px] rounded px-1.5 py-0 ${p.clinicalMeta.livingArrangement === "nursing_home" ? "bg-gray-600 text-gray-100" : "bg-gray-700 text-gray-300"}`}>
+                  {{ independent: "גר עצמאי", with_family: "עם משפחה", assisted_living: "דיור מוגן", nursing_home: "מוסד סיעודי" }[p.clinicalMeta.livingArrangement]}
+                </span>
+              )}
+            </div>
+          )}
+          {/* Isolation badges */}
+          {p.clinicalMeta?.isolation?.length ? (
+            <div className="flex gap-1 mt-0.5 flex-wrap">
+              {p.clinicalMeta.isolation.map(iso => (
+                <span key={iso} className="text-[10px] bg-red-700 text-white rounded px-1.5 py-0 font-bold">⚠ {iso}</span>
+              ))}
+            </div>
+          ) : null}
           {p.diagnosis && (
             <p className="text-xs text-blue-300 mt-0.5 leading-snug">{p.diagnosis}</p>
           )}
@@ -221,25 +257,6 @@ function PatientCard({ p, isNew, dispatch }: { p: PatientEntry; isNew: boolean; 
               {p.flags.map((f, i) => (
                 <span key={i} className="text-xs bg-orange-900/50 text-orange-300 border border-orange-700/50 rounded px-1.5 py-0">{f}</span>
               ))}
-            </div>
-          )}
-          {/* Isolation + baseline badges */}
-          {(p.clinicalMeta?.isolation?.length || p.clinicalMeta?.baselineMobility) && (
-            <div className="flex gap-1 mt-1 flex-wrap">
-              {p.clinicalMeta?.isolation?.map(iso => (
-                <span key={iso} className="text-[10px] bg-red-700 text-white rounded px-1.5 py-0 font-bold">⚠ {iso}</span>
-              ))}
-              {p.clinicalMeta?.baselineMobility && p.clinicalMeta.baselineMobility !== "independent" && (
-                <span className="text-[10px] bg-gray-700 text-gray-300 rounded px-1.5 py-0">
-                  {{ walker: "הליכון", wheelchair: "כסא גלגלים", bedbound: "מרותק", independent: "" }[p.clinicalMeta.baselineMobility]}
-                </span>
-              )}
-              {p.clinicalMeta?.baselineCognition === "dementia" && (
-                <span className="text-[10px] bg-purple-800 text-purple-200 rounded px-1.5 py-0">דמנציה</span>
-              )}
-              {p.clinicalMeta?.livingArrangement === "nursing_home" && (
-                <span className="text-[10px] bg-gray-700 text-gray-300 rounded px-1.5 py-0">מוסד</span>
-              )}
             </div>
           )}
         </div>

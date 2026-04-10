@@ -203,15 +203,99 @@ const COMMON_ADMISSION_MEDS = [
 ];
 
 // ── Quick admission templates — one-tap common geriatric patterns ──
-const QUICK_TEMPLATES: { label: string; emoji: string; diagnosis: string; source?: AdmissionSource; meta?: Partial<PatientClinicalMeta> }[] = [
-  { label: "חום ממוסד", emoji: "🏥", diagnosis: "Sepsis workup", source: "nursing_home", meta: { livingArrangement: "nursing_home" } },
-  { label: "נפילה מהבית", emoji: "🦴", diagnosis: "Falls + Hip fracture workup", source: "ed", meta: { livingArrangement: "independent" } },
-  { label: "אי ספיקת לב", emoji: "❤️", diagnosis: "Acute HF decompensation", source: "ed" },
-  { label: "דלקת ריאות", emoji: "🫁", diagnosis: "Pneumonia", source: "ed" },
-  { label: "בלבול חדש", emoji: "🧠", diagnosis: "Delirium", source: "ed" },
-  { label: "UTI / אורוספסיס", emoji: "🦠", diagnosis: "UTI + Urosepsis", source: "ed" },
-  { label: "AKI", emoji: "🧪", diagnosis: "AKI", source: "ed" },
-  { label: "העברה ממחלקה", emoji: "🔄", diagnosis: "", source: "transfer" },
+// Each includes a realistic fictitious scenario with [placeholders] for specifics.
+const QUICK_TEMPLATES: { label: string; emoji: string; diagnosis: string; source?: AdmissionSource; meta?: Partial<PatientClinicalMeta>; scenario?: string }[] = [
+  {
+    label: "חום ממוסד", emoji: "🏥",
+    diagnosis: "Sepsis workup",
+    source: "nursing_home",
+    meta: { livingArrangement: "nursing_home", baselineMobility: "wheelchair", baselineCognition: "dementia" },
+    scenario: "חולה עם דמנציה בבסיס, ניידות בכסא גלגלים, שוהה במוסד סיעודי [שם המוסד]. הובא/ה בגלל חום [38.5°C] מזה [X] שעות עם [שתן עכור / שיעול / פצע לחץ]. במוסד קיבל/ה [אנטיביוטיקה PO / לא טופל]. ברקע [DM / HTN / CVA], תרופות קבועות כוללות [רשימה].",
+  },
+  {
+    label: "נפילה מהבית", emoji: "🦴",
+    diagnosis: "Falls + Hip fracture workup",
+    source: "ed",
+    meta: { livingArrangement: "independent", baselineMobility: "walker", baselineCognition: "mci" },
+    scenario: "חולה עם MCI בבסיס, מהלך/ת עם הליכון, גר/ה לבד בבית. נפל/ה [בלילה כשקם/ה לשירותים / במדרגות / בבית], מתלונן/ת על כאב ב-[ירך ימין / אגן / ראש]. במיון בוצע צילום [אגן / ירך] שהדגים [שבר צוואר ירך / תקין], וכן CT ראש [תקין / SDH קטן]. ברקע [HTN / AF / אוסטאופורוזיס], נוטל/ת [Eliquis / Coumadin / ללא נוגדי קרישה].",
+  },
+  {
+    label: "אי ספיקת לב", emoji: "❤️",
+    diagnosis: "Acute HF decompensation",
+    source: "ed",
+    meta: { baselineMobility: "walker" },
+    scenario: "חולה עם אי ספיקת לב ידועה עם EF [30% / 45% / שמור], מהלך/ת עם הליכון, גר/ה [עם משפחה / לבד]. הגיע/ה עם קוצר נשימה מחמיר מזה [X] ימים עם בצקות רגליים ו-[PND / אורתופניאה / עלייה במשקל של X ק\"ג]. סטורציה [88%] באוויר חדר. כנראה הפסיק/ה [משתנים / לא ברור]. תרופות קבועות כוללות [Furosemide / Entresto / BB].",
+  },
+  {
+    label: "דלקת ריאות", emoji: "🫁",
+    diagnosis: "Pneumonia",
+    source: "ed",
+    meta: { baselineCognition: "oriented" },
+    scenario: "חולה צלול/ה בבסיס, [מהלך עצמאי / עם הליכון], גר/ה ב-[בית / מוסד]. מתלונן/ת על שיעול [יבש / פרודוקטיבי] מזה [X] ימים עם חום עד [38.X°C] וקוצר נשימה. בצילום חזה נמצא [תסנין ימני / שמאלי / דו-צדדי], סטורציה [92%] באוויר חדר, CRP [120], WBC [15K]. ברקע [COPD / אי ספיקת לב / סוכרת]. אלרגיה ל-[פניצילין / אין אלרגיות ידועות].",
+  },
+  {
+    label: "בלבול חדש", emoji: "🧠",
+    diagnosis: "Delirium — workup",
+    source: "ed",
+    meta: { baselineCognition: "oriented" },
+    scenario: "חולה צלול/ה בבסיס, [מהלך עצמאי / עם הליכון], גר/ה ב-[בית / מוסד]. פיתח/ה בלבול חדש מזה [X שעות / ימים] שמתבטא ב-[תוקפנות / אי שקט / ישנוניות חריגה]. CAM חיובי. חשד לגורם [UTI / עצירות / תרופה חדשה / כאב לא מטופל]. ברקע [דמנציה קלה / ללא ירידה קוגניטיבית ידועה], נוטל/ת [BZD / אנטיכולינרגיות / רשימת תרופות]. בבדיקות Na [X], TSH [X], B12 [X].",
+  },
+  {
+    label: "UTI / אורוספסיס", emoji: "🦠",
+    diagnosis: "UTI + Urosepsis",
+    source: "ed",
+    meta: { livingArrangement: "nursing_home", baselineMobility: "wheelchair", baselineCognition: "dementia" },
+    scenario: "חולה עם דמנציה בבסיס, ניידות ב-[כסא גלגלים / מרותק למיטה], שוהה במוסד סיעודי. הובא/ה בגלל [חום / שתן סרוח / בלבול חדש / ירידה תפקודית]. [יש / אין] קטטר קבוע. תרבית שתן [ממתינה / הדגימה E.coli / Klebsiella]. מעבדות הדגימו CRP [X], WBC [X], Cr [X]. ברקע [UTI חוזרות / BPH / אבנים בדרכי השתן]. אלרגיות: [X / אין ידועות].",
+  },
+  {
+    label: "AKI", emoji: "🧪",
+    diagnosis: "AKI",
+    source: "ed",
+    meta: {},
+    scenario: "חולה [צלול / MCI] בבסיס, [מהלך עצמאי / עם הליכון], גר/ה ב-[בית / מוסד]. קריאטינין עלה מ-[baseline] ל-[X] בהתאם ל-KDIGO stage [I / II / III]. הגורם החשוד הוא [התייבשות / NSAIDs / ACEi / חסימה]. תפוקת שתן [X] מ\"ל לשעה, אשלגן [X], pH [X]. נוטל/ת [ACEi / ARB / Metformin / משתנים] שהופסקו. US כליות [ממתין / הדגים הידרונפרוזיס / תקין].",
+  },
+  {
+    label: "דימום GI", emoji: "🩸",
+    diagnosis: "GI bleed",
+    source: "ed",
+    meta: {},
+    scenario: "חולה צלול/ה בבסיס, [מהלך עצמאי / עם הליכון / כסא גלגלים], גר/ה ב-[בית / מוסד]. הגיע/ה עם [המטמזיס / מלנה / דם טרי רקטלי] מזה [X שעות / ימים]. המוגלובין [X] (ירד מ-[baseline]), INR [X]. נוטל/ת [Aspirin / Eliquis / Coumadin / ללא]. לחץ דם [X/X] עם דופק [X]. במיון קיבל/ה [עירויים / מנת דם / ללא]. גסטרוסקופיה [מתוכננת / בוצעה והדגימה X].",
+  },
+  {
+    label: "צלוליטיס", emoji: "🔴",
+    diagnosis: "Cellulitis",
+    source: "ed",
+    meta: {},
+    scenario: "חולה צלול/ה בבסיס, [מהלך עצמאי / עם הליכון / כסא גלגלים], גר/ה ב-[בית / מוסד]. מתלונן/ת על אודם וחום מקומי ב-[רגל ימין / שמאלית / פנים] מזה [X] ימים עם חום עד [38.X°C]. גורמי סיכון כוללים [בצקות כרוניות / פטרת / פצע כרוני]. מעבדות הדגימו WBC [X] ו-CRP [X]. סומנו גבולות [כן / לא]. אלרגיה ל-[פניצילין / אין ידועות].",
+  },
+  {
+    label: "סינקופה", emoji: "💫",
+    diagnosis: "Syncope workup",
+    source: "ed",
+    meta: { baselineCognition: "oriented" },
+    scenario: "חולה צלול/ה בבסיס, [מהלך עצמאי / עם הליכון], גר/ה בבית. חווה אירוע [התעלפות / ליפותימיה] [בקימה מהמיטה / במאמץ / ללא טריגר ברור] עם אובדן הכרה של [מספר שניות / כדקה]. [נחבל/ה בראש / ללא חבלה]. ב-ECG נמצא [SR / AF / ברדיקרדיה / בלוק]. לחץ דם בשכיבה [X/X] ובעמידה [X/X]. טרופונין [X]. נוטל/ת [BB / CCB / alpha-blockers / רשימה].",
+  },
+  {
+    label: "DVT / PE", emoji: "🫁",
+    diagnosis: "DVT/PE",
+    source: "ed",
+    meta: {},
+    scenario: "חולה צלול/ה בבסיס, [מהלך עצמאי / כסא גלגלים / מרותק], גר/ה ב-[בית / מוסד]. הגיע/ה עם [בצקת רגל חד-צדדית / קוצר נשימה פתאומי / כאב חזה פלאוריטי]. D-dimer [X], Wells score [X]. US ורידי הדגים [DVT proximal / distal / שלילי]. CTA [הדגים PE / תקין / לא בוצע]. גורמי סיכון כוללים [חוסר תנועה ממושך / ממאירות ידועה / ניתוח לאחרונה].",
+  },
+  {
+    label: "היפרגליקמיה", emoji: "📈",
+    diagnosis: "Hyperglycemia / DKA workup",
+    source: "ed",
+    meta: {},
+    scenario: "חולה [צלול/ה / מבולבל/ת], [מהלך עצמאי / עם הליכון], גר/ה ב-[בית / מוסד]. הגיע/ה עם סוכר [X] mg/dL. כנראה [הקיא / הפסיק אינסולין / יש זיהום חדש]. בגזים pH [X], HCO3 [X], AG [X], קטונים [חיובי / שלילי]. סוכרת סוג [1 / 2] עם HbA1c אחרון [X%]. בבית מטופל/ת ב-[Insulin / Metformin / לא מטופל]. אשלגן [X], נתרן [X].",
+  },
+  {
+    label: "העברה ממחלקה", emoji: "🔄",
+    diagnosis: "",
+    source: "transfer",
+    meta: {},
+    scenario: "חולה מועבר/ת מ-[שם מחלקה] לאחר [ניתוח / צנתור / טיפול במצב חריף]. אושפז/ה במקור בגלל [סיבה]. בבסיס [צלול / דמנציה], ניידות [עם הליכון / כסא גלגלים]. נושאים פתוחים להמשך טיפול כוללים [אנטיביוטיקה IV ליום X מתוך Y / שיקום / המשך מעקב מעבדות].",
+  },
 ];
 
 const ISOLATION_OPTIONS: { value: IsolationType; label: string; color: string }[] = [
@@ -918,6 +1002,7 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
                   if (t.diagnosis) setDiagnosis(prev => prev ? `${prev} + ${t.diagnosis}` : t.diagnosis);
                   if (t.source) setClinicalMeta(prev => ({ ...prev, admissionSource: t.source }));
                   if (t.meta) setClinicalMeta(prev => ({ ...prev, ...t.meta }));
+                  if (t.scenario) setMorningPresentation(prev => prev || t.scenario!);
                   setShowStructured(true);
                   setParsed(true);
                 }}
