@@ -15,6 +15,7 @@
  */
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { STRONG_ROOM_RE, normalizeRoom } from "../utils/roomFormat";
 
 // ── Structured parse result ──
 export interface VoiceParsedCommand {
@@ -60,6 +61,8 @@ function getSpeechRecognition(): SpeechRecognitionConstructor | null {
 // ── Parse structured Hebrew clinical commands ──
 
 const ROOM_PATTERN = /(?:מיטה|חדר|מטה|bed)\s*(\d{1,4}(?:[-][א-ת])?(?:[/\\]\d)?)/i;
+// Strong formats (ניטור-1, א-92, 2095-א, 49/2) don't need a keyword prefix
+const STRONG_ROOM_PATTERN = /\b(ניטור\s*-?\s*\d{1,2}|[א-ת]-\d{1,4}|\d{1,4}-[א-ת]|\d{1,4}\/\d{1,2})\b/;
 const TEMP_PATTERN = /(?:חום|טמפרטורה|temp)\s*([\d]{2}[.,]?\d?)/i;
 const GLUCOSE_PATTERN = /(?:סוכר|גלוקוז|sugar|glucose)\s*(\d{2,3})/i;
 const BP_PATTERN = /(?:לחץ\s*(?:דם)?|BP)\s*(\d{2,3})[/\\](\d{2,3})/i;
@@ -92,6 +95,13 @@ function parseCommand(transcript: string): VoiceParsedCommand {
   if (roomMatch) {
     room = roomMatch[1];
     confidence += 0.3;
+  } else {
+    // Try strong formats without keyword: ניטור-1, א-92, 2095-א, 49/2
+    const strongMatch = transcript.match(STRONG_ROOM_PATTERN);
+    if (strongMatch) {
+      room = normalizeRoom(strongMatch[1]);
+      confidence += 0.3;
+    }
   }
 
   if (URGENCY_STAT.test(transcript)) {
@@ -138,6 +148,7 @@ function parseCommand(transcript: string): VoiceParsedCommand {
   if (taskParts.length === 0) {
     let cleaned = transcript
       .replace(ROOM_PATTERN, "")
+      .replace(STRONG_ROOM_PATTERN, "")
       .replace(URGENCY_STAT, "")
       .replace(URGENCY_URGENT, "")
       .trim();

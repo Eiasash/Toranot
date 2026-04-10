@@ -76,6 +76,11 @@ export type Task = {
 // warnings rather than guessing from free text.
 export type GoalsOfCare = "full" | "limited" | "comfort_only" | "unknown";
 export type SexAtBirth = "male" | "female" | "unknown";
+export type BaselineMobility = "independent" | "walker" | "wheelchair" | "bedbound";
+export type BaselineCognition = "oriented" | "mci" | "dementia" | "unknown";
+export type LivingArrangement = "independent" | "with_family" | "assisted_living" | "nursing_home";
+export type AdmissionSource = "ed" | "community" | "transfer" | "nursing_home" | "rehab";
+export type IsolationType = "MRSA" | "VRE" | "CRE" | "ESBL" | "COVID" | "CDiff" | "TB" | "other";
 
 export interface PatientClinicalMeta {
   sexAtBirth?: SexAtBirth;
@@ -83,6 +88,12 @@ export interface PatientClinicalMeta {
   onDialysis?: boolean;
   baselineCreatinine?: number | null;
   goalsOfCare?: GoalsOfCare;
+  // ── Geriatric baseline (populated on admission) ──
+  baselineMobility?: BaselineMobility;
+  baselineCognition?: BaselineCognition;
+  livingArrangement?: LivingArrangement;
+  admissionSource?: AdmissionSource;
+  isolation?: IsolationType[];
 }
 
 // ─── Sync metadata ──────────────────────────────────────────

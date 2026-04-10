@@ -1,6 +1,6 @@
 
 import { useState, useCallback, useRef } from "react";
-import type { PatientEntry, PatientSection, PatientClinicalMeta, GoalsOfCare, SexAtBirth } from "../types";
+import type { PatientEntry, PatientSection, PatientClinicalMeta, GoalsOfCare, SexAtBirth, BaselineMobility, BaselineCognition, LivingArrangement, AdmissionSource, IsolationType } from "../types";
 import { getProxyAuthHeaders, isProxyAvailableAsync } from "../cloudSync";
 import { safeGetItem } from "../utils/storage";
 
@@ -63,6 +63,15 @@ export function parseFreestyle(text: string): Partial<{
   if (hedarMatch) {
     result.room = hedarMatch[1];
     remaining = remaining.replace(hedarMatch[0], " ");
+  }
+
+  // 0b. Monitor room: "ניטור-1", "ניטור 2", "ניטור2"
+  if (!result.room) {
+    const monitorMatch = remaining.match(/ניטור\s*-?\s*(\d{1,2})(?=\s|$)/);
+    if (monitorMatch) {
+      result.room = `ניטור-${monitorMatch[1]}`;
+      remaining = remaining.replace(monitorMatch[0], " ");
+    }
   }
 
   if (!result.room) {
@@ -208,6 +217,56 @@ const COMMON_ADMISSION_MEDS = [
   "Benzodiazepines", "Antipsychotics",
 ];
 
+// ── Quick admission templates — one-tap common geriatric patterns ──
+const QUICK_TEMPLATES: { label: string; emoji: string; diagnosis: string; source?: AdmissionSource; meta?: Partial<PatientClinicalMeta> }[] = [
+  { label: "חום ממוסד", emoji: "🏥", diagnosis: "Sepsis workup", source: "nursing_home", meta: { livingArrangement: "nursing_home" } },
+  { label: "נפילה מהבית", emoji: "🦴", diagnosis: "Falls + Hip fracture workup", source: "ed", meta: { livingArrangement: "independent" } },
+  { label: "אי ספיקת לב", emoji: "❤️", diagnosis: "Acute HF decompensation", source: "ed" },
+  { label: "דלקת ריאות", emoji: "🫁", diagnosis: "Pneumonia", source: "ed" },
+  { label: "בלבול חדש", emoji: "🧠", diagnosis: "Delirium", source: "ed" },
+  { label: "UTI / אורוספסיס", emoji: "🦠", diagnosis: "UTI + Urosepsis", source: "ed" },
+  { label: "AKI", emoji: "🧪", diagnosis: "AKI", source: "ed" },
+  { label: "העברה ממחלקה", emoji: "🔄", diagnosis: "", source: "transfer" },
+];
+
+const ISOLATION_OPTIONS: { value: IsolationType; label: string; color: string }[] = [
+  { value: "MRSA", label: "MRSA", color: "bg-orange-500" },
+  { value: "VRE", label: "VRE", color: "bg-red-500" },
+  { value: "CRE", label: "CRE", color: "bg-red-700" },
+  { value: "ESBL", label: "ESBL", color: "bg-amber-500" },
+  { value: "COVID", label: "COVID", color: "bg-purple-500" },
+  { value: "CDiff", label: "C.diff", color: "bg-yellow-600" },
+  { value: "TB", label: "TB", color: "bg-pink-600" },
+];
+
+const MOBILITY_OPTIONS: { value: BaselineMobility; label: string }[] = [
+  { value: "independent", label: "עצמאי" },
+  { value: "walker", label: "הליכון" },
+  { value: "wheelchair", label: "כסא גלגלים" },
+  { value: "bedbound", label: "מרותק למיטה" },
+];
+
+const COGNITION_OPTIONS: { value: BaselineCognition; label: string }[] = [
+  { value: "oriented", label: "צלול" },
+  { value: "mci", label: "MCI" },
+  { value: "dementia", label: "דמנציה" },
+];
+
+const LIVING_OPTIONS: { value: LivingArrangement; label: string }[] = [
+  { value: "independent", label: "עצמאי" },
+  { value: "with_family", label: "עם משפחה" },
+  { value: "assisted_living", label: "דיור מוגן" },
+  { value: "nursing_home", label: "מוסד סיעודי" },
+];
+
+const SOURCE_OPTIONS: { value: AdmissionSource; label: string }[] = [
+  { value: "ed", label: "מיון" },
+  { value: "community", label: "קהילה" },
+  { value: "transfer", label: "העברה" },
+  { value: "nursing_home", label: "מוסד" },
+  { value: "rehab", label: "שיקום" },
+];
+
 // ── File → base64 helper ──
 async function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -258,6 +317,7 @@ CRITICAL HALLUCINATION PREVENTION:
 - Room format: plain number (70, 117, 2088) or with Hebrew letter prefix/suffix (א-92, 2095-א). Return as-is.
 - bed: only for legacy 2-3 digit rooms with explicit bed (e.g. 49/2). For standalone room numbers → null.
 - meds: only drugs explicitly named in document, max 8. Never infer unlisted drugs.
+- For baseline fields: extract ONLY if explicitly stated. "מהלכת עם הליכון" → mobility "walker". If not mentioned → null.
 
 The JSON must have this exact shape:
 {
@@ -269,6 +329,11 @@ The JSON must have this exact shape:
   "status": "" | "DNR" | "DNI" | "DNR/DNI",
   "meds": ["list of relevant chronic/home medications, max 8"],
   "allergies": ["known drug allergies, exact names as written, empty array if none mentioned"],
+  "mobility": "independent" | "walker" | "wheelchair" | "bedbound" | null,
+  "cognition": "oriented" | "mci" | "dementia" | null,
+  "livingArrangement": "independent" | "with_family" | "assisted_living" | "nursing_home" | null,
+  "admissionSource": "ed" | "community" | "transfer" | "nursing_home" | "rehab" | null,
+  "isolation": ["MRSA", "VRE", "CRE", "ESBL", "COVID", "CDiff", "TB"] or empty array,
   "morningPresentation": "Concise morning handover in English suitable for ward rounds. Format: [Name, Age] admitted [date if known] with [chief complaint]. PMH: [key comorbidities]. Presenting: [vitals/exam findings if available]. Workup: [key labs/imaging]. Assessment: [working diagnosis]. Plan: [key management steps]. Pending: [outstanding issues for morning team].",
   "remarks": "Any other clinically relevant info not captured above (e.g. social, functional status)"
 }`;
@@ -282,6 +347,11 @@ interface ExtractedData {
   status?: "" | "DNR" | "DNI" | "DNR/DNI";
   meds?: string[];
   allergies?: string[];
+  mobility?: BaselineMobility | null;
+  cognition?: BaselineCognition | null;
+  livingArrangement?: LivingArrangement | null;
+  admissionSource?: AdmissionSource | null;
+  isolation?: IsolationType[];
   morningPresentation?: string;
   remarks?: string;
 }
@@ -394,6 +464,7 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
   const [clinicalMeta, setClinicalMeta] = useState<PatientClinicalMeta>({});
   const [error, setError] = useState<string | null>(null);
   const [parsed, setParsed] = useState(false);
+  const [isolation, setIsolation] = useState<IsolationType[]>([]);
 
   // ── Diagnosis picker state ──
   const [dxSearch, setDxSearch] = useState("");
@@ -494,6 +565,22 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
         setShowMorning(true);
       }
 
+      // ── Geriatric baseline from letter ──
+      const metaUpdate: Partial<PatientClinicalMeta> = {};
+      const validMobility: BaselineMobility[] = ["independent", "walker", "wheelchair", "bedbound"];
+      if (extracted.mobility && validMobility.includes(extracted.mobility)) metaUpdate.baselineMobility = extracted.mobility;
+      const validCognition: BaselineCognition[] = ["oriented", "mci", "dementia"];
+      if (extracted.cognition && validCognition.includes(extracted.cognition)) metaUpdate.baselineCognition = extracted.cognition;
+      const validLiving: LivingArrangement[] = ["independent", "with_family", "assisted_living", "nursing_home"];
+      if (extracted.livingArrangement && validLiving.includes(extracted.livingArrangement)) metaUpdate.livingArrangement = extracted.livingArrangement;
+      const validSource: AdmissionSource[] = ["ed", "community", "transfer", "nursing_home", "rehab"];
+      if (extracted.admissionSource && validSource.includes(extracted.admissionSource)) metaUpdate.admissionSource = extracted.admissionSource;
+      if (Object.keys(metaUpdate).length > 0) setClinicalMeta(prev => ({ ...prev, ...metaUpdate }));
+
+      const validIso: IsolationType[] = ["MRSA", "VRE", "CRE", "ESBL", "COVID", "CDiff", "TB"];
+      const safeIso = (extracted.isolation ?? []).filter((i): i is IsolationType => validIso.includes(i as IsolationType));
+      if (safeIso.length > 0) setIsolation(prev => Array.from(new Set([...prev, ...safeIso])));
+
       setShowStructured(true);
       setParsed(true);
     } catch (e) {
@@ -507,7 +594,7 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
     if (!side) return "יש לבחור צד";
     const r = room.trim();
     // Accept: "70", "2088", "א-92", "2095-א", "92א", legacy "49/2"
-    if (!r || !/^(?:[א-ת][-]\d{1,4}|\d{1,4}[-]?[א-ת]|\d{1,4}|\d{2,3}\/\d)$/.test(r)) return "יש להזין מספר חדר תקין";
+    if (!r || !/^(?:ניטור-?\d{1,2}|[א-ת][-]\d{1,4}|\d{1,4}[-]?[א-ת]|\d{1,4}|\d{2,3}\/\d)$/.test(r)) return "יש להזין מספר חדר תקין";
     if (!name.trim()) return "יש להזין שם מטופל";
     if (!diagnosis.trim()) return "יש להזין אבחנה";
     return null;
@@ -571,7 +658,10 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
       order: Date.now(),
       // Morning presentation stored as handoverNote — shows in handoff sheet
       ...(morningPresentation.trim() ? { handoverNote: `📋 Morning: ${morningPresentation.trim()}` } : {}),
-      clinicalMeta: Object.keys(clinicalMeta).length > 0 ? clinicalMeta : undefined,
+      clinicalMeta: (() => {
+        const merged = { ...clinicalMeta, ...(isolation.length > 0 ? { isolation } : {}) };
+        return Object.keys(merged).length > 0 ? merged : undefined;
+      })(),
     } as PatientEntry;
 
     dispatch({ type: "NEW_ADMISSION", patient });
@@ -678,6 +768,30 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
           )}
         </div>
 
+        {/* ── Quick admission templates ── */}
+        <div>
+          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">קבלה מהירה</label>
+          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+            {QUICK_TEMPLATES.map(t => (
+              <button
+                key={t.label}
+                type="button"
+                onClick={() => {
+                  if (t.diagnosis) setDiagnosis(t.diagnosis);
+                  if (t.source) setClinicalMeta(prev => ({ ...prev, admissionSource: t.source }));
+                  if (t.meta) setClinicalMeta(prev => ({ ...prev, ...t.meta }));
+                  setShowStructured(true);
+                  setParsed(true);
+                }}
+                className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 whitespace-nowrap active:bg-blue-50 dark:active:bg-blue-900/30 flex-shrink-0"
+              >
+                <span>{t.emoji}</span>
+                <span>{t.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* ── Freestyle input ── */}
         <div>
           <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">הקלד חופשי — הכל בשורה אחת</label>
@@ -731,7 +845,7 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
               </div>
               <div className="flex-1">
                 <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">חדר *</label>
-                <input type="text" inputMode="numeric" value={room} onChange={(e) => setRoom(e.target.value)} placeholder="70" className={inputCls} />
+                <input type="text" inputMode="text" value={room} onChange={(e) => setRoom(e.target.value)} placeholder="70 / א-92 / ניטור-1" className={inputCls} />
               </div>
               {!isStandaloneRoom && (
                 <div className="w-24">
@@ -1026,6 +1140,74 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
                   />
                   <label htmlFor="dialysis-check" className="text-xs text-gray-700 dark:text-gray-300">דיאליזה</label>
                 </div>
+              </div>
+            </div>
+
+            {/* ── Geriatric baseline — תפקוד בסיסי ── */}
+            <div className="bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-700/40 rounded-xl p-3 space-y-3">
+              <span className="text-xs font-semibold text-teal-700 dark:text-teal-300">🏠 תפקוד בסיסי ומקור</span>
+
+              {/* Admission source */}
+              <div>
+                <label className="block text-[10px] text-gray-500 dark:text-gray-400 mb-1">מקור קבלה</label>
+                <div className="flex gap-1 flex-wrap">
+                  {SOURCE_OPTIONS.map(o => (
+                    <button key={o.value} type="button" onClick={() => setClinicalMeta(prev => ({ ...prev, admissionSource: prev.admissionSource === o.value ? undefined : o.value }))}
+                      className={"text-[11px] px-2.5 py-1 rounded-lg border transition-colors " + (clinicalMeta.admissionSource === o.value ? "bg-teal-600 text-white border-teal-600" : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 active:bg-teal-50")}
+                    >{o.label}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Mobility */}
+              <div>
+                <label className="block text-[10px] text-gray-500 dark:text-gray-400 mb-1">ניידות בסיסית</label>
+                <div className="flex gap-1 flex-wrap">
+                  {MOBILITY_OPTIONS.map(o => (
+                    <button key={o.value} type="button" onClick={() => setClinicalMeta(prev => ({ ...prev, baselineMobility: prev.baselineMobility === o.value ? undefined : o.value }))}
+                      className={"text-[11px] px-2.5 py-1 rounded-lg border transition-colors " + (clinicalMeta.baselineMobility === o.value ? "bg-teal-600 text-white border-teal-600" : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 active:bg-teal-50")}
+                    >{o.label}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Cognition + Living arrangement row */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] text-gray-500 dark:text-gray-400 mb-1">קוגניציה</label>
+                  <div className="flex gap-1 flex-wrap">
+                    {COGNITION_OPTIONS.map(o => (
+                      <button key={o.value} type="button" onClick={() => setClinicalMeta(prev => ({ ...prev, baselineCognition: prev.baselineCognition === o.value ? undefined : o.value }))}
+                        className={"text-[10px] px-2 py-1 rounded-lg border transition-colors " + (clinicalMeta.baselineCognition === o.value ? "bg-teal-600 text-white border-teal-600" : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600")}
+                      >{o.label}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] text-gray-500 dark:text-gray-400 mb-1">מגורים</label>
+                  <div className="flex gap-1 flex-wrap">
+                    {LIVING_OPTIONS.map(o => (
+                      <button key={o.value} type="button" onClick={() => setClinicalMeta(prev => ({ ...prev, livingArrangement: prev.livingArrangement === o.value ? undefined : o.value }))}
+                        className={"text-[10px] px-2 py-1 rounded-lg border transition-colors " + (clinicalMeta.livingArrangement === o.value ? "bg-teal-600 text-white border-teal-600" : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600")}
+                      >{o.label}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Isolation ── */}
+            <div>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                בידוד <span className="text-gray-400">(אופציונלי)</span>
+              </label>
+              <div className="flex gap-1.5 flex-wrap">
+                {ISOLATION_OPTIONS.map(o => (
+                  <button key={o.value} type="button"
+                    onClick={() => setIsolation(prev => prev.includes(o.value) ? prev.filter(x => x !== o.value) : [...prev, o.value])}
+                    className={"text-[11px] px-2.5 py-1 rounded-full border font-medium transition-colors " + (isolation.includes(o.value) ? `${o.color} text-white border-transparent` : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 active:bg-red-50")}
+                  >{o.label}</button>
+                ))}
               </div>
             </div>
           </>

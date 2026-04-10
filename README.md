@@ -2,6 +2,23 @@
 
 ## Recent Changes
 
+### Admission workflow upgrade + room format fix (2026-04-10)
+
+**Geriatric baseline on admission:**
+- New `PatientClinicalMeta` fields: `baselineMobility` (independent/walker/wheelchair/bedbound), `baselineCognition` (oriented/MCI/dementia), `livingArrangement`, `admissionSource`, `isolation` (multi-select: MRSA/VRE/CRE/ESBL/COVID/CDiff/TB).
+- Chip-select UI in AddAdmissionModal — fast one-tap input for all baseline fields.
+- Claude letter extraction prompt updated to auto-extract baseline/isolation from admission letters.
+
+**Quick admission templates:**
+- 8 one-tap templates for common geriatric patterns (חום ממוסד, נפילה מהבית, אי ספיקת לב, דלקת ריאות, בלבול חדש, UTI, AKI, העברה ממחלקה).
+- Templates pre-fill diagnosis, admission source, and living arrangement.
+
+**Room format fixes:**
+- ניטור (monitor) rooms now supported in AddAdmissionModal, VoiceInput, QuickCaptureSheet.
+- Room validation regex updated to accept ניטור format.
+- `inputMode="numeric"` → `"text"` on room field (was blocking Hebrew keyboard on Android).
+- Shared room format utility: `src/utils/roomFormat.ts`.
+
 ### Phase 6 — Self-healing infrastructure + clinical safety engines (2026-03-21)
 
 **New clinical engines:**

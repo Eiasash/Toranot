@@ -97,4 +97,30 @@ describe("parseFreestyle", () => {
       expect(r.diagnosis).toBe("pneumonia");
     });
   });
+
+  describe("monitor room (ניטור) parsing", () => {
+    it("ניטור-1 with hyphen", () => {
+      const r = parseFreestyle("ניטור-1 לנדאו אפרים 88 STEMI");
+      expect(r.room).toBe("ניטור-1");
+      expect(r.name).toBe("לנדאו אפרים");
+      expect(r.age).toBe(88);
+    });
+
+    it("ניטור 2 with space", () => {
+      const r = parseFreestyle("ניטור 2 וולף גיטל 91 sepsis");
+      expect(r.room).toBe("ניטור-2");
+    });
+
+    it("ניטור2 no separator", () => {
+      const r = parseFreestyle("ניטור2 כהן שרה 78 respiratory failure");
+      expect(r.room).toBe("ניטור-2");
+    });
+
+    it("ניטור in freestyle with section", () => {
+      const r = parseFreestyle("88 לנדאו אפרים ניטור-1 צד א STEMI");
+      expect(r.room).toBe("ניטור-1");
+      expect(r.side).toBe("A");
+      expect(r.age).toBe(88);
+    });
+  });
 });

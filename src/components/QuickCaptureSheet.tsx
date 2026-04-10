@@ -20,8 +20,11 @@ function detectUrgency(text: string): Urgency {
   return "routine";
 }
 
-// Try to extract room from "70" "א-92" "2088" "52/1" "52-1" "חדר 52" "חד' 52" patterns
+// Try to extract room from "70" "א-92" "2088" "52/1" "52-1" "חדר 52" "חד' 52" "ניטור-1" patterns
 function extractRoom(text: string): string | null {
+  // Try monitor room: "ניטור-1", "ניטור 2"
+  const monitorMatch = text.match(/ניטור\s*-?\s*(\d{1,2})/);
+  if (monitorMatch) return `ניטור-${monitorMatch[1]}`;
   // Try Hebrew-letter prefix: "א-92", "א 92"
   const prefixMatch = text.match(/([א-ת])[-\s](\d{1,4})(?=\s|$)/);
   if (prefixMatch) return `${prefixMatch[1]}-${prefixMatch[2]}`;
