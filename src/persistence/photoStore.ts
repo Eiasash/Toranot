@@ -84,6 +84,7 @@ export async function getPhoto(id: string): Promise<StoredPhoto | null> {
 /** Convert a base64 dataUrl to a Blob */
 function dataUrlToBlob(dataUrl: string): Blob {
   const [header, b64] = dataUrl.split(",");
+  if (!b64) throw new Error("Invalid dataUrl: missing base64 content after comma");
   const mimeMatch = header.match(/:(.*?);/);
   const mime = mimeMatch ? mimeMatch[1] : "image/jpeg";
   const binary = atob(b64);
