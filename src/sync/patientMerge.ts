@@ -152,9 +152,14 @@ export const PATIENT_FIELD_CAPS = {
 export function prunePatientForSync(patient: PatientEntry): PatientEntry {
   return {
     ...patient,
-    // Keep most-recent tasks (sort done tasks to front so they trim first)
+    // Keep most-recent tasks; done tasks are trimmed first to preserve open items
     tasks: patient.tasks.length > PATIENT_FIELD_CAPS.tasks
-      ? [...patient.tasks].slice(-PATIENT_FIELD_CAPS.tasks)
+      ? (() => {
+          const open = patient.tasks.filter(t => !t.done);
+          const done = patient.tasks.filter(t => t.done);
+          const keep = [...open, ...done].slice(0, PATIENT_FIELD_CAPS.tasks);
+          return keep;
+        })()
       : patient.tasks,
     // Labs: keep most recent
     labs: patient.labs && patient.labs.length > PATIENT_FIELD_CAPS.labs
