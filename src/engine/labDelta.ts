@@ -109,8 +109,10 @@ function classifyAKI(
   }
 
   // KDIGO Stage 1 — 48h absolute criterion (>=0.3 mg/dL within 48h)
-  // Use rounded value (same as Stage 3 absolute criterion) to avoid float epsilon
-  if (roundedRise >= 0.3 && hoursElapsed <= 48) {
+  // Use raw absoluteRise here (not rounded) — rounding 0.295→0.30 would create
+  // false positives. The Stage 3 absolute criterion above uses roundedRise because
+  // the peakCr>=4.0 check involves larger values where float epsilon matters more.
+  if (absoluteRise >= 0.3 && hoursElapsed <= 48) {
     return {
       severity: "warning",
       stage: 1,
