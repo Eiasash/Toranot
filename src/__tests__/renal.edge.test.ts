@@ -136,3 +136,49 @@ describe("cockcroft — invalid input guards", () => {
     expect(crclToBucket(9.999)).toBe("lt10");
   });
 });
+
+// ── clinicalMeta-aware CrCl in checkRenalDoseWarnings ──
+import { checkRenalDoseWarnings, calculateCrCl } from "../engine/drugSafety";
+import type { PatientEntry } from "../types";
+
+function makePatient(overrides: Partial<PatientEntry>): PatientEntry {
+  return {
+    id: "test", section: "SIDE_A", date: "01/01/2026", room: "70",
+    name: "Test", age: 85, diagnosis: "AKI", status: ["Enoxaparin 40mg"],
+    flags: [], tasks: [], generatedTasks: [], tomorrowNotes: [],
+    labs: [{ label: "Cr", value: 1.8, time: new Date().toISOString(), unit: "mg/dL" }],
+    scannedAt: new Date().toISOString(), confidence: 1,
+    ...overrides,
+  } as PatientEntry;
+}
+
+describe("checkRenalDoseWarnings — clinicalMeta demographics", () => {
+  it("uses exact CrCl when both sex and weight provided", () => {
+    const pt = makePatient({
+      clinicalMeta: { sexAtBirth: "female", weightKg: 50 },
+    });
+    const warnings = checkRenalDoseWarnings(pt);
+    expect(warnings.length).toBeGreaterThan(0);
+    // Exact CrCl: (140-85)*50*0.85 / (72*1.8) = 55*50*0.85/129.6 ≈ 18
+    const w = warnings[0];
+    expect(w.crcl).toBe(calculateCrCl(85, 1.8, 50, true));
+    expect(w.weightAssumed).toBeUndefined();
+    expect(w.crclRange).toBeUndefined();
+  });
+
+  it("falls back to dual-estimate when no clinicalMeta", () => {
+    const pt = makePatient({ clinicalMeta: undefined });
+    const warnings = checkRenalDoseWarnings(pt);
+    expect(warnings.length).toBeGreaterThan(0);
+    expect(warnings[0].weightAssumed).toBe(true);
+    expect(warnings[0].crclRange).toBeDefined();
+  });
+
+  it("uses weight with female assumption when sex unknown", () => {
+    const pt = makePatient({ clinicalMeta: { weightKg: 60 } });
+    const warnings = checkRenalDoseWarnings(pt);
+    expect(warnings.length).toBeGreaterThan(0);
+    expect(warnings[0].crcl).toBe(calculateCrCl(85, 1.8, 60, true));
+    expect(warnings[0].weightAssumed).toBe(true);
+  });
+});

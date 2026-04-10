@@ -394,34 +394,53 @@ function getLatestCr(patient: PatientEntry): number | null {
  * Check for renal dose adjustments needed based on patient's CrCl and drug mentions.
  *
  * ── DEMOGRAPHIC CORRECTION ──
- * PatientEntry has no sex or weight fields. The Cockcroft-Gault formula is
- * highly sensitive to both, and the geriatric ward is predominantly female
- * and underweight (typical 50-65kg, age 75-95).
- *
- * A 70kg male assumption for this population overestimates CrCl by 20-35%,
- * which means drug dose warnings fire at the wrong thresholds.
- *
- * Approach: calculate CrCl for BOTH demographic extremes:
+ * When clinicalMeta.sexAtBirth and clinicalMeta.weightKg are set (from admission),
+ * we compute an exact Cockcroft-Gault CrCl. When either is missing, we fall back
+ * to the conservative dual-estimate approach:
  *   - Conservative: 55kg female (sex factor 0.85)
  *   - Liberal:      70kg male   (sex factor 1.0)
  *
- * We use the LOWER (conservative) value for threshold decisions, erring
+ * The LOWER (conservative) value is used for threshold decisions, erring
  * toward over-alerting rather than missing a dose adjustment in a frail
- * elderly woman. The warning label exposes this assumption so the clinician
- * can apply clinical judgment.
+ * elderly patient. The warning label exposes whether demographics were assumed.
  */
 export function checkRenalDoseWarnings(patient: PatientEntry): RenalWarning[] {
   const cr = getLatestCr(patient);
   if (cr === null || !patient.age) return [];
 
-  // Calculate both demographic bounds
-  const crclFemale55 = calculateCrCl(patient.age, cr, 55, true)!;
-  const crclMale70   = calculateCrCl(patient.age, cr, 70, false)!;
+  // ── Use structured demographics when available ──
+  // clinicalMeta.sexAtBirth and weightKg are collected on admission.
+  // When present, we get an exact CrCl instead of the dual-estimate fallback.
+  const meta = patient.clinicalMeta;
+  const knownWeight = meta?.weightKg != null && meta.weightKg >= 20 && meta.weightKg <= 250
+    ? meta.weightKg : null;
+  const knownFemale = meta?.sexAtBirth === "female" ? true
+    : meta?.sexAtBirth === "male" ? false : null;
 
-  // Use the conservative (lower) estimate for threshold decisions.
-  // This protects the typical ward patient — a 55-65kg elderly woman —
-  // from being under-warned because the formula assumed a 70kg man.
-  const conservativeCrCl = Math.min(crclFemale55, crclMale70);
+  let conservativeCrCl: number;
+  let assumed = false;
+  let rangeInfo: { female55kg: number; male70kg: number } | undefined;
+
+  if (knownWeight !== null && knownFemale !== null) {
+    // Exact: both sex and weight known
+    conservativeCrCl = calculateCrCl(patient.age, cr, knownWeight, knownFemale)!;
+  } else if (knownWeight !== null) {
+    // Weight known, sex unknown → use female factor (conservative)
+    conservativeCrCl = calculateCrCl(patient.age, cr, knownWeight, true)!;
+    assumed = true;
+  } else if (knownFemale !== null) {
+    // Sex known, weight unknown → use 55kg for female, 70kg for male
+    const w = knownFemale ? 55 : 70;
+    conservativeCrCl = calculateCrCl(patient.age, cr, w, knownFemale)!;
+    assumed = true;
+  } else {
+    // Neither known → dual-estimate fallback (original approach)
+    const crclFemale55 = calculateCrCl(patient.age, cr, 55, true)!;
+    const crclMale70   = calculateCrCl(patient.age, cr, 70, false)!;
+    conservativeCrCl = Math.min(crclFemale55, crclMale70);
+    rangeInfo = { female55kg: crclFemale55, male70kg: crclMale70 };
+    assumed = true;
+  }
 
   const allText = gatherDrugText(patient);
 
@@ -450,8 +469,8 @@ export function checkRenalDoseWarnings(patient: PatientEntry): RenalWarning[] {
         adjustment: applicable[0].guidance,
         crcl: conservativeCrCl,
         severity: applicable[0].severity,
-        weightAssumed: true,
-        crclRange: { female55kg: crclFemale55, male70kg: crclMale70 },
+        ...(assumed ? { weightAssumed: true as const } : {}),
+        ...(rangeInfo ? { crclRange: rangeInfo } : {}),
       });
     }
   }

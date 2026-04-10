@@ -341,6 +341,96 @@ interface ExtractedData {
   remarks?: string;
 }
 
+// ── SZMC admission note generation prompt (condensed from szmc-clinical-notes skill) ──
+const KABALA_SYSTEM = `You are a senior geriatric physician at Shaare Zedek Medical Center (SZMC) drafting a formal ward admission note (קבלה רפואית) in exact SZMC institutional format.
+
+OUTPUT: Plain text only. No HTML, no markdown bold, no tables. User copies sections into EMR fields.
+
+SECTION ORDER:
+הצגת החולה → אבחנות פעילות → אבחנות ברקע → ניתוחים בעבר → תלונה עיקרית → רקע רפואי → מחלה נוכחית → רגישויות → תרופות בבית → הרגלים → תפקוד → בדיקה גופנית → בדיקות עזר → בדיקות מעבדה → דיון ותוכנית → חתימה
+
+KEY RULES:
+- Diagnoses: ALWAYS English (PNEUMONIA, AKI, DELIRIUM 02/26)
+- Narrative: Hebrew, flowing prose, no bullet points
+- Labs: inline prose grouped by panel (כימיה: נתרן 136, אשלגן 3.6...)
+- רקע רפואי: MANDATORY. Organ-system dash headers (לבבי - / GI - / ניתוחים:)
+- Problem discussion: use # Hebrew headers (# זיהומית / # כלייתית / # נוירולוגית / # תפקודית) — each is 3-6 sentences covering reasoning, workup, finding, next step
+- תוכנית: bare verb list, no bullets no numbers
+- Medications: Generic ( Brand Hebrew ) Route Dose Unit X Freq / Period
+- תפקוד: one value per field (מגורים / עזרה / ניידות / התמצאות / הלבשה / רחצה / אכילה / מעברים / שליטה על שתן / שליטה על יציאה / הזנה)
+- Padua score at end of מחלה נוכחית
+- Gender agreement throughout Hebrew text
+- הרגלים section always present (מעשן: לא, שימוש באלכוהול: לא, שימוש בסמים: לא)
+- Goals-of-care inline in relevant problem paragraph for frail/complex patients
+- Consultant recommendations attributed by name and specialty
+- If data is missing, write [חסר - להשלים] — never invent clinical facts
+
+Each section should be clearly labeled. Output the complete note ready for EMR copy-paste.`;
+
+async function generateKabalaNote(
+  file: File,
+  patientContext: { name?: string; age?: number | null; diagnosis?: string; room?: string; side?: string },
+): Promise<string> {
+  const fileType = file.type;
+  const isImage = fileType.startsWith("image/");
+  const isPdf = fileType === "application/pdf";
+  const isDocx = fileType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    || file.name.endsWith(".docx");
+
+  let messageContent: unknown;
+  const contextLine = [
+    patientContext.name && `שם: ${patientContext.name}`,
+    patientContext.age && `גיל: ${patientContext.age}`,
+    patientContext.diagnosis && `אבחנה: ${patientContext.diagnosis}`,
+    patientContext.room && `חדר: ${patientContext.room}`,
+    patientContext.side && `צד: ${patientContext.side}`,
+  ].filter(Boolean).join(", ");
+  const userText = `Draft a formal SZMC geriatric ward admission note (קבלה רפואית) from this admission letter.${contextLine ? `\nPatient context: ${contextLine}` : ""}`;
+
+  if (isImage) {
+    const data = await fileToBase64(file);
+    messageContent = [
+      { type: "image", source: { type: "base64", media_type: fileType, data } },
+      { type: "text", text: userText },
+    ];
+  } else if (isPdf) {
+    const data = await fileToBase64(file);
+    messageContent = [
+      { type: "document", source: { type: "base64", media_type: "application/pdf", data } },
+      { type: "text", text: userText },
+    ];
+  } else if (isDocx) {
+    const text = await extractDocxText(file);
+    messageContent = `${userText}\n\nAdmission letter text:\n${text}`;
+  } else {
+    throw new Error("פורמט לא נתמך.");
+  }
+
+  const useProxy = await isProxyAvailableAsync();
+  const storedKey = safeGetItem(API_KEY_STORAGE) ?? "";
+  if (!useProxy && !storedKey) throw new Error("נדרש מפתח API.");
+
+  let endpoint: string;
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  if (useProxy) {
+    endpoint = "/api/claude";
+    const authHeaders = await getProxyAuthHeaders();
+    if (authHeaders) Object.assign(headers, authHeaders);
+  } else {
+    endpoint = DIRECT_API_URL;
+    headers["x-api-key"] = storedKey;
+    headers["anthropic-version"] = "2023-06-01";
+    headers["anthropic-dangerous-direct-browser-access"] = "true";
+  }
+
+  const body = { model: "claude-sonnet-4-6", max_tokens: 4000, system: KABALA_SYSTEM, messages: [{ role: "user", content: messageContent }] };
+  const res = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify(body) });
+  if (!res.ok) throw new Error(`שגיאת שרת (${res.status})`);
+
+  const data = await res.json();
+  return (data?.content?.[0]?.text ?? "").trim();
+}
+
 async function extractFromLetter(
   file: File,
 ): Promise<ExtractedData> {
@@ -492,6 +582,9 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
   const [extracting, setExtracting] = useState(false);
   const [morningPresentation, setMorningPresentation] = useState("");
   const [showMorning, setShowMorning] = useState(false);
+  const [kabalaNote, setKabalaNote] = useState("");
+  const [kabalaLoading, setKabalaLoading] = useState(false);
+  const [showKabala, setShowKabala] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFreestyleParse = useCallback(() => {
@@ -752,6 +845,66 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
             </div>
           )}
         </div>
+
+        {/* ── Generate formal SZMC admission note ── */}
+        {letterFile && parsed && (
+          <div className="bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800/40 rounded-xl p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  setKabalaLoading(true);
+                  setError(null);
+                  try {
+                    const note = await generateKabalaNote(letterFile, { name, age: age ? parseInt(age) : null, diagnosis, room, side });
+                    setKabalaNote(note);
+                    setShowKabala(true);
+                  } catch (e) {
+                    setError(e instanceof Error ? e.message : "שגיאה ביצירת קבלה");
+                  } finally {
+                    setKabalaLoading(false);
+                  }
+                }}
+                disabled={kabalaLoading}
+                className="flex-1 px-3 py-2 bg-teal-600 text-white rounded-lg text-xs font-semibold disabled:opacity-40 active:bg-teal-700"
+              >
+                {kabalaLoading ? "⏳ כותב קבלה..." : kabalaNote ? "🔄 צור מחדש" : "📝 צור קבלה רפואית"}
+              </button>
+              <span className="text-[10px] text-gray-400">SZMC format</span>
+            </div>
+
+            {kabalaNote && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setShowKabala(v => !v)}
+                  className="text-xs font-semibold text-teal-600 dark:text-teal-400 flex items-center gap-1"
+                >
+                  📋 קבלה רפואית {showKabala ? "▲" : "▼"}
+                </button>
+                {showKabala && (
+                  <div className="mt-1.5 relative">
+                    <textarea
+                      value={kabalaNote}
+                      onChange={e => setKabalaNote(e.target.value)}
+                      rows={12}
+                      dir="rtl"
+                      className="w-full px-2 py-1.5 text-xs border border-teal-200 dark:border-teal-700 rounded-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 resize-y leading-relaxed"
+                      style={{ unicodeBidi: "plaintext" as const }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { navigator.clipboard.writeText(kabalaNote).catch(() => {}); }}
+                      className="absolute top-1.5 left-1.5 text-[10px] bg-teal-600 text-white px-1.5 py-0.5 rounded opacity-70 hover:opacity-100"
+                    >
+                      העתק
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── Quick admission templates ── */}
         <div>
