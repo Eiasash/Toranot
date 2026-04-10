@@ -167,19 +167,6 @@ export function parseFreestyle(text: string): Partial<{
   return result;
 }
 
-// ── Common geriatric diagnoses for autocomplete ──
-const COMMON_DIAGNOSES = [
-  "Pneumonia", "Aspiration pneumonia", "UTI", "Urosepsis", "Sepsis",
-  "Cellulitis", "Endocarditis", "Cholangitis", "Cholecystitis", "C. diff colitis", "COVID-19",
-  "ACS", "NSTEMI", "STEMI", "AF with RVR", "Acute HF decompensation",
-  "HFrEF exacerbation", "HFpEF exacerbation", "Hypertensive urgency", "Syncope",
-  "COPD exacerbation", "Asthma exacerbation", "PE", "Pleural effusion",
-  "Delirium", "Stroke", "TIA", "Seizure", "Altered mental status",
-  "GI bleed", "Acute abdomen", "Bowel obstruction", "Liver failure", "Pancreatitis",
-  "DKA", "HHS", "Hyponatremia", "Hyperkalemia", "AKI", "CKD exacerbation",
-  "Hip fracture", "Falls", "DVT", "Anemia", "Functional decline", "Malignancy workup",
-];
-
 // Organised by category for the chip picker
 const DX_CATEGORIES: { label: string; items: string[] }[] = [
   { label: "זיהום 🦠", items: ["Pneumonia", "Aspiration pneumonia", "UTI", "Urosepsis", "Sepsis", "Cellulitis", "C. diff", "COVID-19", "Cholangitis", "Endocarditis"] },
@@ -206,8 +193,6 @@ const DX_COMBOS = [
   "Stroke + Aspiration pneumonia",
   "HHS + Pneumonia",
 ];
-
-const QUICK_DX = ["Pneumonia", "UTI", "ACS", "Delirium", "AKI", "HF", "Sepsis", "Stroke", "COPD", "AF with RVR", "GI bleed", "Hip fracture"];
 
 const COMMON_ADMISSION_MEDS = [
   "Warfarin", "Apixaban", "Rivaroxaban", "Aspirin",
@@ -777,7 +762,7 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
                 key={t.label}
                 type="button"
                 onClick={() => {
-                  if (t.diagnosis) setDiagnosis(t.diagnosis);
+                  if (t.diagnosis) setDiagnosis(prev => prev ? `${prev} + ${t.diagnosis}` : t.diagnosis);
                   if (t.source) setClinicalMeta(prev => ({ ...prev, admissionSource: t.source }));
                   if (t.meta) setClinicalMeta(prev => ({ ...prev, ...t.meta }));
                   setShowStructured(true);

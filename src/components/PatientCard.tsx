@@ -319,6 +319,9 @@ function PatientCardBase({ patient }: { patient: PatientEntry }) {
             {patient.flags.filter(f => f.toUpperCase().includes("DNR") || f.toUpperCase().includes("DNI")).map(f => (
               <FlagBadge key={f} flag={f} />
             ))}
+            {patient.clinicalMeta?.isolation?.map(iso => (
+              <span key={iso} className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-500 text-white shrink-0">{iso}</span>
+            ))}
           </div>
           {patient.diagnosis && (
             <div className="text-xs text-gray-500 dark:text-gray-400 truncate" dir="auto" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -1012,6 +1015,30 @@ function PatientRowBase({ patient }: { patient: PatientEntry }) {
                     >
                       {s}
                     </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Geriatric baseline summary */}
+              {patient.clinicalMeta && (patient.clinicalMeta.baselineMobility || patient.clinicalMeta.baselineCognition || patient.clinicalMeta.livingArrangement || patient.clinicalMeta.isolation?.length) && (
+                <div className="flex flex-wrap gap-1.5">
+                  {patient.clinicalMeta.baselineMobility && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-700">
+                      {{ independent: "עצמאי", walker: "הליכון", wheelchair: "כסא גלגלים", bedbound: "מרותק" }[patient.clinicalMeta.baselineMobility]}
+                    </span>
+                  )}
+                  {patient.clinicalMeta.baselineCognition && patient.clinicalMeta.baselineCognition !== "oriented" && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-700">
+                      {{ oriented: "צלול", mci: "MCI", dementia: "דמנציה", unknown: "" }[patient.clinicalMeta.baselineCognition]}
+                    </span>
+                  )}
+                  {patient.clinicalMeta.livingArrangement && patient.clinicalMeta.livingArrangement !== "independent" && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600">
+                      {{ independent: "", with_family: "עם משפחה", assisted_living: "דיור מוגן", nursing_home: "מוסד" }[patient.clinicalMeta.livingArrangement]}
+                    </span>
+                  )}
+                  {patient.clinicalMeta.isolation?.map(iso => (
+                    <span key={iso} className="text-[10px] px-2 py-0.5 rounded-full bg-orange-500 text-white font-bold">⚠ {iso}</span>
                   ))}
                 </div>
               )}

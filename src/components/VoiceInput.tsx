@@ -15,7 +15,7 @@
  */
 
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { STRONG_ROOM_RE, normalizeRoom } from "../utils/roomFormat";
+import { normalizeRoom } from "../utils/roomFormat";
 
 // ── Structured parse result ──
 export interface VoiceParsedCommand {

@@ -31,6 +31,13 @@ function formatPatient(p: PatientEntry): string {
   const severity = [p.diagnosis, ...p.flags].filter(Boolean).join(" | ");
   if (severity) lines.push(`  אבחנה: ${severity}`);
   if (p.status.length > 0) lines.push(`  מצב: ${p.status.join(", ")}`);
+  // Isolation + baseline for morning team
+  if (p.clinicalMeta?.isolation?.length) lines.push(`  ⚠️ בידוד: ${p.clinicalMeta.isolation.join(", ")}`);
+  const baselineParts: string[] = [];
+  if (p.clinicalMeta?.baselineMobility) baselineParts.push({ independent: "עצמאי", walker: "הליכון", wheelchair: "כסא גלגלים", bedbound: "מרותק" }[p.clinicalMeta.baselineMobility]);
+  if (p.clinicalMeta?.baselineCognition && p.clinicalMeta.baselineCognition !== "oriented") baselineParts.push({ oriented: "", mci: "MCI", dementia: "דמנציה", unknown: "" }[p.clinicalMeta.baselineCognition]);
+  if (p.clinicalMeta?.livingArrangement && p.clinicalMeta.livingArrangement !== "independent") baselineParts.push({ independent: "", with_family: "עם משפחה", assisted_living: "דיור מוגן", nursing_home: "מוסד" }[p.clinicalMeta.livingArrangement]);
+  if (baselineParts.filter(Boolean).length > 0) lines.push(`  תפקוד: ${baselineParts.filter(Boolean).join(" | ")}`);
   const labSummary = formatLabsForHandoff(p);
   if (labSummary) lines.push(`  🔬 ${labSummary}`);
   if (pending.length > 0) {

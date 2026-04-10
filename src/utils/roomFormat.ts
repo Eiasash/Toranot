@@ -13,16 +13,6 @@
  */
 
 /**
- * Strong room formats that are unambiguously rooms in any context:
- *  - ניטור-1, ניטור 2       (monitor rooms)
- *  - א-92, ב-10             (Hebrew-letter prefix + hyphen + digits)
- *  - 2095-א                 (digits + hyphen + Hebrew letter suffix)
- *  - 49/2, 55/1             (room/bed legacy)
- */
-export const STRONG_ROOM_RE =
-  /ניטור\s*-?\s*(\d{1,2})|([א-ת])-(\d{1,4})|(\d{1,4})-([א-ת])|(\d{1,4})\/(\d{1,2})/;
-
-/**
  * Normalize a raw room match into consistent display format.
  * e.g. "ניטור 2" → "ניטור-2", "א 92" → "א-92"
  */
