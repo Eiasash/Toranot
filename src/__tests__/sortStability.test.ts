@@ -149,8 +149,6 @@ describe("comparePatientsByRoom — antisymmetry and transitivity", () => {
   it("null rooms sort after numbered rooms", () => {
     const a = makePatient({ room: "49/1" });
     const b = makePatient({ room: null as unknown as string });
-    // @ts-expect-error -- testing null room edge case
-    b.room = null;
     expect(comparePatientsByRoom(a, b)).toBeLessThan(0);
   });
 });
