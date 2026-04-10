@@ -223,6 +223,25 @@ function PatientCard({ p, isNew, dispatch }: { p: PatientEntry; isNew: boolean; 
               ))}
             </div>
           )}
+          {/* Isolation + baseline badges */}
+          {(p.clinicalMeta?.isolation?.length || p.clinicalMeta?.baselineMobility) && (
+            <div className="flex gap-1 mt-1 flex-wrap">
+              {p.clinicalMeta?.isolation?.map(iso => (
+                <span key={iso} className="text-[10px] bg-red-700 text-white rounded px-1.5 py-0 font-bold">⚠ {iso}</span>
+              ))}
+              {p.clinicalMeta?.baselineMobility && p.clinicalMeta.baselineMobility !== "independent" && (
+                <span className="text-[10px] bg-gray-700 text-gray-300 rounded px-1.5 py-0">
+                  {{ walker: "הליכון", wheelchair: "כסא גלגלים", bedbound: "מרותק", independent: "" }[p.clinicalMeta.baselineMobility]}
+                </span>
+              )}
+              {p.clinicalMeta?.baselineCognition === "dementia" && (
+                <span className="text-[10px] bg-purple-800 text-purple-200 rounded px-1.5 py-0">דמנציה</span>
+              )}
+              {p.clinicalMeta?.livingArrangement === "nursing_home" && (
+                <span className="text-[10px] bg-gray-700 text-gray-300 rounded px-1.5 py-0">מוסד</span>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
           {statCount > 0 && (
@@ -947,6 +966,9 @@ export function HandoffSheet({ onClose, initialTab }: { onClose: () => void; ini
                               {admPatient?.age && <span className="text-xs text-gray-400">({admPatient.age})</span>}
                               {statusTags.map((s, i) => (
                                 <span key={i} className="text-[10px] bg-zinc-800 text-zinc-300 border border-zinc-700 rounded px-1.5 py-0.5 font-mono">{s}</span>
+                              ))}
+                              {admPatient?.clinicalMeta?.isolation?.map(iso => (
+                                <span key={iso} className="text-[10px] bg-red-700 text-white rounded px-1.5 py-0 font-bold">⚠ {iso}</span>
                               ))}
                             </div>
                             {admPatient?.diagnosis && (
