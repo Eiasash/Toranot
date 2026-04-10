@@ -8,7 +8,7 @@ Live: https://toranot.netlify.app
 
 ```bash
 npm run dev          # Dev server at http://localhost:5173/Toranot/
-npm test             # Run all tests (vitest, ~1,700+ tests)
+npm test             # Run all tests (vitest, ~1,780 tests)
 npm run build        # TypeScript check + Vite build → dist/
 npm run typecheck    # tsc --noEmit (strict mode)
 ```
@@ -77,7 +77,7 @@ src/
 │   ├── AddAdmissionModal.tsx  # Admission workflow
 │   ├── OnCallProtocols.tsx    # IV/clinical protocol reference
 │   └── ...                    # 38+ more components (many lazy-loaded)
-└── __tests__/                 # 54 test files, ~1,700+ tests
+└── __tests__/                 # 54 test files, ~1,780 tests
     ├── phase1.test.ts         # Acceptance tests
     ├── rules.test.ts          # 151 rule engine tests
     ├── drugSafety.test.ts     # 73 drug safety tests
@@ -97,7 +97,7 @@ public/
 └── szmc-iv-protocols.json     # Shaare Zedek specific protocols
 ```
 
-**Codebase size**: ~143 TypeScript/TSX files (88 source + 54 test + 1 index).
+**Codebase size**: ~146 TypeScript/TSX files (88 source + 57 test + 1 index).
 
 ## Architecture
 
