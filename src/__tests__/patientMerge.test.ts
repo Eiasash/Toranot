@@ -16,8 +16,17 @@ import {
   patientPayloadBytes,
   PATIENT_FIELD_CAPS,
   type PatientEnvelope,
+  type PatientMergeResult,
 } from "../sync/patientMerge";
 import type { PatientEntry, Task } from "../types";
+
+/** Narrow a merge result to a non-conflict variant (has `.merged`). */
+function assertMerged(
+  result: PatientMergeResult | null,
+): asserts result is Extract<PatientMergeResult, { merged: PatientEnvelope }> {
+  expect(result).not.toBeNull();
+  if (result!.kind === "conflict") throw new Error(`Expected merged result, got conflict: ${result!.reason}`);
+}
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -134,17 +143,17 @@ describe("mergePatient", () => {
   it("returns remote-newer when local is null", () => {
     const remote = makeEnvelope(makePatient(), 1);
     const result = mergePatient(null, remote);
-    expect(result).not.toBeNull();
-    expect(result!.kind).toBe("remote-newer");
-    expect(result!.merged).toBe(remote);
+    assertMerged(result);
+    expect(result.kind).toBe("remote-newer");
+    expect(result.merged).toBe(remote);
   });
 
   it("returns local-newer when remote is null", () => {
     const local = makeEnvelope(makePatient(), 1);
     const result = mergePatient(local, null);
-    expect(result).not.toBeNull();
-    expect(result!.kind).toBe("local-newer");
-    expect(result!.merged).toBe(local);
+    assertMerged(result);
+    expect(result.kind).toBe("local-newer");
+    expect(result.merged).toBe(local);
   });
 
   it("returns identical when hashes match", () => {
@@ -152,9 +161,10 @@ describe("mergePatient", () => {
     const local = makeEnvelope(p, 3);
     const remote = makeEnvelope(p, 2);
     const result = mergePatient(local, remote);
-    expect(result!.kind).toBe("identical");
+    assertMerged(result);
+    expect(result.kind).toBe("identical");
     // Should prefer the higher revision
-    expect(result!.merged.revision).toBe(3);
+    expect(result.merged.revision).toBe(3);
   });
 
   it("returns local-newer when local revision is higher", () => {
@@ -163,8 +173,9 @@ describe("mergePatient", () => {
     const local = makeEnvelope(localP, 5);
     const remote = makeEnvelope(remoteP, 3);
     const result = mergePatient(local, remote);
-    expect(result!.kind).toBe("local-newer");
-    expect(result!.merged.payload.name).toBe("Updated");
+    assertMerged(result);
+    expect(result.kind).toBe("local-newer");
+    expect(result.merged.payload.name).toBe("Updated");
   });
 
   it("returns remote-newer when remote revision is higher", () => {
@@ -173,8 +184,9 @@ describe("mergePatient", () => {
     const local = makeEnvelope(localP, 2);
     const remote = makeEnvelope(remoteP, 5);
     const result = mergePatient(local, remote);
-    expect(result!.kind).toBe("remote-newer");
-    expect(result!.merged.payload.name).toBe("Updated");
+    assertMerged(result);
+    expect(result.kind).toBe("remote-newer");
+    expect(result.merged.payload.name).toBe("Updated");
   });
 
   it("returns conflict when same revision but different content", () => {
