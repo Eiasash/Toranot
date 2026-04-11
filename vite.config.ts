@@ -29,6 +29,16 @@ export default defineConfig({
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
     __GIT_SHA__: JSON.stringify(process.env.GITHUB_SHA?.slice(0, 7) ?? "dev"),
   },
+  test: {
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "lcov"],
+      thresholds: {
+        lines: 40,
+        branches: 30,
+      },
+    },
+  },
   build: {
     // Hidden source maps: .map files deployed but no //# sourceMappingURL in JS.
     // Fixes Lighthouse Best Practices "missing source maps" without exposing them to users.
