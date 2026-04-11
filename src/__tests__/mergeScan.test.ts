@@ -361,4 +361,49 @@ describe("mergeScan", () => {
       expect(merged).toHaveLength(3);
     });
   });
+
+  describe("photo and photoIds preservation", () => {
+    function makePatient(overrides: Partial<PatientEntry> & { id: string }): PatientEntry {
+      return {
+        section: "SIDE_A", date: "01/04/2026", room: "70",
+        name: "כהן יוסף", age: 82, diagnosis: "UTI",
+        status: [], flags: [], tomorrowNotes: [],
+        tasks: [], generatedTasks: [], notes: [], labs: [],
+        order: 0, scannedAt: new Date().toISOString(), confidence: 1,
+        ...overrides,
+      };
+    }
+
+    it("preserves photoIds from old patient during re-import", () => {
+      const existing = [makePatient({ id: "p1", photoIds: ["photo-abc", "photo-def"] })];
+      const incoming = [makePatient({ id: "new-1" })];
+      const merged = mergeScan(existing, incoming);
+      expect(merged).toHaveLength(1);
+      expect(merged[0].photoIds).toEqual(["photo-abc", "photo-def"]);
+    });
+
+    it("preserves legacy photos from old patient during re-import", () => {
+      const existing = [makePatient({
+        id: "p1", section: "SIDE_B", room: "80",
+        name: "לוי שרה", age: 75, diagnosis: "CHF",
+        photos: [{ id: "ph1", dataUrl: "data:image/png;base64,abc", time: "2026-04-01T00:00:00Z" }],
+      })];
+      const incoming = [makePatient({
+        id: "new-2", section: "SIDE_B", room: "80",
+        name: "לוי שרה", age: 75, diagnosis: "CHF",
+      })];
+      const merged = mergeScan(existing, incoming);
+      expect(merged).toHaveLength(1);
+      expect(merged[0].photos).toHaveLength(1);
+      expect(merged[0].photos![0].id).toBe("ph1");
+    });
+
+    it("does not lose photoIds when both old and new have them", () => {
+      const existing = [makePatient({ id: "p1", photoIds: ["photo-old"] })];
+      const incoming = [makePatient({ id: "new-1", photoIds: ["photo-new"] })];
+      const merged = mergeScan(existing, incoming);
+      // Old photoIds take precedence (they reference the user's actual photos)
+      expect(merged[0].photoIds).toEqual(["photo-old"]);
+    });
+  });
 });

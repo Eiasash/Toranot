@@ -51,6 +51,7 @@ function mergePatient(oldP: PatientEntry, newP: PatientEntry): PatientEntry {
     labs: oldP.labs ?? [],
     handoverNote: oldP.handoverNote,
     photos: oldP.photos ?? [],
+    photoIds: oldP.photoIds ?? newP.photoIds ?? [],
   };
 }
 
