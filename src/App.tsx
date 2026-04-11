@@ -18,7 +18,7 @@ import { usePatientsDispatch, usePatientsState, useCloudSync } from "./context/P
 const QRSync            = lazy(() => import("./components/QRSync").then(m => ({ default: m.QRSync })));
 const QuickCaptureSheet = lazy(() => import("./components/QuickCaptureSheet").then(m => ({ default: m.QuickCaptureSheet })));
 import { requestNotificationPermission } from "./utils/taskReminders";
-import { startReminderScheduler, resyncReminders, stopReminderScheduler } from "./reminders/reminderScheduler";
+// reminderScheduler is dynamically imported in AppInner to reduce main bundle size
 import { persistAllPatientLabs, restorePatientLabs } from "./persistence/labPersistence";
 import { formatScanDiffSummary } from "./engine/smartOCR";
 import { buildShiftContinuity } from "./engine/shiftContinuity";
@@ -569,6 +569,11 @@ function AppInner() {
   const [modal, setModal] = useState<Modal>("none");
   const { patients, activeSection } = usePatientsState();
   const dispatch = usePatientsDispatch();
+  // Refs for lazily-loaded reminder scheduler (dynamic import)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const schedulerRef = useRef<{ resync: (pts: any[]) => void; stop: () => void } | null>(null);
+  const patientsForSchedulerRef = useRef(patients);
+  patientsForSchedulerRef.current = patients;
 
   // ── Lab persistence: save on change, restore on import ──────────────
   // Persist labs to Supabase whenever patients change (fire-and-forget)
@@ -601,13 +606,23 @@ function AppInner() {
       }
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  // Start the shared scheduler once; re-sync whenever patients change.
+  // Start the shared scheduler once (lazy-loaded to reduce main bundle).
   // The scheduler handles snooze reset, visibility re-check, and dedup.
   useEffect(() => {
-    startReminderScheduler();
-    return () => stopReminderScheduler();
+    let cancelled = false;
+    import("./reminders/reminderScheduler").then(({ startReminderScheduler, stopReminderScheduler, resyncReminders }) => {
+      if (cancelled) return;
+      startReminderScheduler();
+      schedulerRef.current = { resync: resyncReminders, stop: stopReminderScheduler };
+      // Initial sync — the patients effect below already ran before module loaded
+      resyncReminders(patientsForSchedulerRef.current);
+    });
+    return () => {
+      cancelled = true;
+      schedulerRef.current?.stop();
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { resyncReminders(patients); }, [patients]);
+  useEffect(() => { schedulerRef.current?.resync(patients); }, [patients]);
 
   const openRef = useCallback(() => {
     setModal((prev) => (prev === "reference" ? "none" : "reference"));
