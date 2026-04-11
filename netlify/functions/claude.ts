@@ -42,35 +42,57 @@ function normalizeClaudeModel(input: unknown): string | null {
   return null;
 }
 
+// ─── CORS ────────────────────────────────────────────────────────────────────
+
+const ALLOWED_ORIGINS = new Set([
+  "https://eiasash.github.io",      // Shlav A Mega (Geriatrics study app)
+  "https://toranot.netlify.app",    // Toranot (ward management)
+  "http://localhost:3737",          // local dev — Shlav A Mega
+  "http://localhost:5173",          // local dev — Vite
+  "http://localhost:8888",          // local dev — Netlify Dev
+]);
+
+function corsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get("origin") ?? "";
+  const allowed = ALLOWED_ORIGINS.has(origin) ? origin : "https://toranot.netlify.app";
+  return {
+    "Access-Control-Allow-Origin": allowed,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, x-api-secret, Authorization",
+    "Access-Control-Max-Age": "86400",
+    "Vary": "Origin",
+  };
+}
+
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 export default async (req: Request, _context: Context) => {
-  if (req.method === "OPTIONS") return new Response(null, { status: 204 });
-  if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(req) });
+  if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers: corsHeaders(req) });
 
   const authError = await checkAuth(req);
-  if (authError) return authError;
+  if (authError) return new Response(await authError.text(), { status: authError.status, headers: { ...corsHeaders(req), "content-type": "text/plain" } });
 
   const sizeError = checkBodySize(req);
-  if (sizeError) return sizeError;
+  if (sizeError) return new Response(await sizeError.text(), { status: sizeError.status, headers: { ...corsHeaders(req), "content-type": "text/plain" } });
 
   const limitError = await checkRateLimit(req, "ai");
-  if (limitError) return limitError;
+  if (limitError) return new Response(await limitError.text(), { status: limitError.status, headers: { ...corsHeaders(req), "content-type": "text/plain" } });
 
   const apiKey = Netlify.env.get("ANTHROPIC_API_KEY");
-  if (!apiKey) return new Response("AI service not configured", { status: 503 });
+  if (!apiKey) return new Response("AI service not configured", { status: 503, headers: corsHeaders(req) });
 
   let body: unknown;
   try {
     body = await req.json();
   } catch {
-    return new Response("Invalid JSON body", { status: 400 });
+    return new Response("Invalid JSON body", { status: 400, headers: corsHeaders(req) });
   }
 
   const b = body as Record<string, unknown>;
   const envModel = Netlify.env.get("CLAUDE_MODEL");
   const model = normalizeClaudeModel(b?.model ?? envModel);
-  if (!model) return new Response("Unsupported model", { status: 400 });
+  if (!model) return new Response("Unsupported model", { status: 400, headers: corsHeaders(req) });
 
   const maxTokens = clampInt(b?.max_tokens ?? b?.maxTokens, 4096, 256, 8192);
 
@@ -81,10 +103,10 @@ export default async (req: Request, _context: Context) => {
         ? [{ role: "user", content: b.prompt }]
         : [];
 
-  if (!rawMessages.length) return new Response("Missing prompt/messages", { status: 400 });
+  if (!rawMessages.length) return new Response("Missing prompt/messages", { status: 400, headers: corsHeaders(req) });
 
   const messages = validateMessages(rawMessages);
-  if (!messages) return new Response("Invalid messages format", { status: 400 });
+  if (!messages) return new Response("Invalid messages format", { status: 400, headers: corsHeaders(req) });
 
   const payload: Record<string, unknown> = {
     model,
@@ -116,7 +138,7 @@ export default async (req: Request, _context: Context) => {
       body: JSON.stringify(payload),
     }, timeoutMs);
   } catch {
-    return new Response("Upstream timeout", { status: 504 });
+    return new Response("Upstream timeout", { status: 504, headers: corsHeaders(req) });
   }
 
   const text = await upstream.text();
@@ -157,6 +179,7 @@ export default async (req: Request, _context: Context) => {
     status: upstream.status,
     headers: {
       "content-type": safeContentType(upstream),
+      ...corsHeaders(req),
     },
   });
 };
