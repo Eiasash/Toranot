@@ -25,10 +25,15 @@ export const UPSTREAM_TIMEOUT_LONG_MS = 23_000; // for file/vision requests — 
 // Falls back to legacy x-api-secret if VITE_SUPABASE_URL is not set,
 // so local dev without Supabase continues to work.
 
+function matchesSecret(reqSecret: string | null, envSecret: string | undefined): boolean {
+  if (!reqSecret || !envSecret) return false;
+  return envSecret.split(",").some(s => s.trim() === reqSecret);
+}
+
 export async function checkAuth(req: Request): Promise<Response | null> {
-  // ── Fast path: API_SECRET (works with or without Supabase) ─────────────
+  // ── Fast path: API_SECRET — supports comma-separated values for multiple apps ──
   const secret = Netlify.env.get("API_SECRET");
-  if (secret && req.headers.get("x-api-secret") === secret) return null;
+  if (matchesSecret(req.headers.get("x-api-secret"), secret)) return null;
 
   const supabaseUrl  = Netlify.env.get("VITE_SUPABASE_URL");
   const supabaseAnon = Netlify.env.get("VITE_SUPABASE_ANON_KEY");
@@ -59,15 +64,13 @@ export async function checkAuth(req: Request): Promise<Response | null> {
 
       // Supabase returned unexpected error — require API_SECRET fallback instead of failing open
       console.warn("[auth] Supabase /auth/v1/user returned", res.status, "— checking API_SECRET fallback");
-      const fallbackSecret = Netlify.env.get("API_SECRET");
-      if (fallbackSecret && req.headers.get("x-api-secret") === fallbackSecret) return null;
+      if (matchesSecret(req.headers.get("x-api-secret"), Netlify.env.get("API_SECRET"))) return null;
       return new Response("Authentication service unavailable", { status: 503 });
 
     } catch (err) {
       // Network timeout reaching Supabase — require API_SECRET fallback instead of failing open
       console.warn("[auth] Supabase JWT verification timed out — checking API_SECRET fallback:", err);
-      const fallbackSecret = Netlify.env.get("API_SECRET");
-      if (fallbackSecret && req.headers.get("x-api-secret") === fallbackSecret) return null;
+      if (matchesSecret(req.headers.get("x-api-secret"), Netlify.env.get("API_SECRET"))) return null;
       return new Response("Authentication service unavailable", { status: 503 });
     }
   }
