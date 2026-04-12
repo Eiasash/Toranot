@@ -40,7 +40,7 @@ import {
   checkAuth,
   checkRateLimit,
   MAX_BODY_BYTES,
-} from "../../netlify/functions/_utils.ts";
+} from "../../netlify/functions/_utils";
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
 
