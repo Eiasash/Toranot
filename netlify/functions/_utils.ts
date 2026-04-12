@@ -3,6 +3,10 @@
  * Prefixed with _ so Netlify does not treat this as a function endpoint.
  */
 
+declare const Netlify: {
+  env: { get(key: string): string | undefined }
+};
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 export const MAX_BODY_BYTES = 5_000_000; // 5MB — supports base64-encoded admission letter files

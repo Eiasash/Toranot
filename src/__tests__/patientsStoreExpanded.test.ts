@@ -8,28 +8,32 @@
  *   4. Edge cases (scale, missing fields, concurrent ops, partial updates)
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
 import type { PatientEntry, Task } from "../types";
 
 // ─── localStorage mock ──────────────────────────────────────────────────────
 const storage = new Map<string, string>();
 
-const localStorageMock: Storage & { _simulateQuotaError?: boolean } = {
+const _setItem = vi.fn((key: string, value: string) => {
+  if (_localStorageMock._simulateQuotaError) {
+    const err = new DOMException("QuotaExceededError", "QuotaExceededError");
+    Object.defineProperty(err, "name", { value: "QuotaExceededError" });
+    throw err;
+  }
+  storage.set(key, value);
+});
+
+const _localStorageMock = {
   getItem: vi.fn((key: string) => storage.get(key) ?? null),
-  setItem: vi.fn((key: string, value: string) => {
-    if ((localStorageMock as { _simulateQuotaError?: boolean })._simulateQuotaError) {
-      const err = new DOMException("QuotaExceededError", "QuotaExceededError");
-      Object.defineProperty(err, "name", { value: "QuotaExceededError" });
-      throw err;
-    }
-    storage.set(key, value);
-  }),
+  setItem: _setItem,
   removeItem: vi.fn((key: string) => { storage.delete(key); }),
   clear: vi.fn(() => { storage.clear(); }),
   get length() { return storage.size; },
   key: vi.fn((_i: number) => null),
   _simulateQuotaError: false,
 };
+
+const localStorageMock = _localStorageMock as typeof _localStorageMock & Storage;
 
 // ─── DOM mock ───────────────────────────────────────────────────────────────
 const classListMock = {
