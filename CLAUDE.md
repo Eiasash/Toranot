@@ -8,7 +8,7 @@ Live: https://toranot.netlify.app
 
 ```bash
 npm run dev          # Dev server at http://localhost:5173/Toranot/
-npm test             # Run all tests (vitest, ~1,780 tests)
+npm test             # Run all tests (vitest, 2,052 tests)
 npm run build        # TypeScript check + Vite build → dist/
 npm run typecheck    # tsc --noEmit (strict mode)
 ```
@@ -77,10 +77,10 @@ src/
 │   ├── AddAdmissionModal.tsx  # Admission workflow
 │   ├── OnCallProtocols.tsx    # IV/clinical protocol reference
 │   └── ...                    # 38+ more components (many lazy-loaded)
-└── __tests__/                 # 54 test files, ~1,780 tests
+└── __tests__/                 # 65 test files, 2,052 tests
     ├── phase1.test.ts         # Acceptance tests
-    ├── rules.test.ts          # 151 rule engine tests
-    ├── drugSafety.test.ts     # 73 drug safety tests
+    ├── rules.test.ts          # 146 rule engine tests
+    ├── drugSafety.test.ts     # 56 drug safety tests
     └── ...                    # labDelta, dosing, renal, mergeScan, etc.
 
 netlify/functions/             # Serverless API proxies
@@ -97,7 +97,7 @@ public/
 └── szmc-iv-protocols.json     # Shaare Zedek specific protocols
 ```
 
-**Codebase size**: ~146 TypeScript/TSX files (88 source + 57 test + 1 index).
+**Codebase size**: ~154 TypeScript/TSX files (88 source + 65 test + 1 index).
 
 ## Architecture
 
@@ -140,18 +140,111 @@ npm test -- src/__tests__/rules.test.ts     # Single file
 npm test -- --reporter=verbose              # Verbose output
 ```
 
-**Test coverage by area:**
-| Area | Coverage | Notes |
-|------|----------|-------|
-| Engine (rules, drugSafety, labDelta) | Strong (~430+ tests) | Core clinical logic |
-| Utilities (renal, sort, patientKey) | Moderate (~100+ tests) | |
-| Parser | Moderate (37+ tests) | Section detection, patient parsing |
-| Reducer | Good (105+ tests) | State transitions |
-| Medication integration | Good (21+ tests) | Lab persistence, med integration |
-| Components | None | 46 components untested |
-| Zustand store | None | localStorage persistence untested |
+**2,052 tests across 65 files** — run `npm test` to see current count.
 
-**Known**: ~8% of tests may fail (pre-existing; mostly cloud sync race conditions). Core engine tests should always pass.
+Always run `npm test` before every push. ALL tests must pass.
+
+**Auto-expand rule:** Every feature, improvement, or bug fix MUST include new or updated tests:
+- New engine rule → tests for happy path + edge cases + comfort care suppression
+- Bug fix → regression test that reproduces the bug before the fix
+- New clinical logic → boundary tests + property tests
+- Modified thresholds → edge case tests at boundary values
+- After adding tests, update the test count in this section
+
+### Test file inventory (65 files, 2,052 tests)
+
+```
+src/__tests__/
+  acuity.test.ts                 21 tests — patient acuity scoring
+  acuity.edge.test.ts            13 tests — acuity edge cases
+  allergyConflicts.test.ts       28 tests — allergy conflict detection
+  anticholinergicBurden.test.ts  14 tests — ACB scoring for medications
+  authThrottle.test.ts            6 tests — auth rate limiting
+  bulkLabs.test.ts               13 tests — bulk lab entry processing
+  calculateCockcroftGault.test.ts 18 tests — Cockcroft-Gault calculation
+  clinicalThresholds.test.ts     40 tests — canonical lab threshold validation
+  cloudSync.test.ts              39 tests — Supabase sync, conflict detection, merge
+  comfortCare.test.ts            36 tests — comfort care / goals of care suppression
+  dosing.test.ts                  8 tests — renal dosing table (19 antibiotics)
+  drugSafety.test.ts             56 tests — Beers criteria, drug interactions, renal adjustment
+  drugSafety.beers.test.ts       38 tests — Beers criteria 2023 detailed validation
+  drugSafety.edge.test.ts        34 tests — drug safety edge cases
+  drugSafetyAlerts.test.ts       33 tests — drug safety alert generation
+  fallsRisk.test.ts              13 tests — falls risk assessment
+  generateId.test.ts             10 tests — stable ID generation
+  handoffSheet.test.ts           34 tests — shift handoff document generation
+  hints.test.ts                  58 tests — clinical hints engine
+  ivProtocolMatch.test.ts        39 tests — IV protocol matching
+  ivProtocolMatch.edge.test.ts   27 tests — IV protocol edge cases
+  labAlerts.test.ts              36 tests — critical lab push notifications
+  labDelta.test.ts               38 tests — KDIGO AKI staging, Hb delta alerting
+  labDelta.edge.test.ts          29 tests — lab delta edge cases
+  labPersistence.test.ts         10 tests — lab data persistence
+  labTrends.test.ts              14 tests — lab trend analysis
+  medFlags.test.ts               22 tests — medication flag detection
+  medicationIntegration.test.ts  11 tests — lab persistence + med integration
+  mergeScan.test.ts              23 tests — OCR/parser deduplication
+  netlifyFunctions.test.ts       59 tests — serverless function handlers (Claude, Gemini, OCR)
+  oncallShiftsStress.test.ts    113 tests — on-call shift stress/load testing
+  parseFreestyle.test.ts         19 tests — freestyle text parsing
+  parsePatientList.test.ts       71 tests — WhatsApp/nurse-call text → PatientEntry[]
+  parsePatientList.edge.test.ts  21 tests — parser edge cases
+  parserFuzz.test.ts             21 tests — parser fuzz testing
+  parserNormalize.test.ts        42 tests — parser normalization
+  patientCard.test.ts            35 tests — patient card component logic
+  patientKey.test.ts             30 tests — room+name → stable patient ID
+  patientMerge.test.ts           45 tests — cloud sync conflict merge
+  patientsStore.test.ts          25 tests — Zustand store operations
+  patientsStoreExpanded.test.ts  32 tests — expanded store operations
+  phase1.test.ts                 39 tests — acceptance tests
+  phase3.test.ts                 21 tests — phase 3 feature tests
+  phlebotomy.test.ts             19 tests — phlebotomy scheduling
+  reducer.test.ts               111 tests — state reducer + action types
+  reminderScheduler.test.ts      17 tests — task reminder scheduling
+  renal.test.ts                  15 tests — Cockcroft-Gault with frailty floor
+  renal.edge.test.ts             32 tests — renal calculation edge cases
+  renalDosing.test.ts            15 tests — renal dose adjustments
+  roomFormat.simulation.test.ts  64 tests — room format simulation
+  rules.test.ts                 146 tests — 57 clinical rule groups
+  rules.comfort.test.ts          22 tests — comfort care rule suppression
+  rules.cross.test.ts             7 tests — cross-rule interactions
+  sectionDetection.test.ts       29 tests — ward section detection
+  shiftContinuity.test.ts        11 tests — cross-shift task continuity
+  shiftIntegrity.test.ts         14 tests — shift data integrity checks
+  shiftTime.test.ts              21 tests — shift time calculations
+  smartOCR.test.ts               16 tests — diff reporting
+  sortPatients.test.ts            9 tests — patient sort by section/room/bed
+  sortStability.test.ts          15 tests — sort stability guarantees
+  storage.test.ts                30 tests — localStorage persistence
+  storageExport.test.ts          13 tests — storage export/import
+  stressOncallShifts.test.ts     44 tests — on-call shift stress scenarios
+  syncWrite.test.ts               9 tests — sync write operations
+  taskReminders.test.ts          22 tests — task reminder logic
+```
+
+### Test coverage by area
+
+| Area | Tests | Coverage | Notes |
+|------|-------|----------|-------|
+| Engine (rules, drugSafety, labDelta) | ~530 | Strong | Core clinical logic, Beers, AKI staging |
+| Clinical utilities (renal, acuity, falls, hints) | ~190 | Strong | Cockcroft-Gault, ACB, thresholds |
+| Parser (patient list, freestyle, normalize) | ~195 | Strong | Section detection, fuzz testing |
+| Reducer + store | ~168 | Strong | State transitions, Zustand ops |
+| IV protocols + dosing | ~74 | Good | Protocol matching, renal dosing |
+| Lab processing (alerts, trends, persistence) | ~73 | Good | Critical labs, bulk entry, deltas |
+| Cloud sync + merge | ~84 | Good | Conflict detection, merge, write ops |
+| Shift management (continuity, integrity, time) | ~46 | Good | Cross-shift tasks, data integrity |
+| On-call scheduling | ~157 | Strong | Stress testing, shift scenarios |
+| Serverless functions | ~59 | Good | Claude, Gemini, OCR proxies |
+| Handoff sheet | ~34 | Good | Document generation |
+| Patient card component | ~35 | Good | Component logic |
+| Storage + export | ~43 | Good | localStorage, export/import |
+
+**Gaps — areas not tested:**
+- 45 of 46 React components (only PatientCard has tests)
+- UI interactions, navigation, modal workflows
+- Service worker (offline caching, background sync)
+- Supabase real-time subscriptions (tested via mocks only)
 
 ## Environment Variables
 
