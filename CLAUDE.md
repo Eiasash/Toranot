@@ -8,7 +8,7 @@ Live: https://toranot.netlify.app
 
 ```bash
 npm run dev          # Dev server at http://localhost:5173/Toranot/
-npm test             # Run all tests (vitest, 2,052 tests)
+npm test             # Run all tests (vitest, 2,151 tests)
 npm run build        # TypeScript check + Vite build → dist/
 npm run typecheck    # tsc --noEmit (strict mode)
 ```
@@ -58,16 +58,6 @@ src/
 ├── data/
 │   ├── dosing.ts              # Renal dosing table (19 antibiotics, CrCl buckets)
 │   └── drugHazards.json       # Drug hazard databases
-├── utils/                     # Utility functions
-│   ├── renal.ts               # Cockcroft-Gault with frailty creatinine floor
-│   ├── patientKey.ts          # Room+name → stable patient ID
-│   ├── labAlerts.ts           # Critical lab push notifications
-│   ├── sortPatients.ts        # Sort by section/room/bed
-│   └── ...                    # storage, shiftTime, haptics, taskReminders, etc.
-├── reminders/                 # Task reminder scheduling
-├── sync/patientMerge.ts       # Cloud sync conflict detection + merge
-├── persistence/photoStore.ts  # IndexedDB for photo blobs
-├── cloudSync.ts               # Supabase cloud sync + OTP auth
 ├── components/                # 46 React components
 │   ├── PatientCard.tsx        # Main patient display (~1500 lines)
 │   ├── PatientList.tsx        # Patient list with filtering
@@ -77,168 +67,61 @@ src/
 │   ├── AddAdmissionModal.tsx  # Admission workflow
 │   ├── OnCallProtocols.tsx    # IV/clinical protocol reference
 │   └── ...                    # 38+ more components (many lazy-loaded)
-└── __tests__/                 # 65 test files, 2,052 tests
-    ├── phase1.test.ts         # Acceptance tests
-    ├── rules.test.ts          # 146 rule engine tests
-    ├── drugSafety.test.ts     # 56 drug safety tests
-    └── ...                    # labDelta, dosing, renal, mergeScan, etc.
+└── __tests__/                 # 68 test files, 2,151 tests
 
 netlify/functions/             # Serverless API proxies
-├── claude.ts                  # Claude API proxy (vision + document support)
-├── gemini.ts                  # Gemini API proxy for OCR
-├── ocr-proxy.ts               # PDF OCR pipeline
-├── github-pat.ts              # GitHub token proxy
+├── claude.ts, gemini.ts, ocr-proxy.ts, github-pat.ts
 └── _utils.ts                  # Shared auth, rate limiting, validation
 
 public/
-├── sw.js                      # Service Worker (offline + caching)
-├── manifest.json              # PWA manifest (Hebrew RTL)
-├── iv-protocols.json          # IV protocol data
-└── szmc-iv-protocols.json     # Shaare Zedek specific protocols
+├── sw.js, manifest.json, iv-protocols.json, szmc-iv-protocols.json
 ```
 
-**Codebase size**: ~154 TypeScript/TSX files (88 source + 65 test + 1 index).
+**Codebase size**: ~157 TypeScript/TSX files (88 source + 68 test + 1 index).
 
 ## Architecture
 
 ### State Management
 - **Zustand store** (`store/patientsStore.ts`) is the single source of truth
-- **React Context** (`context/PatientsContext.tsx`) wraps Zustand for backward compatibility
-- **Reducer** (`context/reducer.ts`) extracted separately to break circular imports between Context and Store
-- State persists to **localStorage** via Zustand subscriptions; optional **Supabase** cloud sync
+- **React Context** wraps Zustand for backward compatibility
+- **Reducer** extracted separately to break circular imports
+- State persists to **localStorage**; optional **Supabase** cloud sync
 
 ### Engine (Business Logic)
-All clinical logic lives in `src/engine/` — deterministic, pure functions, heavily tested:
-- **rules.ts**: 57 rule groups that generate tasks from patient data (sepsis, AKI, CHF, electrolytes, DVT/PE, GI bleed, etc.)
-- **drugSafety.ts**: Beers Criteria 2023, drug-drug interactions, renal dose adjustments
-- **labDelta.ts**: KDIGO AKI staging, hemoglobin trend alerting
-- **clinicalThresholds.ts**: Canonical lab thresholds shared across the app
-- **anticholinergicBurden.ts**: ACB scoring for medications
-- **fallsRisk.ts**: Falls risk assessment logic
-- **shiftContinuity.ts**: Cross-shift task continuity tracking
-- **shiftIntegrity.ts**: Shift data integrity validation
+All clinical logic in `src/engine/` — deterministic, pure functions, heavily tested.
 
 ### Cloud Sync
-- Debounced push with write coalescing
-- Echo suppression (ignore own changes)
-- Conflict detection + merge strategy (remote-newer, local-newer, identical)
-- Per-patient revision tracking
-- Retry with exponential backoff + jitter
+- Debounced push, echo suppression, conflict detection + merge
+- Per-patient revision tracking, retry with exponential backoff + jitter
 
 ### Serverless Functions (Netlify)
-- Proxy Claude/Gemini APIs to keep keys server-side
-- JWT auth via Supabase (fail-closed on timeout)
-- Rate limiting via Upstash Redis (30/min AI, 10/min OCR; fail-open if Redis unavailable)
-- Content-type whitelist for upstream responses
-- Scheduled functions: `toranot-keepalive` (every 5 days), `self-audit` (weekly Monday)
+- Proxy Claude/Gemini APIs (keys server-side), JWT auth, rate limiting
 
 ## Testing
 
-```bash
-npm test                                    # All tests
-npm test -- src/__tests__/rules.test.ts     # Single file
-npm test -- --reporter=verbose              # Verbose output
-```
-
-**2,052 tests across 65 files** — run `npm test` to see current count.
+**2,151 tests across 68 files** — run `npm test` to see current count.
 
 Always run `npm test` before every push. ALL tests must pass.
 
-**Auto-expand rule:** Every feature, improvement, or bug fix MUST include new or updated tests:
-- New engine rule → tests for happy path + edge cases + comfort care suppression
-- Bug fix → regression test that reproduces the bug before the fix
-- New clinical logic → boundary tests + property tests
-- Modified thresholds → edge case tests at boundary values
-- After adding tests, update the test count in this section
-
-### Test file inventory (65 files, 2,052 tests)
-
-```
-src/__tests__/
-  acuity.test.ts                 21 tests — patient acuity scoring
-  acuity.edge.test.ts            13 tests — acuity edge cases
-  allergyConflicts.test.ts       28 tests — allergy conflict detection
-  anticholinergicBurden.test.ts  14 tests — ACB scoring for medications
-  authThrottle.test.ts            6 tests — auth rate limiting
-  bulkLabs.test.ts               13 tests — bulk lab entry processing
-  calculateCockcroftGault.test.ts 18 tests — Cockcroft-Gault calculation
-  clinicalThresholds.test.ts     40 tests — canonical lab threshold validation
-  cloudSync.test.ts              39 tests — Supabase sync, conflict detection, merge
-  comfortCare.test.ts            36 tests — comfort care / goals of care suppression
-  dosing.test.ts                  8 tests — renal dosing table (19 antibiotics)
-  drugSafety.test.ts             56 tests — Beers criteria, drug interactions, renal adjustment
-  drugSafety.beers.test.ts       38 tests — Beers criteria 2023 detailed validation
-  drugSafety.edge.test.ts        34 tests — drug safety edge cases
-  drugSafetyAlerts.test.ts       33 tests — drug safety alert generation
-  fallsRisk.test.ts              13 tests — falls risk assessment
-  generateId.test.ts             10 tests — stable ID generation
-  handoffSheet.test.ts           34 tests — shift handoff document generation
-  hints.test.ts                  58 tests — clinical hints engine
-  ivProtocolMatch.test.ts        39 tests — IV protocol matching
-  ivProtocolMatch.edge.test.ts   27 tests — IV protocol edge cases
-  labAlerts.test.ts              36 tests — critical lab push notifications
-  labDelta.test.ts               38 tests — KDIGO AKI staging, Hb delta alerting
-  labDelta.edge.test.ts          29 tests — lab delta edge cases
-  labPersistence.test.ts         10 tests — lab data persistence
-  labTrends.test.ts              14 tests — lab trend analysis
-  medFlags.test.ts               22 tests — medication flag detection
-  medicationIntegration.test.ts  11 tests — lab persistence + med integration
-  mergeScan.test.ts              23 tests — OCR/parser deduplication
-  netlifyFunctions.test.ts       59 tests — serverless function handlers (Claude, Gemini, OCR)
-  oncallShiftsStress.test.ts    113 tests — on-call shift stress/load testing
-  parseFreestyle.test.ts         19 tests — freestyle text parsing
-  parsePatientList.test.ts       71 tests — WhatsApp/nurse-call text → PatientEntry[]
-  parsePatientList.edge.test.ts  21 tests — parser edge cases
-  parserFuzz.test.ts             21 tests — parser fuzz testing
-  parserNormalize.test.ts        42 tests — parser normalization
-  patientCard.test.ts            35 tests — patient card component logic
-  patientKey.test.ts             30 tests — room+name → stable patient ID
-  patientMerge.test.ts           45 tests — cloud sync conflict merge
-  patientsStore.test.ts          25 tests — Zustand store operations
-  patientsStoreExpanded.test.ts  32 tests — expanded store operations
-  phase1.test.ts                 39 tests — acceptance tests
-  phase3.test.ts                 21 tests — phase 3 feature tests
-  phlebotomy.test.ts             19 tests — phlebotomy scheduling
-  reducer.test.ts               111 tests — state reducer + action types
-  reminderScheduler.test.ts      17 tests — task reminder scheduling
-  renal.test.ts                  15 tests — Cockcroft-Gault with frailty floor
-  renal.edge.test.ts             32 tests — renal calculation edge cases
-  renalDosing.test.ts            15 tests — renal dose adjustments
-  roomFormat.simulation.test.ts  64 tests — room format simulation
-  rules.test.ts                 146 tests — 57 clinical rule groups
-  rules.comfort.test.ts          22 tests — comfort care rule suppression
-  rules.cross.test.ts             7 tests — cross-rule interactions
-  sectionDetection.test.ts       29 tests — ward section detection
-  shiftContinuity.test.ts        11 tests — cross-shift task continuity
-  shiftIntegrity.test.ts         14 tests — shift data integrity checks
-  shiftTime.test.ts              21 tests — shift time calculations
-  smartOCR.test.ts               16 tests — diff reporting
-  sortPatients.test.ts            9 tests — patient sort by section/room/bed
-  sortStability.test.ts          15 tests — sort stability guarantees
-  storage.test.ts                30 tests — localStorage persistence
-  storageExport.test.ts          13 tests — storage export/import
-  stressOncallShifts.test.ts     44 tests — on-call shift stress scenarios
-  syncWrite.test.ts               9 tests — sync write operations
-  taskReminders.test.ts          22 tests — task reminder logic
-```
+**Auto-expand rule:** Every feature or bug fix MUST include new or updated tests.
 
 ### Test coverage by area
 
-| Area | Tests | Coverage | Notes |
-|------|-------|----------|-------|
-| Engine (rules, drugSafety, labDelta) | ~530 | Strong | Core clinical logic, Beers, AKI staging |
-| Clinical utilities (renal, acuity, falls, hints) | ~190 | Strong | Cockcroft-Gault, ACB, thresholds |
-| Parser (patient list, freestyle, normalize) | ~195 | Strong | Section detection, fuzz testing |
-| Reducer + store | ~168 | Strong | State transitions, Zustand ops |
-| IV protocols + dosing | ~74 | Good | Protocol matching, renal dosing |
-| Lab processing (alerts, trends, persistence) | ~73 | Good | Critical labs, bulk entry, deltas |
-| Cloud sync + merge | ~84 | Good | Conflict detection, merge, write ops |
-| Shift management (continuity, integrity, time) | ~46 | Good | Cross-shift tasks, data integrity |
-| On-call scheduling | ~157 | Strong | Stress testing, shift scenarios |
-| Serverless functions | ~59 | Good | Claude, Gemini, OCR proxies |
-| Handoff sheet | ~34 | Good | Document generation |
-| Patient card component | ~35 | Good | Component logic |
-| Storage + export | ~43 | Good | localStorage, export/import |
+| Area | Tests | Status |
+|------|-------|--------|
+| Engine (rules, drugSafety, labDelta) | ~530 | Strong |
+| Clinical utils (renal, acuity, falls, hints) | ~190 | Strong |
+| Parser (patient list, freestyle, normalize) | ~195 | Strong |
+| Reducer + store | ~168 | Strong |
+| On-call scheduling | ~157 | Strong |
+| Cloud sync + merge | ~84 | Good |
+| IV protocols + dosing | ~74 | Good |
+| Lab processing | ~73 | Good |
+| Serverless functions | ~59 | Good |
+| Shift management | ~46 | Good |
+| Storage + export | ~43 | Good |
+| Patient card component | ~35 | Moderate |
+| Handoff sheet | ~34 | Good |
 
 **Gaps — areas not tested:**
 - 45 of 46 React components (only PatientCard has tests)
@@ -248,154 +131,131 @@ src/__tests__/
 
 ## Environment Variables
 
-Create `.env.local` from `.env.example`:
-
 ```bash
-# Client-side (bundled by Vite)
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbG...
-VITE_BASE_PATH=/Toranot/              # Optional, for GitHub Pages
-
-# Server-side (Netlify Functions only — never in bundle)
-ANTHROPIC_API_KEY=sk-ant-...          # Required for AI features
-GEMINI_API_KEY=AIza...                # Optional OCR alternative
-CLAUDE_MODEL=...                      # Optional model override
-GEMINI_MODEL=...                      # Optional model override
-UPSTASH_REDIS_REST_URL=https://...    # Optional rate limiting
-UPSTASH_REDIS_REST_TOKEN=AX...
-API_SECRET=...                        # Legacy local dev fallback
+# Client-side (Vite)
+VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_BASE_PATH=/Toranot/
+# Server-side (Netlify Functions)
+ANTHROPIC_API_KEY, GEMINI_API_KEY, CLAUDE_MODEL, GEMINI_MODEL
+UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN, API_SECRET
 ```
 
 ## CI/CD
 
-**GitHub Actions** (`.github/workflows/deploy.yml`):
-1. **test**: `npm ci` → `typecheck` → `test` (runs on all pushes/PRs, Node 22)
-2. **build**: `vite build` with `VITE_BASE_PATH=/Toranot/` (push to main only, after tests pass)
-3. **deploy**: GitHub Pages (push to main only)
-
-**Netlify**: Auto-deploys from main; functions bundled with esbuild.
-- API routes: `/api/claude`, `/api/gemini`, `/api/ocr`, `/api/ocr-proxy`, `/api/github-pat`, `/api/self-audit`
-- CSP headers configured (camera/microphone restrictions)
-- Static asset caching: 1 year (31536000s)
-
-## Build Configuration
-
-**vite.config.ts** highlights:
-- React + Tailwind CSS plugins
-- Custom SW version stamping plugin
-- Manual chunk splitting: `vendor-react`, `vendor-supabase`, `vendor-qr`, `vendor-dompurify`, `app-engine`, `app-context`, `app-utils`
-- Build-time defines: `__BUILD_TIME__`, `__GIT_SHA__`
-- Hidden source maps in production
-
-**tsconfig.json**: Target ES2022, ESNext modules, bundler resolution, strict mode.
+**GitHub Actions**: test → build → deploy (GitHub Pages). Node 22.
+**Netlify**: Auto-deploys from main; API routes, CSP headers, scheduled functions.
 
 ## Code Conventions
 
-### General
-- **Language**: TypeScript strict mode — no `any` unless absolutely necessary
-- **UI text**: Hebrew (RTL). All user-facing strings are in Hebrew
-- **Styling**: Tailwind CSS classes; dark mode via class-based toggling
-- **Components**: Functional React components with hooks
-- **Heavy modals**: Code-split via `React.lazy` for bundle size
-- **Dialogs**: Use `useSimpleConfirm` hook (not `window.confirm` — breaks on Android PWA)
+- **TypeScript strict mode** — no `any` unless necessary
+- **UI text**: Hebrew (RTL)
+- **Tailwind CSS**; dark mode via class toggling
+- **React.lazy** for heavy modals; `useSimpleConfirm` not `window.confirm`
+- Engine rules must respect `goalsOfCare === 'comfort'`
+- Lab thresholds from `clinical/clinicalThresholds.ts` (single source)
+- All engine functions must be pure — no side effects
 
-### State Changes
-- Dispatch actions through the reducer (`context/reducer.ts`)
-- Action types defined as a union type in reducer.ts
-- New patient fields must be optional with defaults (forward compatibility)
-- Normalize patients/tasks via `normalizePatient`/`normalizeTask` helpers
-
-### Engine Rules
-- Each rule group in `rules.ts` follows a pattern: check conditions → generate Task objects
-- Rules must respect `goalsOfCare === 'comfort'` (suppress non-comfort tasks)
-- Lab thresholds must come from `clinical/clinicalThresholds.ts` (single source of truth)
-- All engine functions must be pure — no side effects, no API calls
-
-### Patient Sections
-- Sections: `SIDE_A`, `SIDE_B`, `SIDE_C`, `REHAB`, `MONITOR`
-- Section aliases defined in `src/types/patient.ts` for flexible matching
-
-### Testing
-- Test files go in `src/__tests__/`
-- Name pattern: `featureName.test.ts`
-- Engine/utility tests are highest priority
-- Use descriptive test names in Hebrew context where relevant
-
-### Security
-- Never expose API keys client-side; all AI/OCR calls go through Netlify function proxies
-- Sanitize AI-generated HTML with DOMPurify before rendering
-- Auth is fail-closed (Supabase JWT timeout → require API_SECRET, not open access)
-- Validate content types from upstream responses
-
-## Key Files to Know
+## Key Files
 
 | File | Why It Matters |
 |------|---------------|
-| `src/store/patientsStore.ts` | Zustand store — app state source of truth |
-| `src/context/reducer.ts` | All actions + reducer logic + normalizers |
-| `src/engine/rules.ts` | 57 clinical rule groups (~1,077 lines) |
-| `src/engine/drugSafety.ts` | Drug safety checks (Beers, interactions, renal) |
-| `src/engine/shiftContinuity.ts` | Cross-shift task continuity |
+| `src/store/patientsStore.ts` | App state source of truth |
+| `src/context/reducer.ts` | All actions + normalizers |
+| `src/engine/rules.ts` | 57 clinical rule groups |
+| `src/engine/drugSafety.ts` | Beers, interactions, renal |
 | `src/clinical/clinicalThresholds.ts` | Canonical lab thresholds |
-| `src/types/patient.ts` | Core type definitions (PatientEntry, Task, LabEntry, etc.) |
-| `src/parser/parsePatientList.ts` | Text → PatientEntry[] parser |
-| `src/components/PatientCard.tsx` | Main UI component (~1,500 lines) |
-| `src/components/HandoffSheet.tsx` | Shift handoff document |
-| `src/components/OnCallProtocols.tsx` | Clinical protocol reference |
-| `src/cloudSync.ts` | Supabase sync with conflict resolution |
-| `netlify/functions/_utils.ts` | Shared serverless auth + rate limiting |
-| `vite.config.ts` | Build config, chunk splitting, defines |
-| `netlify.toml` | Deployment, redirects, CSP headers, scheduled functions |
-
-## Claude Code Integration
-
-### Slash Commands (`.claude/commands/`)
-
-| Command | Description |
-|---------|-------------|
-| `/toranot-audit` | Full audit of app — bugs, UX issues, clinical logic |
-| `/toranot-audit-fix-deploy` | Full audit → fix → push cycle |
-| `/toranot-fix` | Fix specific issues |
-| `/toranot-test` | Run and verify test suite |
-| `/toranot-deploy` | Build and deploy |
-| `/toranot-update-skill` | Update Claude skill definitions |
-| `/szmc-clinical-notes` | Clinical notes workflow |
-
-### Dev Server
-Configured in `.claude/launch.json`: `npm run dev` on port 5173.
+| `src/types/patient.ts` | Core type definitions |
+| `src/parser/parsePatientList.ts` | Text → PatientEntry[] |
+| `src/components/PatientCard.tsx` | Main UI (~1,500 lines) |
+| `netlify/functions/_utils.ts` | Shared auth + rate limiting |
 
 ## Common Tasks
 
 ### Adding a new clinical rule
 1. Add rule group in `src/engine/rules.ts`
-2. Respect comfort care: check `goalsOfCare` before generating tasks
-3. Use thresholds from `src/clinical/clinicalThresholds.ts`
+2. Respect comfort care: check `goalsOfCare`
+3. Use thresholds from `clinicalThresholds.ts`
 4. Add tests in `src/__tests__/rules.test.ts`
-5. Run `npm test` to verify
 
 ### Adding a new patient field
 1. Add optional field to `PatientEntry` in `src/types/patient.ts`
-2. Update `normalizePatient` in `src/context/reducer.ts` with a default value
-3. Update relevant components
-4. Field must be optional (backward compat with existing localStorage data)
+2. Update `normalizePatient` in `src/context/reducer.ts`
+3. Field must be optional (backward compat)
 
-### Adding a new component
-1. Create in `src/components/`
-2. For heavy/infrequently-used components, use `React.lazy` for code splitting
-3. Use Tailwind for styling; support dark mode
-4. Use `useSimpleConfirm` instead of `window.confirm`
-5. All UI text in Hebrew
+---
 
-### Modifying serverless functions
-1. Edit in `netlify/functions/`
-2. Shared utilities in `_utils.ts`
-3. Auth: verify Supabase JWT or fall back to API_SECRET
-4. Always validate and sanitize inputs
-5. Test locally with `netlify dev` (requires Netlify CLI)
+## Codebase Metrics
+
+| Metric | Value |
+|--------|-------|
+| Source files (TS/TSX) | ~88 |
+| Test files | 68 |
+| Total tests | 2,151 |
+| Components | 46 |
+| Engine modules | 12 |
+| Clinical rule groups | 57 |
+| Renal dosing drugs | 19 |
+| Netlify functions | 5 (+1 shared utils) |
+| Patient sections | 5 (SIDE_A–C, REHAB, MONITOR) |
+
+---
+
+## Test Coverage Recommendations
+
+### Recommended Additions (Priority Order)
+
+1. **Component testing expansion** — Only PatientCard tested (1/46). Priority:
+   - `AddAdmissionModal.tsx` — form validation, templates, geriatric baselines
+   - `HandoffSheet.tsx` — all 5 tab renders, export formatting
+   - `Scanner.tsx` — OCR trigger, confidence, error states
+   - `MedicationInput.tsx` — structured entry, ACB preview, validation
+   - `PatientList.tsx` — filtering, sorting, section grouping
+2. **Service worker tests** — offline caching, background sync, auto-update
+3. **Supabase real-time subscription tests** — integration-style lifecycle tests
+4. **Error boundary coverage** — `InlineErrorBoundary` fallback rendering
+5. **Voice input tests** — `VoiceInput.tsx` speech-to-text
+6. **Photo persistence tests** — Dexie IndexedDB blob storage
+7. **Rate limiting boundary tests** — Upstash Redis at 29th vs 31st request
+8. **Room format edge cases** — SZMC-specific numbering
+9. **Shift handoff cross-patient tests** — 10+ patients, mixed sections/acuity
+10. **AI clinical reasoning tests** — mock Claude responses, DOMPurify sanitization
+
+### Long-Term Goal
+Reach **2,500+ tests** with at least 10 component test files.
+
+---
+
+## TODO / Improvement Roadmap
+
+### High Priority
+- [ ] **Component test coverage** — top 5 critical components
+- [ ] **Service worker test file** — caching, version sync, background sync
+- [ ] **Coverage thresholds** — target Lines >=50%, Branches >=40%
+- [ ] **PatientCard refactoring** — continue extracting sub-components
+
+### Medium Priority
+- [ ] **Structured medication database** — expand drugHazards.json
+- [ ] **Lab trend visualization** — sparkline/mini-charts
+- [ ] **Multi-ward support** — extend PatientSection
+- [ ] **Admission template expansion** — beyond current 8
+- [ ] **Push notification reliability** — test and improve delivery
+
+### Low Priority
+- [ ] **Performance optimization** — PatientCard re-render profiling
+- [ ] **Offline resilience testing** — offline → online transitions
+- [ ] **i18n preparation** — extract Hebrew strings for future locales
+- [ ] **Accessibility audit** — WCAG compliance
+- [ ] **Bundle size monitoring** — track chunk sizes
+
+### Clinical Content Roadmap
+- [ ] **Rule expansion** — delirium screening (4AT/CAM), pressure injury (Braden), nutrition (MNA)
+- [ ] **Drug database expansion** — more Beers drugs, STOPP/START v3
+- [ ] **Protocol library** — more SZMC-specific protocols
+- [ ] **Clinical calculators** — GDS-15, Norton, Morse Fall, CFS
+
+---
 
 ## Branch Policy
 
-- `main` — production branch, auto-deployed to Netlify + GitHub Pages
+- `main` — production, auto-deployed to Netlify + GitHub Pages
 - Feature branches: `claude/<description>-<id>` convention
-- All PRs target `main`
 - CI must pass before merging
