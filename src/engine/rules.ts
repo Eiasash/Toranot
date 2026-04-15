@@ -947,7 +947,7 @@ export function isComfortCarePatient(patient: PatientEntry): boolean {
     ...patient.status,
     ...(patient.notes ?? []),
     patient.handoverNote ?? "",
-    ...patient.tasks.map((t) => t.text),
+    ...(patient.tasks ?? []).map((t) => t.text),
   ].join(" ");
   return (
     patient.clinicalMeta?.goalsOfCare === "comfort_only" ||
@@ -974,7 +974,7 @@ export function applyRules(patient: PatientEntry): Task[] {
     ...patient.status,
     ...(patient.notes ?? []),
     patient.handoverNote ?? "",
-    ...patient.tasks.map((t) => t.text),
+    ...(patient.tasks ?? []).map((t) => t.text),
   ].join(" ");
   const isComfortCareOnly =
     patient.clinicalMeta?.goalsOfCare === "comfort_only" ||
@@ -987,7 +987,7 @@ export function applyRules(patient: PatientEntry): Task[] {
   const tasksText = [
     ...patient.status,
     ...patient.flags,
-    ...patient.tasks.map((t) => t.text),
+    ...(patient.tasks ?? []).map((t) => t.text),
   ].join(" ");
   // ⚠️ planNotes / tomorrowNotes are intentionally EXCLUDED from allText.
   // Plan notes describe the patient's existing management ("on fentanyl drip",
@@ -1028,7 +1028,7 @@ export function applyRules(patient: PatientEntry): Task[] {
     // For comfort-care patients with comfortRequiresExplicitTask rules,
     // override textToMatch to ONLY the explicit task list text.
     if (isComfortCareOnly && rule.comfortRequiresExplicitTask) {
-      textToMatch = patient.tasks.map((t) => t.text).join(" ");
+      textToMatch = (patient.tasks ?? []).map((t) => t.text).join(" ");
     }
 
     if (rule.trigger.test(textToMatch)) {
@@ -1036,7 +1036,7 @@ export function applyRules(patient: PatientEntry): Task[] {
 
       // Skip if doctor already wrote an explicit task covering this — prevents duplicates
       if (rule.skipIfExplicitTaskMatches) {
-        const explicitTaskText = patient.tasks.map((t) => t.text).join(" ");
+        const explicitTaskText = (patient.tasks ?? []).map((t) => t.text).join(" ");
         if (rule.skipIfExplicitTaskMatches.test(explicitTaskText)) continue;
       }
 

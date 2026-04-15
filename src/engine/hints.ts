@@ -1434,7 +1434,7 @@ export function generateHints(patient: PatientEntry): ClinicalHint[] {
     ...(patient.notes ?? []),
     ...(patient.planNotes ?? []),
     ...(patient.tomorrowNotes ?? []),
-    ...patient.tasks.map((t) => t.text),
+    ...(patient.tasks ?? []).map((t) => t.text),
     patient.handoverNote ?? "",
   ].join(" ");
   if (!textToSearch.trim()) return [];
