@@ -63,11 +63,11 @@ beforeEach(() => {
     writable: true,
     configurable: true,
   });
-  dispatchEventSpy = vi.fn(() => true);
+  dispatchEventSpy = vi.fn((_: Event) => true);
   if (typeof globalThis.window === "undefined") {
     (globalThis as Record<string, unknown>).window = { dispatchEvent: dispatchEventSpy };
   } else {
-    vi.spyOn(window, "dispatchEvent").mockImplementation(dispatchEventSpy);
+    vi.spyOn(window, "dispatchEvent").mockImplementation(dispatchEventSpy as unknown as (event: Event) => boolean);
   }
 });
 
