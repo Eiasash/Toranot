@@ -1,0 +1,76 @@
+name: Netlify Deploy Monitor
+
+# Polls Netlify's public deploy API after every push to main and fails
+# if Netlify deploy errors or times out. GitHub sends a failure email
+# to the repo owner automatically — so a failed deploy becomes a loud
+# signal instead of silently rotting for 4 days like April 12-16.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  monitor:
+    name: Verify Netlify deploy reaches ready state
+    runs-on: ubuntu-latest
+    steps:
+      - name: Poll Netlify deploy status for this commit
+        env:
+          SITE_ID: 85d12386-b960-4f65-bee8-80e210ecd683
+        run: |
+          echo "Monitoring Netlify deploy for commit $GITHUB_SHA"
+          echo "Site: https://toranot.netlify.app"
+          echo ""
+
+          # Initial delay: Netlify takes 20-40s to start processing after push
+          sleep 30
+
+          # Poll up to 10 minutes for the deploy to reach 'ready' or 'error'
+          MAX_ATTEMPTS=30
+          for i in $(seq 1 $MAX_ATTEMPTS); do
+            RESP=$(curl -sf "https://api.netlify.com/api/v1/sites/${SITE_ID}/deploys?per_page=20" || echo "[]")
+            STATE=$(echo "$RESP" | jq -r --arg sha "$GITHUB_SHA" '.[] | select(.commit_ref == $sha) | .state' | head -1)
+
+            if [ -z "$STATE" ]; then
+              echo "[$i/$MAX_ATTEMPTS] No deploy found yet for $GITHUB_SHA (state=?)"
+            else
+              echo "[$i/$MAX_ATTEMPTS] Deploy state: $STATE"
+            fi
+
+            case "$STATE" in
+              ready)
+                DEPLOY_ID=$(echo "$RESP" | jq -r --arg sha "$GITHUB_SHA" '.[] | select(.commit_ref == $sha) | .id' | head -1)
+                DEPLOY_TIME=$(echo "$RESP" | jq -r --arg sha "$GITHUB_SHA" '.[] | select(.commit_ref == $sha) | .deploy_time' | head -1)
+                echo ""
+                echo "✓ Deploy succeeded."
+                echo "  deploy_id:   $DEPLOY_ID"
+                echo "  deploy_time: ${DEPLOY_TIME}s"
+                echo "  url:         https://app.netlify.com/sites/toranot/deploys/$DEPLOY_ID"
+                exit 0
+                ;;
+              error)
+                DEPLOY_ID=$(echo "$RESP" | jq -r --arg sha "$GITHUB_SHA" '.[] | select(.commit_ref == $sha) | .id' | head -1)
+                echo ""
+                echo "::error::Netlify deploy failed for $GITHUB_SHA"
+                echo "::error::Check logs at: https://app.netlify.com/sites/toranot/deploys/$DEPLOY_ID"
+                exit 1
+                ;;
+              uploading|preparing|building|processing|enqueued|new|uploaded|prepared|accepted|skipped)
+                # In-progress — keep polling
+                sleep 20
+                ;;
+              *)
+                # Unknown state or empty — keep polling
+                sleep 20
+                ;;
+            esac
+          done
+
+          echo ""
+          echo "::error::Timed out after $((MAX_ATTEMPTS * 20 + 30))s waiting for Netlify deploy of $GITHUB_SHA"
+          echo "::error::Last observed state: ${STATE:-none}"
+          exit 1
