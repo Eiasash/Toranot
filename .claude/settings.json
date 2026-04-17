@@ -7,7 +7,19 @@
       "Bash(git pull --rebase origin main)",
       "Bash(npx tsc --noEmit)",
       "Bash(npx vitest run)",
-      "Bash(npx vite build)"
+      "Bash(npx vite build)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vitest:*)",
+      "Bash(npx vite:*)",
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git config:*)",
+      "Bash(bash .claude/skills/toranot-ship/scripts/*:*)",
+      "Bash(node .claude/hooks/*:*)"
     ]
   },
   "hooks": {
@@ -17,7 +29,29 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'if echo \"$CLAUDE_TOOL_INPUT\" | grep -q \"push origin main\" 2>/dev/null; then echo \"[skill-hook] Deploy pushed — run /toranot-update-skill to sync skill file\"; fi'"
+            "command": "bash -c 'if echo \"$CLAUDE_TOOL_INPUT\" | grep -q \"push origin main\" 2>/dev/null; then echo \"[skill-hook] Deploy pushed \u2014 run /toranot-update-skill to sync skill file\"; fi'"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/room-format-drift.cjs",
+            "description": "Warn when a 1-of-5 room-format file was edited without the others"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/ban-patterns.cjs",
+            "description": "Block banned Toranot patterns (transition-all, confirm(), mid-file imports, will-change on animate-card-in)"
           }
         ]
       }
