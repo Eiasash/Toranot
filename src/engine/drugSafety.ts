@@ -152,8 +152,8 @@ const INTERACTIONS: DrugInteraction[] = [
  */
 function gatherDrugText(patient: PatientEntry): string {
   return [
-    ...patient.tasks.map((t) => t.text),
-    ...patient.generatedTasks.map((t) => t.text),
+    ...(patient.tasks ?? []).map((t) => t.text),
+    ...(patient.generatedTasks ?? []).map((t) => t.text),
     ...patient.status,
     ...patient.flags,
     ...(patient.notes ?? []),
@@ -831,8 +831,8 @@ export function checkAllergyConflicts(patient: PatientEntry): AllergyWarning[] {
 
   // Collect all drug text from tasks, generated tasks, notes, planNotes, and medications
   const allText = [
-    ...patient.tasks.map(t => t.text),
-    ...patient.generatedTasks.map(t => t.text),
+    ...(patient.tasks ?? []).map(t => t.text),
+    ...(patient.generatedTasks ?? []).map(t => t.text),
     ...(patient.notes ?? []),
     ...(patient.planNotes ?? []),
     ...(patient.status ?? []),
