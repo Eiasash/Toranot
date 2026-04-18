@@ -1,0 +1,8 @@
+{
+  "name": "cowork",
+  "version": "0.1.0",
+  "description": "Cowork branch + session-handoff workflow tuned for Toranot's clinical rules engine and SZMC notes. Commands, agents, skills, and SessionStart hook for resuming work cleanly across Claude sessions.",
+  "author": { "name": "eiasash" },
+  "keywords": ["cowork", "handoff", "clinical", "rules-engine", "szmc"],
+  "homepage": "https://github.com/eiasash/toranot"
+}
