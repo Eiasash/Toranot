@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null); case \"$branch\" in cowork/*) slug=${branch#cowork/}; echo \"=== cowork session: $branch ===\"; if [ -f \".cowork/$slug.md\" ]; then cat \".cowork/$slug.md\"; else echo \"(no handoff file at .cowork/$slug.md — run /cowork:handoff)\"; fi; echo; echo \"--- last 5 commits ---\"; git log --oneline -5; ;; esac'"
+          }
+        ]
+      }
+    ]
+  }
+}
