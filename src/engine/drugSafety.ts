@@ -372,6 +372,14 @@ export function calculateCrCl(
   isFemale?: boolean,    // optional, default false
 ): number | null {
   if (!age || !creatinine || creatinine <= 0) return null;
+  // Reject clinically impossible inputs — protects against typos
+  // (e.g. weight "900" instead of "90") that would silently produce
+  // nonsensical CrCl values and drive incorrect renal dose warnings.
+  if (age < 18 || age > 120) return null;
+  if (creatinine > 20) return null;
+  // Weight range matches the clinicalMeta sanity bounds used by callers
+  // (see checkRenalDoseWarnings: weightKg must be 20-250 to be trusted).
+  if (weight !== undefined && (weight < 20 || weight > 250)) return null;
   // Apply creatinine floor for frail elderly (≥75yo) — prevents CrCl overestimation
   const cr = age >= 75 && creatinine < 1.0 ? 1.0 : creatinine;
   const w = weight ?? 70;
