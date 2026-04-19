@@ -202,6 +202,28 @@ describe("calculateCrCl — additional edge cases", () => {
     // (140-30)*70/(72*0.3) = 7700/21.6 ≈ 356
     expect(result).toBeGreaterThan(300);
   });
+
+  it("returns null for age below adult range (age < 18)", () => {
+    expect(calculateCrCl(12, 1.0, 70, false)).toBeNull();
+  });
+
+  it("returns null for implausible age (age > 120)", () => {
+    // Typo like 180 instead of 80 should not silently produce negative CrCl
+    expect(calculateCrCl(180, 1.0, 70, false)).toBeNull();
+  });
+
+  it("returns null for implausibly high creatinine (> 20)", () => {
+    expect(calculateCrCl(70, 25, 70, false)).toBeNull();
+  });
+
+  it("returns null for implausibly low weight (< 20 kg)", () => {
+    expect(calculateCrCl(80, 1.0, 10, false)).toBeNull();
+  });
+
+  it("returns null for implausibly high weight (> 250 kg)", () => {
+    // Typo like 900 instead of 90 should not produce nonsensical CrCl
+    expect(calculateCrCl(80, 1.0, 900, false)).toBeNull();
+  });
 });
 
 // ═════════════════════════════════════════════════════════════
