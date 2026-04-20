@@ -1,6 +1,58 @@
 @import "tailwindcss";
+/* SZMC Clinical Kit v1 — Toranot skin (slate + sky)
+ * Additive foundation. Existing Tailwind utility classes in components
+ * are untouched. Future components should reference --sem-* and --app-*.
+ */
+
+/* Self-hosted Heebo (Hebrew + Latin, unicode-range split) */
+@font-face{font-family:"Heebo";font-style:normal;font-weight:400;font-display:swap;
+  src:url("/fonts/heebo-hebrew-400-normal.woff2") format("woff2");
+  unicode-range:U+0590-05FF,U+FB1D-FB4F;}
+@font-face{font-family:"Heebo";font-style:normal;font-weight:500;font-display:swap;
+  src:url("/fonts/heebo-hebrew-500-normal.woff2") format("woff2");
+  unicode-range:U+0590-05FF,U+FB1D-FB4F;}
+@font-face{font-family:"Heebo";font-style:normal;font-weight:600;font-display:swap;
+  src:url("/fonts/heebo-hebrew-600-normal.woff2") format("woff2");
+  unicode-range:U+0590-05FF,U+FB1D-FB4F;}
+@font-face{font-family:"Heebo";font-style:normal;font-weight:700;font-display:swap;
+  src:url("/fonts/heebo-hebrew-700-normal.woff2") format("woff2");
+  unicode-range:U+0590-05FF,U+FB1D-FB4F;}
+@font-face{font-family:"Heebo";font-style:normal;font-weight:400;font-display:swap;
+  src:url("/fonts/heebo-latin-400-normal.woff2") format("woff2");
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:"Heebo";font-style:normal;font-weight:500;font-display:swap;
+  src:url("/fonts/heebo-latin-500-normal.woff2") format("woff2");
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:"Heebo";font-style:normal;font-weight:600;font-display:swap;
+  src:url("/fonts/heebo-latin-600-normal.woff2") format("woff2");
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+@font-face{font-family:"Heebo";font-style:normal;font-weight:700;font-display:swap;
+  src:url("/fonts/heebo-latin-700-normal.woff2") format("woff2");
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;}
+
+/* Semantic tokens (clinical — reserved, never decorative) */
+:root{
+  --sem-critical:#ef4444;
+  --sem-warning:#f59e0b;
+  --sem-ok:#10b981;
+  --sem-info:#3b82f6;
+  --sem-neutral:#64748b;
+  --tap-min:44px;
+}
+
+/* Skin: Toranot — slate primary, sky accent (brief spec) */
+html[data-skin="toranot"]{
+  --app-primary:#1e293b;
+  --app-accent:#3b82f6;
+  --app-on-primary:#fff;
+}
+html[data-skin="toranot"].dark{
+  --app-primary:#3b82f6;
+  --app-on-primary:#fff;
+}
+
 
 body {
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "Heebo", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   direction: rtl;
 }

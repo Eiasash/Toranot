@@ -1,6 +1,6 @@
 {
   "name": "toranot",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -23,7 +23,7 @@
     "vite": "^7.3.1",
     "vitest": "^4.0.18"
   },
-  "description": "Hospital ward shift management PWA — patient tracking, task automation, drug safety alerts, and lab trend monitoring for on-call doctors",
+  "description": "Hospital ward shift management PWA \u2014 patient tracking, task automation, drug safety alerts, and lab trend monitoring for on-call doctors",
   "main": "index.js",
   "repository": {
     "type": "git",
