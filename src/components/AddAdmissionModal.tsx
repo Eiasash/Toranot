@@ -8,6 +8,7 @@ const API_KEY_STORAGE = "toranot-anthropic-key";
 const DIRECT_API_URL = "https://api.anthropic.com/v1/messages";
 import { usePatientsState, usePatientsDispatch } from "../context/PatientsContext";
 import { generateId } from "../utils/id";
+import { processIntake } from "../engine/admissionProcessor";
 
 const SIDE_TO_SECTION: Record<"A" | "B" | "C" | "REHAB" | "UNKNOWN", PatientSection> = {
   A: "SIDE_A",
@@ -826,7 +827,8 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
       })(),
     } as PatientEntry;
 
-    dispatch({ type: "NEW_ADMISSION", patient });
+    const processed = processIntake(patient);
+    dispatch({ type: "NEW_ADMISSION", patient: processed });
     onSuccess?.();
     onClose();
   }

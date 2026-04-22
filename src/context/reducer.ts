@@ -108,6 +108,7 @@ export function normalizePatient(p: RawPatient): PatientEntry {
     },
     ...(p.discharged ? { discharged: true } : {}),
     ...(p.isAdmission ? { isAdmission: true } : {}),
+    ...((p as PatientEntry).needsCapacityAssessment ? { needsCapacityAssessment: true } : {}),
   } as PatientEntry;
 }
 

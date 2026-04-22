@@ -148,6 +148,12 @@ export type PatientEntry = {
   discharged?: boolean;
   isAdmission?: boolean;
 
+  // MOH surrogate-consent trigger: flagged by the intake processor when an
+  // elderly patient (age >= 65) has a high anticholinergic burden (ACB >= 3).
+  // UI surfaces this as a reminder to verify decision-making capacity before
+  // discharge planning or advance-directive discussions.
+  needsCapacityAssessment?: boolean;
+
   // Legacy photo attachments (base64 data URLs, stored in localStorage).
   // DEPRECATED: Phase 2 migration moves blobs to IndexedDB.
   // After migration this field is removed from the patient record.
