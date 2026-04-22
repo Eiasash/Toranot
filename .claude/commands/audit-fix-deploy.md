@@ -1,12 +1,10 @@
 ---
-description: Full audit → fix → test → build → deploy → verify cycle. Detects which of Eias's repos you're in automatically (§ A–E).
+description: Full audit → fix → test → build → deploy → verify cycle for this repo. Detects repo automatically.
 ---
 
-Run the audit-fix-deploy pipeline.
+Run the **audit-fix-deploy** skill pipeline in full.
 
-Read the skill file at `~/.claude/skills/user/audit-fix-deploy/SKILL.md` and execute it in full.
-If that path doesn't exist, check `.claude/skills/user/audit-fix-deploy/SKILL.md` at the project root.
+The audit-fix-deploy skill is already loaded in your context (check available_skills).
+Execute every phase: STEP 0 (detect repo profile § A–E) → Audit → Fix → Test + Build → Deploy → Verify live → Skill update → Self-improve.
 
-Execute completely: STEP 0 (detect repo profile) → Audit → Fix → Test + Build → Deploy → Verify live → Skill update → Self-improve.
-
-Do not ask for confirmation. Start with STEP 0 immediately.
+Start with STEP 0 immediately. Do not ask for confirmation.
