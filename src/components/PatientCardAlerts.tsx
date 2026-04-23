@@ -5,7 +5,7 @@
  * Owns its own showHints toggle state — no prop drilling needed.
  */
 
-import { useState, useMemo, memo } from "react";
+import { useState, useMemo, memo, useCallback } from "react";
 import type { PatientEntry } from "../types";
 import { LabBadges, AddLabForm } from "./LabTracker";
 import { DrugSafetyAlerts } from "./DrugSafetyAlerts";
@@ -15,6 +15,7 @@ import { generateHints } from "../engine/hints";
 import { calculateACB } from "../engine/anticholinergicBurden";
 import { calculateFallsRisk } from "../engine/fallsRisk";
 import { calculateLabTrends, type TrendArrow } from "../engine/labDelta";
+import { generateChameleonRoundsNote } from "../parser/chameleonExport";
 
 // ── ACB badge ────────────────────────────────────────────────────────────────
 
@@ -80,6 +81,38 @@ function LabTrendArrows({ patient }: { patient: PatientEntry }) {
         </span>
       ))}
     </div>
+  );
+}
+
+// ── Chameleon rounds-note copy button ────────────────────────────────────────
+
+function ChameleonCopyButton({ patient }: { patient: PatientEntry }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    const note = generateChameleonRoundsNote(patient);
+    try {
+      await navigator.clipboard.writeText(note);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard API unavailable (old Safari / insecure context) — no-op.
+    }
+  }, [patient]);
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className={`text-xs px-2.5 py-1 rounded-lg border active:opacity-80 ${
+        copied
+          ? "bg-emerald-50 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300"
+          : "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300"
+      }`}
+      aria-label="העתק סיכום ביקור לצ'מליון"
+    >
+      {copied ? "✓ הועתק" : "📋 העתק לסיכום ממוחשב"}
+    </button>
   );
 }
 
@@ -163,6 +196,11 @@ function PatientCardAlertsBase({ patient, showLabForm, onToggleLabForm }: Patien
 
       {/* Clinical hints */}
       <ClinicalHints patient={patient} />
+
+      {/* Chameleon EMR rounds-note export */}
+      <div className="flex flex-wrap gap-2">
+        <ChameleonCopyButton patient={patient} />
+      </div>
 
       {/* Inline lab entry form */}
       {showLabForm && (
