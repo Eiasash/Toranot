@@ -2,7 +2,15 @@
  * Safe localStorage wrappers that log warnings instead of silently swallowing errors.
  */
 
+
+// True when the runtime has a usable localStorage (browser, jsdom). When false
+// (node test environment, SSR), the safe* wrappers below early-return instead
+// of throwing a ReferenceError that the catch then logs — the environment not
+// having localStorage is expected there, not a warning-worthy runtime fault.
+const HAS_LOCAL_STORAGE = typeof localStorage !== 'undefined';
+
 export function safeGetItem(key: string): string | null {
+  if (!HAS_LOCAL_STORAGE) return null;
   try {
     return localStorage.getItem(key);
   } catch (err) {
@@ -22,6 +30,7 @@ export type SetItemResult =
  * QuotaExceededError is surfaced separately so the UI can show a specific warning.
  */
 export function safeSetItem(key: string, value: string): SetItemResult {
+  if (!HAS_LOCAL_STORAGE) return { ok: false, quotaExceeded: false, message: "localStorage unavailable" };
   try {
     localStorage.setItem(key, value);
     return { ok: true };
@@ -50,6 +59,7 @@ export async function estimateStorage(): Promise<{ usage: number; quota: number 
 
 /** Returns true if localStorage appears writable (quick canary write). */
 export function storageAvailable(): boolean {
+  if (!HAS_LOCAL_STORAGE) return false;
   const canary = "__toranot_canary__";
   try {
     localStorage.setItem(canary, "1");
@@ -61,6 +71,7 @@ export function storageAvailable(): boolean {
 }
 
 export function safeRemoveItem(key: string): boolean {
+  if (!HAS_LOCAL_STORAGE) return false;
   try {
     localStorage.removeItem(key);
     return true;
@@ -284,6 +295,7 @@ function tryQuotaRecovery(key: string, value: string): boolean {
  *   - Never throws
  */
 export function safeStorageSet(key: string, value: string): boolean {
+  if (!HAS_LOCAL_STORAGE) return false;
   if (storageDisabled) return false;
 
   const byteSize = new Blob([value]).size;
@@ -327,6 +339,7 @@ export function safeStorageSet(key: string, value: string): boolean {
  * Never throws.
  */
 export function safeStorageGet(key: string): string | null {
+  if (!HAS_LOCAL_STORAGE) return null;
   try {
     return localStorage.getItem(key);
   } catch (err) {

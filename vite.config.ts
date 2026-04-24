@@ -50,7 +50,6 @@ export default defineConfig({
         manualChunks(id) {
           // Vendor chunks — long-cache TTL (content-hashed)
           if (id.includes("node_modules/react") || id.includes("node_modules/react-dom")) return "vendor-react";
-          if (id.includes("node_modules/@supabase")) return "vendor-supabase";
           if (id.includes("node_modules/qrcode.react")) return "vendor-qr";
           if (id.includes("node_modules/dompurify")) return "vendor-dompurify";
           // App engine chunks — separate from UI components
