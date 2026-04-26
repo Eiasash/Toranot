@@ -81,6 +81,41 @@ export async function handler(event) {
     } catch {
       // table may not exist yet — non-fatal
     }
+    // ── Compute real token usage ─────────────────────────────────────────
+    // The legacy `monthly_token_usage` key has been frozen since 2026-03-20
+    // because the proxy now writes per-month-per-provider keys
+    // (token_usage_YYYY-MM_provider). Compute current-month + all-time
+    // totals from those rows. This snapshot used to silently emit zero.
+    const tokenUsageRows = Object.entries(configMap)
+      .filter(([k]) => k.startsWith('token_usage_'))
+      .map(([k, v]) => ({ key: k, ...v }));
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const sumField = (arr, field) =>
+      arr.reduce((a, r) => a + Number(r?.[field] ?? 0), 0);
+    const currentMonthRows = tokenUsageRows.filter((r) => r.month === currentMonthKey);
+    const tokenUsage = tokenUsageRows.length === 0
+      ? null
+      : {
+          currentMonth: currentMonthKey,
+          currentMonthTotals: {
+            input_tokens: sumField(currentMonthRows, 'input_tokens'),
+            output_tokens: sumField(currentMonthRows, 'output_tokens'),
+            call_count: sumField(currentMonthRows, 'call_count'),
+          },
+          allTimeTotals: {
+            input_tokens: sumField(tokenUsageRows, 'input_tokens'),
+            output_tokens: sumField(tokenUsageRows, 'output_tokens'),
+            call_count: sumField(tokenUsageRows, 'call_count'),
+          },
+        };
+
+    // Filter token_usage_* keys out of configKeys to keep the list bounded.
+    // Otherwise it grows by one entry per month per provider.
+    const stableConfigKeys = Object.keys(configMap).filter(
+      (k) => !k.startsWith('token_usage_'),
+    );
+
     return {
       statusCode: 200,
       headers: { ...CORS, "Content-Type": "application/json" },
@@ -97,9 +132,9 @@ export async function handler(event) {
           ? ((totalTasks.dismissed / (totalTasks.active + totalTasks.dismissed)) * 100).toFixed(1) + '%'
           : 'N/A',
         backupCount: backupCount ?? 0,
-        configKeys: Object.keys(configMap),
+        configKeys: stableConfigKeys,
         claudeModel: configMap['claude_model'] ?? 'not set',
-        monthlyTokenUsage: configMap['monthly_token_usage'] ?? null,
+        tokenUsage,
         keepaliveLast: configMap['keepalive_last'] ?? null,
         recentErrorCount: recentErrors.length,
         recentErrors,
