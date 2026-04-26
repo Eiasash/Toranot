@@ -119,11 +119,15 @@ export default async (req: Request, _context: Context) => {
   if (typeof b?.top_p === "number" && Number.isFinite(b.top_p)) payload.top_p = Math.max(0, Math.min(1, b.top_p));
 
   // Use longer timeout when request contains file content blocks (PDF/image)
+  // OR when the response itself will be substantial. 600+ tokens of Hebrew/clinical
+  // generation routinely exceeds 18s on Sonnet 4.6 — chat (1024), summary (800),
+  // generate-qs (1500-3000) all need the longer ceiling. The old 2000 cutoff was
+  // letting chat 504 even though chat is the most user-visible path.
   const hasFileBlocks = messages.some(m =>
     Array.isArray(m.content) &&
     (m.content as {type:string}[]).some(b => b.type === "image" || b.type === "document")
   );
-  const isLongGeneration = maxTokens >= 2000; // clinical reasoning uses 3000 — needs more time
+  const isLongGeneration = maxTokens >= 600;
   const timeoutMs = (hasFileBlocks || isLongGeneration) ? UPSTREAM_TIMEOUT_LONG_MS : undefined;
 
   let upstream: Response;
