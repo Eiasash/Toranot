@@ -9,6 +9,12 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
+# ── Edge Functions — Deno runtime, no 26s sync wall, native streaming ──
+# /api/claude is served by netlify/edge-functions/claude.ts. It supersedes
+# the old netlify/functions/claude.ts (kept for emergency rollback at the
+# /api/claude-legacy redirect below). The Edge Function declares `path` in
+# its config export, so no `[[edge_functions]]` block needed here.
+
 [functions."toranot-keepalive"]
   schedule = "0 6 */5 * *"
 
@@ -28,8 +34,13 @@
   timeout = 26
 
 # ── API rewrites — map /api/* to Netlify Functions ──
+# /api/claude is intentionally NOT redirected here — the Edge Function at
+# netlify/edge-functions/claude.ts owns that path via its config.path export.
+# /api/claude-legacy is an emergency-rollback alias that bypasses the edge
+# runtime and hits the original sync function directly. Useful when the
+# edge function has a regression but the sync function is known-good.
 [[redirects]]
-  from = "/api/claude"
+  from = "/api/claude-legacy"
   to = "/.netlify/functions/claude"
   status = 200
 
