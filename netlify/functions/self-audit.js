@@ -196,15 +196,46 @@ export async function handler(event) {
     }
 
     // ── 6. Token usage ────────────────────────────────────────────────────
+    // The proxy (netlify/functions/claude.ts) calls increment_token_usage()
+    // which writes to per-month-per-provider keys: token_usage_YYYY-MM_provider.
+    // This audit ROUTE used to read a legacy `monthly_token_usage` key that
+    // hasn't been written since 2026-03-20 — the audit silently reported zero
+    // forever. Patched to read the actual keys and aggregate them.
     let tokenUsage = null;
     try {
-      const { data: usageData } = await supabase
+      const { data: usageRows } = await supabase
         .from('toranot_config')
-        .select('value')
-        .eq('key', 'monthly_token_usage')
-        .single();
-      tokenUsage = usageData?.value ?? null;
-    } catch { /* may not exist yet */ }
+        .select('key, value, updated_at')
+        .like('key', 'token_usage_%')
+        .order('updated_at', { ascending: false });
+      const rows = usageRows ?? [];
+      if (rows.length > 0) {
+        const now = new Date();
+        const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const currentMonth = rows.filter(r => (r.value?.month) === currentMonthKey);
+        const sum = (arr, field) => arr.reduce((a, r) => a + Number(r.value?.[field] ?? 0), 0);
+        tokenUsage = {
+          currentMonth: currentMonthKey,
+          currentMonthTotals: {
+            input_tokens: sum(currentMonth, 'input_tokens'),
+            output_tokens: sum(currentMonth, 'output_tokens'),
+            call_count: sum(currentMonth, 'call_count'),
+            byProvider: currentMonth.map(r => ({
+              provider: r.value?.provider,
+              input_tokens: r.value?.input_tokens ?? 0,
+              output_tokens: r.value?.output_tokens ?? 0,
+              call_count: r.value?.call_count ?? 0,
+            })),
+          },
+          allTimeTotals: {
+            input_tokens: sum(rows, 'input_tokens'),
+            output_tokens: sum(rows, 'output_tokens'),
+            call_count: sum(rows, 'call_count'),
+          },
+          lastUpdate: rows[0]?.updated_at ?? null,
+        };
+      }
+    } catch { /* table may not exist or have no token_usage rows yet */ }
 
     // ── 7. Recent errors ──────────────────────────────────────────────────
     let recentErrors = [];
