@@ -64,17 +64,20 @@ export async function handler(event) {
 
     const patients = stateRow?.state?.patients ?? [];
     const lastUpdate = stateRow?.updated_at ?? null;
+    const daysSinceUpdate = lastUpdate
+      ? (Date.now() - new Date(lastUpdate).getTime()) / 86400000
+      : Infinity;
+    // App is "actively used" if state was touched within the last 14 days.
+    // Used by both the stale-data check below and the backup health check (§ 4).
+    const isActivelyUsed = Number.isFinite(daysSinceUpdate) && daysSinceUpdate < 14;
 
     // Stale data check: if state hasn't been updated in >7 days, the app isn't being used
-    if (lastUpdate) {
-      const daysSinceUpdate = (Date.now() - new Date(lastUpdate).getTime()) / 86400000;
-      if (daysSinceUpdate > 7) {
-        findings.push({
-          severity: "info",
-          area: "usage",
-          message: `State not updated in ${Math.round(daysSinceUpdate)} days — no active shift`,
-        });
-      }
+    if (lastUpdate && daysSinceUpdate > 7) {
+      findings.push({
+        severity: "info",
+        area: "usage",
+        message: `State not updated in ${Math.round(daysSinceUpdate)} days — no active shift`,
+      });
     }
 
     // Duplicate patient IDs
@@ -177,12 +180,30 @@ export async function handler(event) {
     }
 
     // ── 4. Backup health ──────────────────────────────────────────────────
+    // toranot_patients_backup is currently a passive table — no writer is wired
+    // up (verified 2026-04-27). When/if a scheduled snapshot job is built,
+    // a missing-backup state during ACTIVE use is the real warning signal.
+    // While the app is idle, "0 backups" is expected and not actionable.
     const { count: backupCount } = await supabase
       .from('toranot_patients_backup')
       .select('*', { count: 'exact', head: true });
 
     if ((backupCount ?? 0) === 0) {
-      findings.push({ severity: "warning", area: "backup", message: "No backups found" });
+      if (isActivelyUsed) {
+        findings.push({
+          severity: "warning",
+          area: "backup",
+          message: `No backups despite recent activity (state updated ${Math.round(daysSinceUpdate)}d ago) — backup writer may be broken or never built.`,
+        });
+      } else {
+        findings.push({
+          severity: "info",
+          area: "backup",
+          message: Number.isFinite(daysSinceUpdate)
+            ? `No backups — app idle for ${Math.round(daysSinceUpdate)}d, expected.`
+            : `No backups — app has no state yet, expected.`,
+        });
+      }
     }
 
     // ── 5. Config table ───────────────────────────────────────────────────
