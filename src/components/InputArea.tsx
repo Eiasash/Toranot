@@ -161,18 +161,27 @@ export function InputArea() {
   // ── Text mode ──
   return (
     <div className="p-4 space-y-3">
+      <label htmlFor="patient-list-input" className="sr-only">
+        הדבק רשימת חולים
+      </label>
       <textarea
+        id="patient-list-input"
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder={PLACEHOLDER}
         dir="auto"
         rows={8}
         autoFocus
+        aria-label="הדבק רשימת חולים"
         style={{ unicodeBidi: "plaintext" }}
         className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 text-base leading-relaxed resize-y focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none whitespace-pre-wrap break-words"
       />
       {parseError && (
-        <div className="bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-sm text-red-700 text-right">
+        <div
+          role="alert"
+          aria-live="assertive"
+          className="bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-sm text-red-700 text-right"
+        >
           ❌ {parseError}
         </div>
       )}

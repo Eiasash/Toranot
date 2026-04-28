@@ -151,13 +151,19 @@ export function GlobalSearch({ onClose }: { onClose: () => void }) {
       >
         {/* Search input */}
         <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-          <span className="text-gray-400 text-lg">🔍</span>
+          <span className="text-gray-400 text-lg" aria-hidden="true">🔍</span>
+          <label htmlFor="global-search-input" className="sr-only">
+            חיפוש מטופלים, תרופות, פרוטוקולים
+          </label>
           <input
+            id="global-search-input"
             ref={inputRef}
+            type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="שם, חדר, אבחנה, תרופה, פרוטוקול..."
             dir="auto"
+            aria-label="חיפוש מטופלים, תרופות, פרוטוקולים"
             className="flex-1 bg-transparent text-gray-900 dark:text-gray-100 text-base outline-none placeholder:text-gray-400"
           />
           <kbd className="hidden sm:inline text-[10px] text-gray-400 border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5">
