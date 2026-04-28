@@ -109,18 +109,20 @@ export function MedicationInput({ patient, onClose }: MedicationInputProps) {
   return (
     <div className="bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-lg p-2.5">
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[10px] font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider">
+        <label htmlFor={`med-input-${patient.id}`} className="text-[10px] font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider">
           💊 הדבק רשימת תרופות
-        </span>
-        <button onClick={onClose} className="text-[10px] text-gray-400">✕</button>
+        </label>
+        <button onClick={onClose} className="text-[10px] text-gray-400" aria-label="סגור עורך תרופות">✕</button>
       </div>
       <textarea
+        id={`med-input-${patient.id}`}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         placeholder={"Omeprazole 20mg\nMetoprolol 50mg\nAmlodipine 5mg\n...או הדבק מתיק אשפוז"}
         dir="auto"
         rows={5}
         autoFocus
+        aria-label="רשימת תרופות — שורה אחת לכל תרופה"
         className="w-full px-2.5 py-1.5 text-xs border border-violet-300 dark:border-violet-700 rounded-lg bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 resize-none placeholder:text-gray-400 dark:placeholder:text-gray-600 font-mono"
       />
       <div className="flex items-center justify-between mt-1.5">

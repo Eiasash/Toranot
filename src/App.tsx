@@ -152,15 +152,17 @@ function ClearConfirmModal({ onConfirm, onCancel }: { onConfirm: () => void; onC
             פעולה זו בלתי הפיכה. גיבוי אוטומטי נשמר ב"שחזור מגיבוי" בתפריט.
           </p>
           <div>
-            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+            <label htmlFor="clear-confirm-typed" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
               כתוב <span className="font-bold text-red-600">מחק</span> לאישור:
             </label>
             <input
+              id="clear-confirm-typed"
               type="text"
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
               dir="rtl"
               autoFocus
+              aria-required="true"
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
               placeholder="מחק"
             />
@@ -654,6 +656,15 @@ function AppInner() {
     // This means the last patient card is never clipped by Android's gesture indicator.
     <div className="min-h-dvh bg-white dark:bg-gray-900 flex flex-col pb-[calc(56px+env(safe-area-inset-bottom))]">
 
+      {/* Skip-to-content link — keyboard users bypass header + nav, jump
+         straight into <main>. Hidden off-screen until focused. WCAG 2.4.1. */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:right-2 focus:z-[100] focus:bg-blue-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:font-semibold focus:outline focus:outline-2 focus:outline-white"
+      >
+        דלג לתוכן
+      </a>
+
       {/* ── Compact header: title + shift timer + overflow menu ── */}
       <header className="bg-slate-800 text-white px-3 py-2 safe-top border-b border-slate-700">
         <div className="w-full lg:max-w-6xl lg:mx-auto flex items-center gap-2">
@@ -695,7 +706,7 @@ function AppInner() {
 
       <SectionTabs />
 
-      <main className="flex-1 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 lg:bg-white dark:lg:bg-gray-900">
+      <main id="main-content" tabIndex={-1} className="flex-1 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 lg:bg-white dark:lg:bg-gray-900 focus:outline-none">
         <div id={`panel-${activeSection}`} role="tabpanel" aria-label={SECTION_LABEL[activeSection] ?? activeSection} className="w-full lg:max-w-6xl lg:mx-auto">
           <PatientList />
         </div>

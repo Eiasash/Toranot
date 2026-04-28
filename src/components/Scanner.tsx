@@ -298,15 +298,19 @@ function ApiKeySetup({ onSaved }: { onSaved: () => void }) {
           המפתח נשמר רק על המכשיר שלך.
         </p>
       </div>
+      <label htmlFor="scanner-api-key" className="sr-only">מפתח Anthropic API</label>
       <input
+        id="scanner-api-key"
         type="password"
         value={key}
         onChange={(e) => { setKey(e.target.value); setError(""); }}
         placeholder="sk-ant-api03-..."
         dir="ltr"
+        autoComplete="off"
+        aria-label="מפתח Anthropic API"
         className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 text-sm font-mono whitespace-pre-wrap break-words focus:ring-2 focus:ring-blue-400 outline-none"
       />
-      {error && <p className="text-xs text-red-500 text-center">{error}</p>}
+      {error && <p role="alert" aria-live="assertive" className="text-xs text-red-500 text-center">{error}</p>}
       <a
         href="https://console.anthropic.com/settings/keys"
         target="_blank"
@@ -583,17 +587,20 @@ export function Scanner({ onTextExtracted, onCancel, sectionHint }: ScannerProps
   return (
     <div className="flex flex-col gap-3">
       <div className="flex gap-3">
-        <img src={doneState.imageUrl} alt="תוצאה" className="w-20 h-20 rounded-lg border border-gray-200 dark:border-gray-700 object-cover shrink-0" />
+        <img src={doneState.imageUrl} alt="תוצאת סריקה — תמונה ממוזערת" className="w-20 h-20 rounded-lg border border-gray-200 dark:border-gray-700 object-cover shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-700 mb-1">טקסט שזוהה:</p>
-          <p className="text-xs text-gray-400">ניתן לערוך לפני הייבוא</p>
+          <label htmlFor="scanner-ocr-result" className="text-sm font-medium text-gray-700 mb-1 block">טקסט שזוהה:</label>
+          <p id="scanner-ocr-hint" className="text-xs text-gray-400">ניתן לערוך לפני הייבוא</p>
         </div>
       </div>
       <textarea
+        id="scanner-ocr-result"
         value={doneState.text}
         onChange={(e) => setState({ ...doneState, text: e.target.value })}
         dir="auto"
         rows={8}
+        aria-describedby="scanner-ocr-hint"
+        aria-label="טקסט שזוהה — ניתן לערוך לפני הייבוא"
         style={{ unicodeBidi: "plaintext" }}
         className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-base leading-relaxed resize-y focus:ring-2 focus:ring-blue-400 outline-none whitespace-pre-wrap break-words font-mono max-h-[40vh]"
       />

@@ -135,25 +135,33 @@ export function CloudAuthPanel() {
           \u05d4\u05e8\u05e9\u05de\u05d4
         </button>
       </div>
+      <label htmlFor="cloud-auth-email" className="sr-only">\u05db\u05ea\u05d5\u05d1\u05ea \u05de\u05d9\u05d9\u05dc</label>
       <input
+        id="cloud-auth-email"
         type="email"
         dir="ltr"
         placeholder="your@email.com"
         value={email}
         onChange={(e) => { setEmail(e.target.value); setError(null); }}
         onClick={(e) => e.stopPropagation()}
+        autoComplete="email"
+        aria-label="\u05db\u05ea\u05d5\u05d1\u05ea \u05de\u05d9\u05d9\u05dc"
         className="w-full bg-slate-900 border border-slate-600 text-slate-200 text-xs px-2.5 py-2 rounded-lg placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
       />
+      <label htmlFor="cloud-auth-password" className="sr-only">\u05e1\u05d9\u05e1\u05de\u05d4</label>
       <input
+        id="cloud-auth-password"
         type="password"
         dir="ltr"
         placeholder="\u05e1\u05d9\u05e1\u05de\u05d4 (\u05dc\u05e4\u05d7\u05d5\u05ea 6 \u05ea\u05d5\u05d5\u05d9\u05dd)"
         value={password}
         onChange={(e) => { setPassword(e.target.value); setError(null); }}
         onClick={(e) => e.stopPropagation()}
+        autoComplete={mode === "login" ? "current-password" : "new-password"}
+        aria-label="\u05e1\u05d9\u05e1\u05de\u05d4"
         className="w-full bg-slate-900 border border-slate-600 text-slate-200 text-xs px-2.5 py-2 rounded-lg placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
       />
-      {error && <div className="text-[11px] text-red-400 text-center">{error}</div>}
+      {error && <div role="alert" aria-live="assertive" className="text-[11px] text-red-400 text-center">{error}</div>}
       <button
         disabled={loading || !canSubmit}
         onClick={handleSubmit}

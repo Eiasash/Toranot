@@ -12,7 +12,9 @@ export function SectionTabs() {
   }
 
   return (
-    <nav
+    // Use a plain <div> with role="tablist". A <nav> with role="tablist"
+    // confuses screen readers (nav landmark + tab semantics conflict).
+    <div
       className="sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm"
       role="tablist"
       aria-label="מחלקות"
@@ -54,6 +56,6 @@ export function SectionTabs() {
           );
         })}
       </div>
-    </nav>
+    </div>
   );
 }

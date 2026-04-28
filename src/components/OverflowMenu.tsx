@@ -459,14 +459,18 @@ function ApiKeyPanel() {
 
       {editing ? (
         <div className="space-y-1.5">
+          <label htmlFor="anthropic-api-key-input" className="sr-only">מפתח Claude API (sk-ant-...)</label>
           <input
+            id="anthropic-api-key-input"
             ref={inputRef}
-            type="text"
+            type="password"
             dir="ltr"
             placeholder="sk-ant-api03-..."
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onClick={(e) => e.stopPropagation()}
+            autoComplete="off"
+            aria-label="מפתח Claude API"
             className="w-full bg-slate-900 border border-slate-600 text-slate-200 text-xs px-2.5 py-2 rounded-lg placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
           />
           <div className="flex gap-2">

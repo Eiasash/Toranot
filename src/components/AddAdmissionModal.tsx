@@ -1059,8 +1059,8 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
           <>
             <div className="flex gap-2">
               <div className="flex-1">
-                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">צד *</label>
-                <select value={side} onChange={(e) => setSide(e.target.value as "A" | "B" | "C" | "REHAB" | "UNKNOWN")} className={inputCls}>
+                <label htmlFor="adm-side" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">צד *</label>
+                <select id="adm-side" value={side} onChange={(e) => setSide(e.target.value as "A" | "B" | "C" | "REHAB" | "UNKNOWN")} className={inputCls}>
                   <option value="A">צד א</option>
                   <option value="B">צד ב</option>
                   <option value="C">צד ג</option>
@@ -1069,13 +1069,13 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
                 </select>
               </div>
               <div className="flex-1">
-                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">חדר *</label>
-                <input type="text" inputMode="text" value={room} onChange={(e) => setRoom(e.target.value)} placeholder="70 / א-92 / ניטור-1" className={inputCls} />
+                <label htmlFor="adm-room" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">חדר *</label>
+                <input id="adm-room" type="text" inputMode="text" value={room} onChange={(e) => setRoom(e.target.value)} placeholder="70 / א-92 / ניטור-1" required aria-required="true" className={inputCls} />
               </div>
               {!isStandaloneRoom && (
                 <div className="w-24">
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">מיטה</label>
-                  <select value={bed} onChange={(e) => setBed(Number(e.target.value) as 1 | 2 | 3)} className={inputCls}>
+                  <label htmlFor="adm-bed" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">מיטה</label>
+                  <select id="adm-bed" value={bed} onChange={(e) => setBed(Number(e.target.value) as 1 | 2 | 3)} className={inputCls}>
                     <option value={1}>1</option>
                     <option value={2}>2</option>
                     <option value={3}>3</option>
@@ -1086,12 +1086,12 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
 
             <div className="flex gap-2">
               <div className="flex-1">
-                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">שם מטופל *</label>
-                <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="כהן יוסף" dir="auto" className={inputCls} />
+                <label htmlFor="adm-name" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">שם מטופל *</label>
+                <input id="adm-name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="כהן יוסף" dir="auto" required aria-required="true" className={inputCls} />
               </div>
               <div className="w-20">
-                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">גיל</label>
-                <input type="number" value={age} onChange={(e) => setAge(e.target.value)} placeholder="82" min={18} max={120} className={inputCls} />
+                <label htmlFor="adm-age" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">גיל</label>
+                <input id="adm-age" type="number" value={age} onChange={(e) => setAge(e.target.value)} placeholder="82" min={18} max={120} className={inputCls} />
               </div>
             </div>
 
@@ -1249,10 +1249,13 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
                 ))}
               </div>
               {/* Free-text drug entry */}
+              <label htmlFor="adm-free-med" className="sr-only">הוסף תרופה אחרת</label>
               <input
+                id="adm-free-med"
                 type="text"
                 placeholder="תרופה אחרת... (Enter להוספה)"
                 dir="auto"
+                aria-label="הוסף תרופה אחרת"
                 className="mt-1.5 w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 outline-none focus:border-amber-400"
                 onKeyDown={e => {
                   if (e.key === "Enter") {
@@ -1266,8 +1269,8 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">סטטוס</label>
-              <select value={status} onChange={(e) => setStatus(e.target.value as typeof status)} className={inputCls}>
+              <label htmlFor="adm-status" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">סטטוס</label>
+              <select id="adm-status" value={status} onChange={(e) => setStatus(e.target.value as typeof status)} className={inputCls}>
                 <option value="">ללא</option>
                 <option value="DNR">DNR</option>
                 <option value="DNI">DNI</option>
@@ -1276,16 +1279,21 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                אלרגיות לתרופות <span className="text-red-400 font-bold">⚠</span>
+              <label htmlFor="adm-allergies" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                אלרגיות לתרופות <span className="text-red-400 font-bold" aria-hidden="true">⚠</span>
               </label>
               <input
+                id="adm-allergies"
                 value={allergies.join(", ")}
                 onChange={(e) => setAllergies(e.target.value.split(",").map(s => s.trim()).filter(Boolean))}
                 placeholder="penicillin, sulfa, codeine..."
                 dir="auto"
+                aria-describedby="adm-allergies-hint"
                 className={inputCls}
               />
+              <span id="adm-allergies-hint" className="sr-only">
+                הזן אלרגיות מופרדות בפסיקים. שדה קריטי לבטיחות תרופתית.
+              </span>
               {allergies.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-1">
                   {allergies.map((a) => (
@@ -1299,8 +1307,8 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">הערות</label>
-              <textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="הערות נוספות..." dir="auto" rows={2} className={`${inputCls} resize-none`} />
+              <label htmlFor="adm-remarks" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">הערות</label>
+              <textarea id="adm-remarks" value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="הערות נוספות..." dir="auto" rows={2} className={`${inputCls} resize-none`} />
             </div>
 
             {/* ── Clinical metadata — resolves renal-indeterminate warnings ── */}
@@ -1310,8 +1318,9 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
               <div className="grid grid-cols-2 gap-3">
                 {/* Sex at birth */}
                 <div>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">מין ביולוגי</label>
+                  <label htmlFor="adm-sex" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">מין ביולוגי</label>
                   <select
+                    id="adm-sex"
                     value={clinicalMeta.sexAtBirth ?? ""}
                     onChange={(e) => setClinicalMeta({ ...clinicalMeta, sexAtBirth: e.target.value as SexAtBirth || undefined })}
                     className={inputCls}
@@ -1324,8 +1333,9 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
 
                 {/* Weight */}
                 <div>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">משקל (ק"ג)</label>
+                  <label htmlFor="adm-weight" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">משקל (ק"ג)</label>
                   <input
+                    id="adm-weight"
                     type="number"
                     min={20}
                     max={250}
@@ -1340,8 +1350,9 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
               <div className="grid grid-cols-2 gap-3">
                 {/* Goals of care */}
                 <div>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">יעדי טיפול</label>
+                  <label htmlFor="adm-goc" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">יעדי טיפול</label>
                   <select
+                    id="adm-goc"
                     value={clinicalMeta.goalsOfCare ?? ""}
                     onChange={(e) => setClinicalMeta({ ...clinicalMeta, goalsOfCare: e.target.value as GoalsOfCare || undefined })}
                     className={inputCls}

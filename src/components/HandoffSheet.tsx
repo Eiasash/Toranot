@@ -291,6 +291,7 @@ function PatientCard({ p, isNew, dispatch }: { p: PatientEntry; isNew: boolean; 
                   dir="auto"
                   rows={3}
                   autoFocus
+                  aria-label="סיכום קבלה למסירת תורן"
                   className="w-full px-2.5 py-1.5 text-xs border border-teal-600 rounded-lg bg-gray-900 text-gray-200 resize-none placeholder:text-gray-500"
                 />
                 <div className="flex gap-1.5">
@@ -512,6 +513,7 @@ function AdmissionMorningNote({ patient }: { patient: PatientEntry | undefined }
           onChange={e => setDraft(e.target.value)}
           onBlur={save}
           placeholder="הערה לדוח בוקר..."
+          aria-label="הערה לדוח בוקר"
           className="w-full bg-teal-950 border border-teal-600 rounded-lg px-2 py-1 text-[11px] text-teal-100 placeholder-teal-700 resize-none focus:outline-none focus:ring-1 focus:ring-teal-500"
         />
         <div className="flex gap-2 mt-1">
@@ -597,12 +599,14 @@ function QuickOvernightUpdate({
         </button>
       ) : (
         <>
-          <p className="text-[11px] font-bold text-zinc-400">עדכון לילי — חולה שאינו ברשימה</p>
+          <label id="overnight-update-label" className="text-[11px] font-bold text-zinc-400 block">עדכון לילי — חולה שאינו ברשימה</label>
           <select
             value={selectedId ?? ""}
             onChange={e => { setSelectedId(e.target.value || null); setDraft(unmentioned.find(p => p.id === e.target.value)?.handoverNote ?? ""); }}
             className="w-full bg-zinc-900 border border-zinc-600 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-zinc-500"
             dir="rtl"
+            aria-labelledby="overnight-update-label"
+            aria-label="בחר חולה לעדכון לילי"
           >
             <option value="">בחר חולה...</option>
             {unmentioned.map(p => (
@@ -621,6 +625,7 @@ function QuickOvernightUpdate({
                 value={draft}
                 onChange={e => setDraft(e.target.value)}
                 placeholder={`עדכון על ${selected?.name ?? "החולה"}...`}
+                aria-label={`עדכון לילי עבור ${selected?.name ?? "החולה"}`}
                 className="w-full bg-zinc-900 border border-zinc-600 rounded-lg px-2 py-1 text-[11px] text-white placeholder-zinc-600 resize-none focus:outline-none focus:ring-1 focus:ring-zinc-500"
               />
               <div className="flex gap-3">
