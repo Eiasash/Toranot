@@ -10,7 +10,7 @@
  * to open windows but does NOT maintain its own timers or alarm state.
  */
 
-const CACHE_VERSION = 1741686000000; // 2026-03-11 allergy safety + error boundaries + lab alerts
+const CACHE_VERSION = 1777334400000; // 2026-04-28 shared install-promo integrated
 const CACHE_NAME = `toranot-v${CACHE_VERSION}`;
 
 const PRECACHE_ASSETS = [
