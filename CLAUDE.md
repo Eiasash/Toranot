@@ -8,7 +8,7 @@ Live: https://toranot.netlify.app
 
 ```bash
 npm run dev          # Dev server at http://localhost:5173/Toranot/
-npm test             # Run all tests (vitest, 2,151 tests)
+npm test             # Run all tests (vitest, ~2,150 tests across 69 files)
 npm run build        # TypeScript check + Vite build → dist/
 npm run typecheck    # tsc --noEmit (strict mode)
 ```
@@ -38,11 +38,12 @@ src/
 │   ├── PatientsContext.tsx     # React Context wrapper (backward compat)
 │   └── reducer.ts             # State reducer + Action types (extracted to break circular imports)
 ├── types/patient.ts           # PatientEntry, Task, LabEntry, PatientSection, etc.
-├── engine/                    # Deterministic business logic (12 files)
+├── engine/                    # Deterministic business logic (13 files)
 │   ├── rules.ts               # 57 rule groups for task generation
 │   ├── drugSafety.ts          # Beers Criteria 2023, drug interactions, renal dosing
 │   ├── labDelta.ts            # KDIGO AKI / Hb delta alerting
 │   ├── acuity.ts              # Patient acuity scoring
+│   ├── admissionProcessor.ts  # Intake → structured admission pipeline
 │   ├── anticholinergicBurden.ts # ACB scoring
 │   ├── fallsRisk.ts           # Falls risk assessment
 │   ├── hints.ts               # Clinical hints engine
@@ -54,7 +55,8 @@ src/
 ├── clinical/
 │   └── clinicalThresholds.ts  # Canonical lab thresholds (single source of truth)
 ├── parser/
-│   └── parsePatientList.ts    # WhatsApp/nurse-call text → PatientEntry[]
+│   ├── parsePatientList.ts    # WhatsApp/nurse-call text → PatientEntry[]
+│   └── chameleonExport.ts     # Rounds-note exporter for Chameleon EMR paste
 ├── data/
 │   ├── dosing.ts              # Renal dosing table (19 antibiotics, CrCl buckets)
 │   └── drugHazards.json       # Drug hazard databases
@@ -67,17 +69,18 @@ src/
 │   ├── AddAdmissionModal.tsx  # Admission workflow
 │   ├── OnCallProtocols.tsx    # IV/clinical protocol reference
 │   └── ...                    # 38+ more components (many lazy-loaded)
-└── __tests__/                 # 68 test files, 2,151 tests
+└── __tests__/                 # 69 test files, ~2,150 tests
 
-netlify/functions/             # Serverless API proxies
-├── claude.ts, gemini.ts, ocr-proxy.ts, github-pat.ts
+netlify/functions/             # Serverless API proxies + ops helpers
+├── claude.ts, gemini.ts, ocr-proxy.ts, github-pat.ts  # AI/auth proxies
+├── self-audit.js, skill-snapshot.js, toranot-keepalive.js  # ops/scheduled
 └── _utils.ts                  # Shared auth, rate limiting, validation
 
 public/
 ├── sw.js, manifest.json, iv-protocols.json, szmc-iv-protocols.json
 ```
 
-**Codebase size**: ~157 TypeScript/TSX files (88 source + 68 test + 1 index).
+**Codebase size**: ~162 TypeScript/TSX files (~92 source + 69 test + 1 index).
 
 ## Architecture
 
@@ -99,7 +102,7 @@ All clinical logic in `src/engine/` — deterministic, pure functions, heavily t
 
 ## Testing
 
-**2,151 tests across 68 files** — run `npm test` to see current count.
+**~2,150 tests across 69 files** — run `npm test` to see current count.
 
 Always run `npm test` before every push. ALL tests must pass.
 
@@ -187,14 +190,14 @@ UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN, API_SECRET
 
 | Metric | Value |
 |--------|-------|
-| Source files (TS/TSX) | ~88 |
-| Test files | 68 |
-| Total tests | 2,151 |
+| Source files (TS/TSX) | ~92 |
+| Test files | 69 |
+| Total tests | ~2,150 |
 | Components | 46 |
-| Engine modules | 12 |
+| Engine modules | 13 |
 | Clinical rule groups | 57 |
 | Renal dosing drugs | 19 |
-| Netlify functions | 5 (+1 shared utils) |
+| Netlify functions | 7 (+1 shared utils) |
 | Patient sections | 5 (SIDE_A–C, REHAB, MONITOR) |
 
 ---
