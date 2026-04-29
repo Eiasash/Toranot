@@ -41,6 +41,7 @@ import {
 const ALLOWED_MODELS = new Set([
   "claude-sonnet-4-6",
   "claude-opus-4-6",
+  "claude-opus-4-7",
   "claude-haiku-4-5-20251001",
 ]);
 
@@ -56,7 +57,11 @@ function normalizeClaudeModel(input: unknown): string | null {
     "sonnet-4-6":         "claude-sonnet-4-6",
     "sonnet":             "claude-sonnet-4-6",
     "claude-opus-4-6":    "claude-opus-4-6",
-    "opus":               "claude-opus-4-6",
+    "claude-opus-4-7":    "claude-opus-4-7",
+    "claude-opus-4.7":    "claude-opus-4-7",
+    "opus-4-7":           "claude-opus-4-7",
+    "opus-4.7":           "claude-opus-4-7",
+    "opus":               "claude-opus-4-7",
     "claude-haiku-4-5":   "claude-haiku-4-5-20251001",
     "haiku":              "claude-haiku-4-5-20251001",
   };
@@ -166,7 +171,7 @@ export default async (req: Request, _context: Context) => {
     return new Response("Unsupported model", { status: 400, headers: corsHeaders(req) });
   }
 
-  const maxTokens = clampInt(b?.max_tokens ?? b?.maxTokens, 4096, 256, 8192);
+  const maxTokens = clampInt(b?.max_tokens ?? b?.maxTokens, 4096, 256, 32768);
 
   const rawMessages =
     Array.isArray(b?.messages) && (b.messages as unknown[]).length
@@ -193,11 +198,35 @@ export default async (req: Request, _context: Context) => {
   };
   if (wantsStream) payload.stream = true;
   if (typeof b?.system === "string") payload.system = b.system;
-  if (typeof b?.temperature === "number" && Number.isFinite(b.temperature)) {
-    payload.temperature = Math.max(0, Math.min(2, b.temperature));
+  // Opus 4.7 rejects temperature/top_p with non-default values (returns 400).
+  // Silently drop them for that model rather than propagating the error to clients
+  // that historically pass these defensively.
+  const isOpus47 = model === "claude-opus-4-7";
+  if (!isOpus47) {
+    if (typeof b?.temperature === "number" && Number.isFinite(b.temperature)) {
+      payload.temperature = Math.max(0, Math.min(2, b.temperature));
+    }
+    if (typeof b?.top_p === "number" && Number.isFinite(b.top_p)) {
+      payload.top_p = Math.max(0, Math.min(1, b.top_p));
+    }
   }
-  if (typeof b?.top_p === "number" && Number.isFinite(b.top_p)) {
-    payload.top_p = Math.max(0, Math.min(1, b.top_p));
+  // Adaptive thinking: forward thinking config if the client opted in.
+  // We accept exactly one shape — { type: "adaptive" | "disabled" } —
+  // and nothing else, so a typoed param can't unlock arbitrary upstream features.
+  if (b?.thinking && typeof b.thinking === "object") {
+    const t = b.thinking as { type?: unknown };
+    if (t.type === "adaptive" || t.type === "disabled") {
+      payload.thinking = { type: t.type };
+    }
+  }
+  // output_config carries the effort dial for adaptive thinking. Only `effort`
+  // is forwarded; `display` etc. are not whitelisted yet — we omit thinking
+  // summaries from responses by default (matching Opus 4.7 default behavior).
+  if (b?.output_config && typeof b.output_config === "object") {
+    const oc = b.output_config as { effort?: unknown };
+    if (typeof oc.effort === "string" && /^(low|medium|high|xhigh|max)$/.test(oc.effort)) {
+      payload.output_config = { effort: oc.effort };
+    }
   }
 
   // ── Streaming path ────────────────────────────────────────────────────────

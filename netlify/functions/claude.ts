@@ -16,6 +16,7 @@ import {
 const ALLOWED_MODELS = new Set([
   "claude-sonnet-4-6",
   "claude-opus-4-6",
+  "claude-opus-4-7",
   "claude-haiku-4-5-20251001",
 ]);
 
@@ -32,7 +33,11 @@ function normalizeClaudeModel(input: unknown): string | null {
     "sonnet-4-6":         "claude-sonnet-4-6",
     "sonnet":             "claude-sonnet-4-6",
     "claude-opus-4-6":    "claude-opus-4-6",
-    "opus":               "claude-opus-4-6",
+    "claude-opus-4-7":    "claude-opus-4-7",
+    "claude-opus-4.7":    "claude-opus-4-7",
+    "opus-4-7":           "claude-opus-4-7",
+    "opus-4.7":           "claude-opus-4-7",
+    "opus":               "claude-opus-4-7",
     "claude-haiku-4-5":   "claude-haiku-4-5-20251001",
     "haiku":              "claude-haiku-4-5-20251001",
   };
@@ -94,7 +99,7 @@ export default async (req: Request, _context: Context) => {
   const model = normalizeClaudeModel(b?.model ?? envModel);
   if (!model) return new Response("Unsupported model", { status: 400, headers: corsHeaders(req) });
 
-  const maxTokens = clampInt(b?.max_tokens ?? b?.maxTokens, 4096, 256, 8192);
+  const maxTokens = clampInt(b?.max_tokens ?? b?.maxTokens, 4096, 256, 32768);
 
   const rawMessages =
     Array.isArray(b?.messages) && (b.messages as unknown[]).length
@@ -115,8 +120,27 @@ export default async (req: Request, _context: Context) => {
   };
 
   if (typeof b?.system === "string") payload.system = b.system;
-  if (typeof b?.temperature === "number" && Number.isFinite(b.temperature)) payload.temperature = Math.max(0, Math.min(2, b.temperature));
-  if (typeof b?.top_p === "number" && Number.isFinite(b.top_p)) payload.top_p = Math.max(0, Math.min(1, b.top_p));
+  // Opus 4.7 rejects temperature/top_p with non-default values (returns 400).
+  // Silently drop them for that model.
+  const isOpus47 = model === "claude-opus-4-7";
+  if (!isOpus47) {
+    if (typeof b?.temperature === "number" && Number.isFinite(b.temperature)) payload.temperature = Math.max(0, Math.min(2, b.temperature));
+    if (typeof b?.top_p === "number" && Number.isFinite(b.top_p)) payload.top_p = Math.max(0, Math.min(1, b.top_p));
+  }
+  // Adaptive thinking pass-through (Opus 4.7+ uses thinking: {type: "adaptive"}).
+  if (b?.thinking && typeof b.thinking === "object") {
+    const t = b.thinking as { type?: unknown };
+    if (t.type === "adaptive" || t.type === "disabled") {
+      payload.thinking = { type: t.type };
+    }
+  }
+  // effort dial (low|medium|high|xhigh|max) for adaptive thinking.
+  if (b?.output_config && typeof b.output_config === "object") {
+    const oc = b.output_config as { effort?: unknown };
+    if (typeof oc.effort === "string" && /^(low|medium|high|xhigh|max)$/.test(oc.effort)) {
+      payload.output_config = { effort: oc.effort };
+    }
+  }
 
   // Use longer timeout when request contains file content blocks (PDF/image)
   // OR when the response itself will be substantial. 600+ tokens of Hebrew/clinical
