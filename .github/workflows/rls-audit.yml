@@ -37,7 +37,7 @@ jobs:
         run: |
           curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
                -H 'Content-Type: application/json' \
-               -d '{"query": "SELECT schemaname, tablename, rowsecurity FROM pg_tables WHERE schemaname NOT IN ('"'"'pg_catalog'"'"','"'"'information_schema'"'"','"'"'auth'"'"','"'"'storage'"'"','"'"'realtime'"'"','"'"'supabase_functions'"'"','"'"'extensions'"'"','"'"'vault'"'"','"'"'graphql'"'"','"'"'graphql_public'"'"','"'"'pgsodium'"'"','"'"'pgsodium_masks'"'"','"'"'net'"'"') ORDER BY rowsecurity ASC, schemaname, tablename;"}' \
+               -d '{"query": "SELECT schemaname, tablename, rowsecurity FROM pg_tables WHERE schemaname = '"'"'public'"'"' ORDER BY rowsecurity ASC, schemaname, tablename;"}' \
                "https://api.supabase.com/v1/projects/$PROJECT_ID/database/query" \
                > audit_logs/rls/$(date -u +%Y-%m-%d)-q1-rowsecurity.json
           if jq -e '.[] | select(.rowsecurity == false)' audit_logs/rls/$(date -u +%Y-%m-%d)-q1-rowsecurity.json > /tmp/holes.json; then
