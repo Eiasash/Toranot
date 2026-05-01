@@ -1,0 +1,106 @@
+name: RLS sanity pass (shared krmlzwwelqvlfslwltol)
+
+# Weekly audit of Supabase Row-Level-Security policies on the shared project
+# (Toranot + FamilyMedicine + Geriatrics + InternalMedicine + ward-helper).
+# Hard-fails on RLS holes (rowsecurity=false on user-schema tables).
+# Soft-warns on always-true policy count drift from documented baseline.
+# Commits a dated snapshot to audit_logs/rls/ for week-over-week diff.
+
+on:
+  schedule:
+    - cron: '0 7 * * 1'   # Mondays 07:00 UTC ≈ 09:00-10:00 Asia/Jerusalem
+  workflow_dispatch:
+
+permissions:
+  contents: write   # required for the snapshot commit + push step
+
+jobs:
+  rls-audit:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_ID: krmlzwwelqvlfslwltol
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify SUPABASE_ACCESS_TOKEN present
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "::error::SUPABASE_ACCESS_TOKEN is not set in repo secrets — add it before this cron can run"
+            exit 1
+          fi
+
+      - name: Prepare audit-log directory
+        run: mkdir -p audit_logs/rls
+
+      - name: Query 1 — RLS enabled on every public-schema table (HARD FAIL on holes)
+        run: |
+          curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+               -H 'Content-Type: application/json' \
+               -d '{"query": "SELECT schemaname, tablename, rowsecurity FROM pg_tables WHERE schemaname NOT IN ('"'"'pg_catalog'"'"','"'"'information_schema'"'"','"'"'auth'"'"','"'"'storage'"'"','"'"'realtime'"'"','"'"'supabase_functions'"'"','"'"'extensions'"'"','"'"'vault'"'"','"'"'graphql'"'"','"'"'graphql_public'"'"','"'"'pgsodium'"'"','"'"'pgsodium_masks'"'"','"'"'net'"'"') ORDER BY rowsecurity ASC, schemaname, tablename;"}' \
+               "https://api.supabase.com/v1/projects/$PROJECT_ID/database/query" \
+               > audit_logs/rls/$(date -u +%Y-%m-%d)-q1-rowsecurity.json
+          if jq -e '.[] | select(.rowsecurity == false)' audit_logs/rls/$(date -u +%Y-%m-%d)-q1-rowsecurity.json > /tmp/holes.json; then
+            echo "::error::RLS hole detected on krmlzwwelqvlfslwltol (rowsecurity=false on user-schema table)"
+            cat /tmp/holes.json
+            exit 1
+          fi
+
+      - name: Query 2 — every RLS-enabled table has at least one policy (collect only)
+        run: |
+          curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+               -H 'Content-Type: application/json' \
+               -d '{"query": "SELECT t.schemaname, t.tablename, COUNT(p.policyname) AS policy_count FROM pg_tables t LEFT JOIN pg_policies p ON p.schemaname = t.schemaname AND p.tablename = t.tablename WHERE t.rowsecurity = true AND t.schemaname = '"'"'public'"'"' GROUP BY t.schemaname, t.tablename ORDER BY policy_count ASC;"}' \
+               "https://api.supabase.com/v1/projects/$PROJECT_ID/database/query" \
+               > audit_logs/rls/$(date -u +%Y-%m-%d)-q2-policy-counts.json
+          # Documented baseline (R2 audit, 2026-04-22): app_config, toranot_config,
+          # toranot_patients_backup are intentionally service-role-only metadata
+          # (RLS-on, 0 policies → API access is impossible from anon/auth role).
+          # If a NEW table joins the 0-policy list, surface as warning for review.
+          if jq -e --arg known "app_config toranot_config toranot_patients_backup" \
+              '[.[] | select(.policy_count == 0) | .tablename] - ($known | split(" "))' \
+              audit_logs/rls/$(date -u +%Y-%m-%d)-q2-policy-counts.json > /tmp/new-zero-policy.json; then
+            cat /tmp/new-zero-policy.json
+            COUNT=$(jq 'length' /tmp/new-zero-policy.json)
+            if [ "$COUNT" -gt 0 ]; then
+              echo "::warning::$COUNT new RLS-on/0-policy tables not in documented baseline — review intent"
+            fi
+          fi
+
+      - name: Query 3 — full policy dump for week-over-week diff
+        run: |
+          curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+               -H 'Content-Type: application/json' \
+               -d '{"query": "SELECT schemaname, tablename, policyname, cmd, roles, qual, with_check FROM pg_policies WHERE schemaname = '"'"'public'"'"' ORDER BY tablename, policyname;"}' \
+               "https://api.supabase.com/v1/projects/$PROJECT_ID/database/query" \
+               > audit_logs/rls/$(date -u +%Y-%m-%d)-q3-policies.json
+
+      - name: Query 4 — always-true policy count drift (soft warn)
+        run: |
+          # R2 baseline (2026-04-22): 21 always-true policies on the documented
+          # "anon = user via capability-token" tables (progress_state, mishpacha_*,
+          # pnimit_backups/leaderboard/feedback, Toranot OTP tables).
+          # Any drift up = new always-true policy added → review before next deploy.
+          # Any drift down = policy removed → also worth knowing.
+          BASELINE=21
+          COUNT=$(jq '[.[] | select(.qual == "true")] | length' \
+            audit_logs/rls/$(date -u +%Y-%m-%d)-q3-policies.json)
+          echo "always_true_count=$COUNT (baseline=$BASELINE)"
+          if [ "$COUNT" -ne "$BASELINE" ]; then
+            DELTA=$((COUNT - BASELINE))
+            echo "::warning::always-true policy count drift: $COUNT vs baseline $BASELINE (delta $DELTA) — review audit_logs/rls/$(date -u +%Y-%m-%d)-q3-policies.json"
+          fi
+
+      - name: Commit dated RLS snapshot
+        run: |
+          git config user.email "actions@github.com"
+          git config user.name "github-actions[bot]"
+          git add audit_logs/rls/
+          if git diff --cached --quiet; then
+            echo "no audit-log changes to commit"
+            exit 0
+          fi
+          git commit -m "rls-audit: weekly snapshot $(date -u +%Y-%m-%d)"
+          # Surface push errors instead of swallowing — branch protection or auth
+          # failures should fail the job, not silently lose snapshots.
+          git push origin main
