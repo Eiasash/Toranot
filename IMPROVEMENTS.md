@@ -2,6 +2,25 @@
 
 First populated: 2026-04-22.
 
+## 2026-05-01 — R3 cross-repo: weekly RLS sanity-pass cron (filed as PR #83)
+
+Round 3 cross-repo coordinator couldn't run a live RLS sanity pass on `krmlzwwelqvlfslwltol` because Supabase MCP requires browser-OAuth in this environment. Toranot is the natural host for a CI cron that hits the shared project headlessly via `SUPABASE_ACCESS_TOKEN` — the dashboard labels this project "Toranot", and the cron then covers § B (Toranot) + § C (FM) + § D (Geri) + § E (IM) in one pass.
+
+**Filed as**: [PR #83](https://github.com/Eiasash/Toranot/pull/83) — `.github/workflows/rls-audit.yml`. The original draft in this file was reviewed and three correctness fixes were applied before commit (mkdir-p ordering before Q3, `permissions: contents: write` block, surface push errors instead of `|| true`). The workflow itself is the source of truth — read it there, not here.
+
+**Documented baseline embedded in the cron** (do-not-flag list, from R2 watch-advisor2 + Toranot audits — preserved here as the audit-trail rationale):
+- 9 intentional `rls_policy_always_true` lints on `progress_state` and related study/progress tables (Geri/IM/FM medical PWAs share `progress_state` via the anon = user capability-token model).
+- 21 total `rls_policy_always_true` warns at R2 (2026-04-22) — including `mishpacha_*`, `pnimit_backups`, `pnimit_leaderboard`, `pnimit_feedback`, and Toranot OTP tables. Documented "no Supabase Auth" pattern.
+- 3 RLS-on / 0-policy tables intentional service-role-only metadata: `app_config`, `toranot_config`, `toranot_patients_backup`.
+- watch-advisor2 lives on a *different* project (`oaojkanozbfpofbewtfq`) — the cron must not cross-wire there. WA2 has its own 9 intentional always-true lints + the photos-bucket list policy was already dropped on 2026-04-22.
+
+**Pre-merge checklist** (also in PR #83 body):
+1. Confirm `SUPABASE_ACCESS_TOKEN` is set in this repo's GitHub Actions secrets. Workflow has a guard step that fails fast if missing, but verify proactively to avoid the first scheduled run failing at 07:00 UTC Monday with no human attached.
+2. Decide whether the workflow's snapshot commit pushes directly to `main` (current behavior — Toranot's `main` is bypassable per R2 inventory) or opens snapshot PRs (would need a different `permissions` shape).
+3. Optional: switch Q4 from `!=` baseline to `>` baseline (drift-down — fewer always-true policies — is generally good news, not noise-worthy).
+
+---
+
 ## 2026-04-22 — /audit-fix-deploy § B full cycle
 
 **State snapshot (from `/.netlify/functions/skill-snapshot`)**
