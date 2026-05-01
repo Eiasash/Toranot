@@ -13,7 +13,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import type { PatientEntry } from "../types";
 import { getProxyAuthHeaders, isProxyAvailableAsync, supabase } from "../cloudSync";
 import { safeGetItem, safeSetItem } from "../utils/storage";
-import DOMPurify from "dompurify";
+import { renderAndSanitize } from "../utils/renderAndSanitize";
 
 const API_KEY_STORAGE = "toranot-anthropic-key";
 const DIRECT_API_URL = "https://api.anthropic.com/v1/messages";
@@ -23,40 +23,6 @@ const CLAUDE_MODEL = "claude-sonnet-4-6";
 const GEMINI_MODEL = "gemini-2.5-flash";
 
 type AIProvider = "claude" | "gemini";
-
-// Render AI output safely.
-// IMPORTANT: renderMarkdown produces HTML via regex, then DOMPurify sanitizes the
-// final HTML output. This order is critical — sanitizing before rendering would let
-// regex replacements introduce new unsanitized HTML.
-function renderAndSanitize(text: string): string {
-  const html = text
-    // Strip leading artifact characters (Gemini sometimes starts with lone ., ,, * etc)
-    .replace(/^[.,;:\s*]+/, "")
-    // Headers (## and ###)
-    .replace(/^### (.+)$/gm, '<h3 class="text-sm font-bold mt-3 mb-1 text-slate-800 dark:text-slate-200">$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2 class="text-base font-bold mt-4 mb-1.5 text-slate-800 dark:text-slate-200">$1</h2>')
-    // Bold (must run before bullet/italic so ** is consumed first)
-    .replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-slate-900 dark:text-slate-100">$1</strong>')
-    // Italic — only single * surrounded by non-space (avoids eating bullet asterisks)
-    .replace(/(?<![\s*])\*(?![\s*])(.+?)(?<![\s*])\*(?![\s*])/g, '<em>$1</em>')
-    // Bullet lists — handle *, •, ·, - as bullet markers
-    .replace(/^[*•·\-]\s+(.+)$/gm, '<li class="mr-4 mb-0.5">$1</li>')
-    // Wrap consecutive <li> in <ul>
-    .replace(/((?:<li[^>]*>.*<\/li>\n?)+)/g, '<ul class="list-disc list-inside my-1.5 text-xs space-y-0.5">$1</ul>')
-    // Line breaks (double newline = paragraph)
-    .replace(/\n{2,}/g, '</p><p class="mb-2">')
-    // Single newlines in remaining text
-    .replace(/\n/g, '<br/>')
-    // Wrap in paragraph
-    .replace(/^/, '<p class="mb-2">')
-    .replace(/$/, '</p>');
-
-  // Sanitize the FINAL HTML — after all transformations
-  return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ["h2", "h3", "strong", "em", "ul", "li", "p", "br"],
-    ALLOWED_ATTR: ["class"],
-  });
-}
 
 /**
  * isProxyAvailableAsync() from cloudSync replaces this — imported above.

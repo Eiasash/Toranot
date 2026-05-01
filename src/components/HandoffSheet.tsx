@@ -507,7 +507,7 @@ function AdmissionMorningNote({ patient }: { patient: PatientEntry | undefined }
         <textarea
           // eslint-disable-next-line jsx-a11y/no-autofocus
           autoFocus
-          dir="rtl"
+          dir="auto"
           rows={2}
           value={draft}
           onChange={e => setDraft(e.target.value)}
@@ -620,7 +620,7 @@ function QuickOvernightUpdate({
               <textarea
                 // eslint-disable-next-line jsx-a11y/no-autofocus
                 autoFocus
-                dir="rtl"
+                dir="auto"
                 rows={2}
                 value={draft}
                 onChange={e => setDraft(e.target.value)}

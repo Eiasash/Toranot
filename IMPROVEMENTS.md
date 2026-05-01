@@ -43,3 +43,39 @@ First populated: 2026-04-22.
 8. **Branch protection bypass** — the `security(deps)` commit was pushed directly to `main` and the push output notes "Bypassed rule violations: 2 of 2 required status checks are expected." The owner account can bypass, but future audit-fix-deploy commits should prefer opening a PR so the CI gates run pre-merge.
 9. **Stale rule / history wear-pattern analysis** — skipped this run because `historyCount=0` on this project's tracking (the self-audit's `state not updated in 12 days` signal confirms no recent shift activity to mine). Next audit after a shift week will have meaningful data to run the § B.5 "dismissed > 70%" noise detection on.
 10. **Fossil clone cleanup** — leaving `/e/Downloads/Sniffer/Toranot` in place with its `stash@{0}`. If the stashed WIP is truly abandoned, can be removed with `git -C /e/Downloads/Sniffer/Toranot stash drop` and the directory deleted. Flagged for human decision.
+
+---
+
+## 2026-05-01 — /audit-fix-deploy § B (deep audit, expand testing pass)
+
+**Audit findings (severity, count)**
+- **Crash class — defensive guard hole (1, medium)**: `applyRules()` and `isComfortCarePatient()` in `src/engine/rules.ts` spread `patient.flags` and `patient.status` directly. Legacy localStorage payloads (pre-v0.3) may not include those fields → `TypeError: patient.flags is not iterable`. Surfaced because the skill explicitly requires guarding these. Verified by failing test before the fix.
+- **Cosmetic — RTL drift (3, low)**: three textareas in mixed-language containers used `dir="rtl"` instead of `dir="auto"`: `AddAdmissionModal.tsx` kabala-note textarea, plus the morning-report and overnight-update textareas in `HandoffSheet.tsx`. All three accept user input that mixes Hebrew with English drug names — `dir="auto"` is the correct UBA-aware choice.
+- **Dependency — moderate (1, fixed)**: postcss `<8.5.10` XSS via unescaped `</style>` (transitive via Tailwind devDep). Cleared by `npm audit fix`.
+- **Sanitization testability gap (1, low)**: `renderAndSanitize()` was inlined inside `AIClinicalReasoning.tsx` and could not be unit-tested for XSS payload variants. Extracted to `src/utils/renderAndSanitize.ts` with normalised DOMPurify shape (handles both browser bundle + jsdom factory form).
+- **RLS pass**: not re-run live this cycle (Supabase MCP would need OAuth). Per auto-memory baseline, the 9 RLS-always-true WARN lints on `progress_state` etc. are intentional and unchanged from 2026-04-22. No schema-touching commits this session, so the prior `krmlzwwelqvlfslwltol` baseline holds.
+
+**Fixes (committed in this session)**
+- `src/engine/rules.ts` — defensive `?? []` fallbacks in both `applyRules()` and `isComfortCarePatient()`.
+- `src/components/AddAdmissionModal.tsx`, `src/components/HandoffSheet.tsx` — three `dir="rtl"` → `dir="auto"` corrections in mixed-language textareas.
+- `src/utils/renderAndSanitize.ts` (new) — extracted from `AIClinicalReasoning.tsx`, normalises DOMPurify default-export shape across browser/jsdom.
+- `src/components/AIClinicalReasoning.tsx` — now imports the extracted `renderAndSanitize`. No behaviour change in the production bundle.
+- `package-lock.json` — `npm audit fix` for postcss CVE.
+
+**Testing expansion**
+- New test file: `src/__tests__/audit.expand.test.ts` (34 new tests, 5 risk surfaces).
+  1. Rules-engine guards — 6 cases against `undefined` flags/status/diagnosis/tasks; the engine must not crash when reading legacy localStorage.
+  2. Cockcroft-Gault boundaries — 7 cases including frail-elderly Cr-floor at age 75, dialysis short-circuit, exact CrCl=10/50 buckets, structured API indeterminate path.
+  3. DOMPurify XSS payload variants — 11 hostile inputs (script tag, img onerror, svg onload, iframe javascript:, anchor javascript: href, style tag, data URI, event handlers, form action, object tag, encoded entity), each asserted to lose `<script>`, `on*=`, `javascript:`, and disallowed tags. Plus benign-markdown round-trip + Hebrew round-trip + class-attr smuggling.
+  4. Comfort-care exclusion — 4 cases covering: sepsis suppression, BS rule firing on explicit task even for comfort patients, `comfortCareOnly` rules NOT firing on regular patients, and the load-bearing invariant that DNR alone is NOT comfort-care (full pneumonia workup must still proceed).
+  5. Idempotency — same patient run twice yields the same task-text set.
+- Test count delta: 2237 → 2271 (+34). All 72 files green in 2.5 s.
+
+**Build / deploy gates**
+- `npm test` — 2271 / 2271 passing.
+- `npm run build` — `tsc --noEmit && vite build` clean in ~1.2 s; vendor-react 192 KB, app-engine 150 KB, vendor-dompurify 24 KB.
+- Live verification + Netlify deploy state captured below the commit.
+
+**Skill drift corrected**
+- `.claude/skills/toranot-ship/SKILL.md` — last-audited footer refreshed.
+- `.claude/skills/add-clinical-rule/SKILL.md` — schema unchanged from previous cycle (still `{trigger, source, tasks, ...}`); confirmed match with `src/engine/rules.ts` after this session's edits, no skill update required.

@@ -974,7 +974,7 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
                       value={kabalaNote}
                       onChange={e => setKabalaNote(e.target.value)}
                       rows={12}
-                      dir="rtl"
+                      dir="auto"
                       className="w-full px-2 py-1.5 text-xs border border-teal-200 dark:border-teal-700 rounded-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 resize-y leading-relaxed"
                       style={{ unicodeBidi: "plaintext" as const }}
                     />

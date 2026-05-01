@@ -1637,13 +1637,14 @@ const RULES: Rule[] = [
  * rather than re-implementing the detection logic per-component.
  */
 export function isComfortCarePatient(patient: PatientEntry): boolean {
+  // Defensive: legacy localStorage may not have flags/status/tasks set.
   const signal = [
     patient.diagnosis ?? "",
-    ...patient.flags,
-    ...patient.status,
+    ...(patient.flags ?? []),
+    ...(patient.status ?? []),
     ...(patient.notes ?? []),
     patient.handoverNote ?? "",
-    ...(patient.tasks ?? []).map((t) => t.text),
+    ...((patient.tasks ?? []).map((t) => t.text)),
   ].join(" ");
   return (
     patient.clinicalMeta?.goalsOfCare === "comfort_only" ||
@@ -1664,13 +1665,18 @@ export function applyRules(patient: PatientEntry): Task[] {
   // Task text is included because clinicians frequently write "comfort care" or
   // "palliative" as a manual task note rather than in diagnosis/status.
   // Structured goalsOfCare from clinicalMeta takes precedence when present.
+  // Defensive: legacy localStorage payloads (pre-v0.3) may lack flags/status/tasks.
+  // Spreading `undefined` in an array literal throws — fall back to empty arrays.
+  const flagsArr = patient.flags ?? [];
+  const statusArr = patient.status ?? [];
+  const tasksArr = patient.tasks ?? [];
   const comfortSignalText = [
     patient.diagnosis ?? "",
-    ...patient.flags,
-    ...patient.status,
+    ...flagsArr,
+    ...statusArr,
     ...(patient.notes ?? []),
     patient.handoverNote ?? "",
-    ...(patient.tasks ?? []).map((t) => t.text),
+    ...tasksArr.map((t) => t.text),
   ].join(" ");
   const isComfortCareOnly =
     patient.clinicalMeta?.goalsOfCare === "comfort_only" ||
@@ -1681,9 +1687,9 @@ export function applyRules(patient: PatientEntry): Task[] {
   // Pre-build text blobs for each trigger scope
   const diagnosisText = patient.diagnosis ?? "";
   const tasksText = [
-    ...patient.status,
-    ...patient.flags,
-    ...(patient.tasks ?? []).map((t) => t.text),
+    ...statusArr,
+    ...flagsArr,
+    ...tasksArr.map((t) => t.text),
   ].join(" ");
   // ⚠️ planNotes / tomorrowNotes are intentionally EXCLUDED from allText.
   // Plan notes describe the patient's existing management ("on fentanyl drip",
