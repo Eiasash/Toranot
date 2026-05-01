@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write   # required for the snapshot commit + push step
+  contents: read   # was: write — downgraded after switch from commit-to-main to upload-artifact
 
 jobs:
   rls-audit:
@@ -91,16 +91,17 @@ jobs:
             echo "::warning::always-true policy count drift: $COUNT vs baseline $BASELINE (delta $DELTA) — review audit_logs/rls/$(date -u +%Y-%m-%d)-q3-policies.json"
           fi
 
-      - name: Commit dated RLS snapshot
-        run: |
-          git config user.email "actions@github.com"
-          git config user.name "github-actions[bot]"
-          git add audit_logs/rls/
-          if git diff --cached --quiet; then
-            echo "no audit-log changes to commit"
-            exit 0
-          fi
-          git commit -m "rls-audit: weekly snapshot $(date -u +%Y-%m-%d)"
-          # Surface push errors instead of swallowing — branch protection or auth
-          # failures should fail the job, not silently lose snapshots.
-          git push origin main
+      - name: Upload RLS snapshot as workflow artifact (90-day retention)
+        # Branch protection on main blocks bot pushes, and the snapshot's real
+        # value is forensic — Q1 hard-fails on holes inline, Q4 warns on drift
+        # inline against the hardcoded BASELINE=21. The artifact gives you a
+        # downloadable copy of all 4 query outputs for any single run, scoped
+        # to the run page in the Actions UI. Retention is 90 days; if a drift
+        # ever extends past that window without being caught, save the
+        # artifact manually or escalate to a separate audit-snapshots branch.
+        uses: actions/upload-artifact@v4
+        with:
+          name: rls-snapshot-${{ github.run_id }}
+          path: audit_logs/rls/
+          retention-days: 90
+          if-no-files-found: error
