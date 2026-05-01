@@ -33,7 +33,7 @@ Zero errors required. No suppressions.
 ```
 npx vitest run --reporter=dot
 ```
-All 1706 tests across 52 files must pass. If a new test was added, the new count is fine — but it must match the README/CLAUDE.md claim (update both in the same commit if the number moves).
+All 2271 tests across 72 files must pass (last audited: 2026-05-01). If a new test was added, the new count is fine — but it must match the README/CLAUDE.md claim (update both in the same commit if the number moves).
 
 ### Step 3 — Production build + bundle gate
 ```
