@@ -77,12 +77,17 @@ jobs:
 
       - name: Query 4 — always-true policy count drift (soft warn)
         run: |
-          # R2 baseline (2026-04-22): 21 always-true policies on the documented
-          # "anon = user via capability-token" tables (progress_state, mishpacha_*,
-          # pnimit_backups/leaderboard/feedback, Toranot OTP tables).
+          # Baseline history:
+          #   2026-04-22 (R2 audit): 21 always-true policies — documented
+          #     "anon = user via capability-token" pattern across mishpacha_*,
+          #     pnimit_*, shlav_*, Toranot OTP tables, proxy_rate_limits.
+          #   2026-04-29 (Phase 2 backups RLS tightening): dropped public SELECT
+          #     on mishpacha_backups + pnimit_backups + samega_backups (replaced
+          #     by backup_get(p_app, p_id) RPC). Net: -3 always-true SELECTs.
+          #   2026-05-01 (cron run #25210045139): count = 18, confirmed.
           # Any drift up = new always-true policy added → review before next deploy.
           # Any drift down = policy removed → also worth knowing.
-          BASELINE=21
+          BASELINE=18
           COUNT=$(jq '[.[] | select(.qual == "true")] | length' \
             audit_logs/rls/$(date -u +%Y-%m-%d)-q3-policies.json)
           echo "always_true_count=$COUNT (baseline=$BASELINE)"
@@ -94,7 +99,7 @@ jobs:
       - name: Upload RLS snapshot as workflow artifact (90-day retention)
         # Branch protection on main blocks bot pushes, and the snapshot's real
         # value is forensic — Q1 hard-fails on holes inline, Q4 warns on drift
-        # inline against the hardcoded BASELINE=21. The artifact gives you a
+        # inline against the hardcoded BASELINE=18. The artifact gives you a
         # downloadable copy of all 4 query outputs for any single run, scoped
         # to the run page in the Actions UI. Retention is 90 days; if a drift
         # ever extends past that window without being caught, save the
