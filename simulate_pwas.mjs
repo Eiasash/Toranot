@@ -111,17 +111,26 @@ async function simulate(repo) {
         const arr = JSON.parse(raw);
         log(repo.name, 'DATA', `questions.json: ${arr.length} questions`);
 
-        // Sanity-check: c must be valid index, c_accept must contain c if present
+        // Sanity-check: c must be valid index, c_accept must contain c if present.
+        // Option count: 2026-05-02 — relaxed from `!== 4` to a 3-6 range. The
+        // medical PWAs render variable-length options dynamically (q.o.forEach
+        // with Hebrew letters String.fromCharCode(1488+i) → א/ב/ג/ד/ה). The
+        // 4-option assumption broke when GRS8 questions (5 options each) were
+        // imported into Geri — the simulator was reporting them as bugs but
+        // they actually render fine. cInvalid catches the real problem
+        // (c-index out of range), so missingFields is now scoped to genuinely
+        // broken questions: missing fields, or option counts so far outside
+        // the medical-MCQ norm that something is structurally wrong.
         let cInvalid = 0, cAcceptMissingC = 0, missingFields = 0;
         for (let i = 0; i < arr.length; i++) {
           const q = arr[i];
           if (typeof q.c !== 'number' || q.c < 0 || q.c >= (q.o?.length ?? 0)) cInvalid++;
           if (Array.isArray(q.c_accept) && !q.c_accept.includes(q.c)) cAcceptMissingC++;
-          if (!q.q || !q.o || q.o.length !== 4) missingFields++;
+          if (!q.q || !q.o || !Array.isArray(q.o) || q.o.length < 3 || q.o.length > 6) missingFields++;
         }
-        if (cInvalid) log(repo.name, 'BUG', `${cInvalid} questions have invalid c index`);
+        if (cInvalid) log(repo.name, 'BUG', `${cInvalid} questions have invalid c index (out of options range)`);
         if (cAcceptMissingC) log(repo.name, 'BUG', `${cAcceptMissingC} questions: c not in c_accept (regression invariant violated)`);
-        if (missingFields) log(repo.name, 'BUG', `${missingFields} questions: missing q/o or wrong option count`);
+        if (missingFields) log(repo.name, 'BUG', `${missingFields} questions: missing q/o, or option count outside 3-6 range (structurally broken)`);
 
         // Find any questions where e contains "המפתח הרשמי" (the legacy artifact pattern)
         const artifactCount = arr.filter(q => (q.e || '').includes('המפתח הרשמי')).length;
