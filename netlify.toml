@@ -69,6 +69,11 @@
   to = "/.netlify/functions/self-audit"
   status = 200
 
+[[redirects]]
+  from = "/api/feedback-notify"
+  to = "/.netlify/functions/feedback-notify"
+  status = 200
+
 # ── SPA catch-all — must be LAST redirect ──
 [[redirects]]
   from = "/*"
