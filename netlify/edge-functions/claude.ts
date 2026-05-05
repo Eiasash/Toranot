@@ -94,7 +94,10 @@ function corsHeaders(req: Request): Record<string, string> {
 
 // ─── Token-usage tracking (fire-and-forget, identical to functions/claude.ts) ──
 
-function trackUsage(usage: { input_tokens?: number; output_tokens?: number } | undefined): void {
+function trackUsage(
+  usage: { input_tokens?: number; output_tokens?: number } | undefined,
+  model: string,
+): void {
   if (!usage || (!usage.input_tokens && !usage.output_tokens)) return;
   const sbUrl = Netlify.env.get("SUPABASE_URL") || Netlify.env.get("VITE_SUPABASE_URL");
   const sbKey = Netlify.env.get("SUPABASE_SERVICE_KEY") || Netlify.env.get("VITE_SUPABASE_ANON_KEY");
@@ -114,6 +117,7 @@ function trackUsage(usage: { input_tokens?: number; output_tokens?: number } | u
       p_provider: "claude",
       p_input: usage.input_tokens ?? 0,
       p_output: usage.output_tokens ?? 0,
+      p_model: model,
     }),
   }).catch(() => {});
 }
@@ -285,7 +289,7 @@ export default async (req: Request, _context: Context) => {
             if (!dataMatch) continue;
             const parsed = JSON.parse(dataMatch[1]);
             if (parsed?.usage) {
-              trackUsage(parsed.usage);
+              trackUsage(parsed.usage, model);
               break;
             }
           }
@@ -331,7 +335,7 @@ export default async (req: Request, _context: Context) => {
   } else {
     try {
       const parsed = JSON.parse(text);
-      trackUsage(parsed?.usage);
+      trackUsage(parsed?.usage, model);
     } catch { /* tracking failures must never fail the request */ }
   }
 

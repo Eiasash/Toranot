@@ -196,6 +196,7 @@ export default async (req: Request, _context: Context) => {
               p_provider: "claude",
               p_input: usage.input_tokens ?? 0,
               p_output: usage.output_tokens ?? 0,
+              p_model: model,
             }),
           }).catch(() => {}); // silently ignore — tracking must never fail the request
         }
