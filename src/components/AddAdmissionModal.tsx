@@ -842,7 +842,7 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
       >
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">קבלה חדשה</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-xl px-1">×</button>
+          <button onClick={onClose} aria-label="סגור" className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-xl px-1">×</button>
         </div>
 
         {error && (
@@ -853,7 +853,7 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/40 rounded-xl p-3 space-y-2">
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">📄 מכתב קבלה</span>
-            <span className="text-xs text-blue-500 dark:text-blue-400">PDF · תמונה · DOCX</span>
+            <span className="text-xs text-blue-700 dark:text-blue-400">PDF · תמונה · DOCX</span>
           </div>
 
           <div className="flex gap-2">
@@ -1040,15 +1040,15 @@ export function AddAdmissionModal({ onClose, onSuccess }: Props) {
               {parsed ? "✓ נותח" : "נתח →"}
             </button>
           </div>
-          <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+          <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
             דוגמאות: &quot;70 כהן יוסף 82 pneumonia DNR&quot; · &quot;א-92 לוי שרה בת 75 CHF&quot;
           </p>
         </div>
 
         {/* Divider */}
-        <div className="flex items-center gap-2 text-xs text-gray-400">
+        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
           <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
-          <button onClick={() => setShowStructured(!showStructured)} className="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+          <button onClick={() => setShowStructured(!showStructured)} className="hover:text-gray-700 dark:hover:text-gray-300 transition-colors">
             {showStructured ? "▲ הסתר שדות" : "▼ ערוך שדות ידנית"}
           </button>
           <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />

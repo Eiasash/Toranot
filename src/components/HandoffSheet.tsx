@@ -1175,7 +1175,7 @@ export function HandoffSheet({ onClose, initialTab }: { onClose: () => void; ini
         {/* Action buttons */}
         <div className="border-t border-gray-800 p-3 space-y-2 shrink-0 bg-gray-900">
           <div className="flex gap-2">
-            <button onClick={handleCopy} className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-sm font-medium active:bg-emerald-700">
+            <button onClick={handleCopy} className="flex-1 py-3 bg-emerald-700 text-white rounded-xl text-sm font-medium active:bg-emerald-800">
               📋 העתק
             </button>
             <button onClick={handleWhatsApp} className="flex-1 py-3 bg-green-600 text-white rounded-xl text-sm font-medium active:bg-green-700">

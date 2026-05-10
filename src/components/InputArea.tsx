@@ -119,7 +119,7 @@ export function InputArea() {
         <p className="text-center text-gray-500 text-sm">איך להזין חולים?</p>
         <button
           onClick={() => setMode("scan")}
-          className="flex items-center justify-center gap-3 w-full py-5 bg-emerald-600 text-white rounded-xl text-lg font-medium active:bg-emerald-700 active:scale-[0.98] transition-transform"
+          className="flex items-center justify-center gap-3 w-full py-5 bg-emerald-700 text-white rounded-xl text-lg font-medium active:bg-emerald-800 active:scale-[0.98] transition-transform"
         >
           <CameraIcon />
           צלם דף תורן

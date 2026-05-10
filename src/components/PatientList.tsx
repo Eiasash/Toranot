@@ -135,7 +135,7 @@ export function PatientList() {
 
   if (filtered.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 py-20 px-6 animate-card-in">
+      <div className="flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 py-20 px-6 animate-card-in">
         <svg width="72" height="72" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1} className="mb-4 opacity-30">
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 5h6" />
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 14l2 2 4-4" />
