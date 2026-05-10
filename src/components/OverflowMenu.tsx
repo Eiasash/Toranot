@@ -204,7 +204,7 @@ export function OverflowMenu({ onOpenModal }: { onOpenModal: (m: OverflowModal) 
             <div className="absolute left-0 top-full mt-1 z-50 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl overflow-hidden min-w-[220px] max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
 
               {/* ── Shift Management ── */}
-              <div className="px-3 pt-2 pb-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider">משמרת</div>
+              <div className="px-3 pt-2 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">משמרת</div>
 
               {/* Start New Shift — always visible */}
               <button
@@ -245,7 +245,7 @@ export function OverflowMenu({ onOpenModal }: { onOpenModal: (m: OverflowModal) 
               </button>
 
               {/* ── Tools ── */}
-              <div className="px-3 pt-3 pb-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-t border-slate-600">כלים</div>
+              <div className="px-3 pt-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-t border-slate-600">כלים</div>
 
               {/* Quick capture */}
               <button
@@ -273,7 +273,7 @@ export function OverflowMenu({ onOpenModal }: { onOpenModal: (m: OverflowModal) 
               </button>
 
               {/* ── View Settings ── */}
-              <div className="px-3 pt-3 pb-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-t border-slate-600">תצוגה</div>
+              <div className="px-3 pt-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-t border-slate-600">תצוגה</div>
 
               {/* Tomorrow toggle */}
               <button
@@ -301,7 +301,7 @@ export function OverflowMenu({ onOpenModal }: { onOpenModal: (m: OverflowModal) 
               </button>
 
               {/* ── Sync & Share ── */}
-              <div className="px-3 pt-3 pb-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-t border-slate-600">סנכרון ושיתוף</div>
+              <div className="px-3 pt-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-t border-slate-600">סנכרון ושיתוף</div>
 
               {/* Share link */}
               <button
@@ -342,7 +342,7 @@ export function OverflowMenu({ onOpenModal }: { onOpenModal: (m: OverflowModal) 
               )}
 
               {/* ── System ── */}
-              <div className="px-3 pt-3 pb-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-t border-slate-600">מערכת</div>
+              <div className="px-3 pt-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-t border-slate-600">מערכת</div>
 
               {/* Debug console */}
               <button
@@ -385,7 +385,7 @@ export function OverflowMenu({ onOpenModal }: { onOpenModal: (m: OverflowModal) 
               <CloudAuthPanel />
 
               {/* Build stamp */}
-              <div className="px-4 py-2 text-[10px] text-slate-500 border-t border-slate-700 select-text">
+              <div className="px-4 py-2 text-[10px] text-slate-400 border-t border-slate-700 select-text">
                 build {__GIT_SHA__} · {new Date(__BUILD_TIME__).toLocaleString("en-GB")}
               </div>
             </div>
@@ -453,7 +453,7 @@ function ApiKeyPanel() {
       <div className="text-[11px] text-slate-400 mb-1.5 flex items-center justify-between">
         <span>🤖 מפתח Claude API</span>
         {hasKey && !editing && (
-          <span className="text-slate-500 font-mono">{masked}</span>
+          <span className="text-slate-400 font-mono">{masked}</span>
         )}
       </div>
 

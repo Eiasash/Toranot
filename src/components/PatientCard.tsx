@@ -156,7 +156,7 @@ function HandoverNoteInline({ patient }: { patient: PatientEntry }) {
               dispatch({ type: "SET_HANDOVER_NOTE", patientId: patient.id, note: draft.trim() });
               setEditing(false);
             }}
-            className="text-xs px-2.5 py-1 rounded-lg bg-emerald-600 text-white"
+            className="text-xs px-2.5 py-1 rounded-lg bg-emerald-700 text-white"
           >
             שמור
           </button>

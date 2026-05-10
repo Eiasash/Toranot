@@ -315,7 +315,7 @@ function ApiKeySetup({ onSaved }: { onSaved: () => void }) {
         href="https://console.anthropic.com/settings/keys"
         target="_blank"
         rel="noopener noreferrer"
-        className="text-xs text-blue-500 text-center underline"
+        className="text-xs text-blue-700 dark:text-blue-400 text-center underline"
       >
         קבל מפתח מ-Anthropic Console
       </a>
@@ -489,7 +489,7 @@ export function Scanner({ onTextExtracted, onCancel, sectionHint }: ScannerProps
     return (
       <div className="flex flex-col gap-3">
         <button onClick={() => cameraRef.current?.click()}
-          className="flex items-center justify-center gap-3 w-full py-5 bg-emerald-600 text-white rounded-xl text-lg font-medium active:bg-emerald-700 active:scale-[0.98] transition-transform">
+          className="flex items-center justify-center gap-3 w-full py-5 bg-emerald-700 text-white rounded-xl text-lg font-medium active:bg-emerald-800 active:scale-[0.98] transition-transform">
           <CameraIcon size={28} /> צלם דף תורן
         </button>
         <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={handleFileChange} className="hidden" />
@@ -574,9 +574,9 @@ export function Scanner({ onTextExtracted, onCancel, sectionHint }: ScannerProps
         <div className="flex flex-col items-center gap-3 py-6 px-2 text-center">
           <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-2xl">⚠️</div>
           <p className="text-sm text-gray-700 leading-relaxed">{state.message}</p>
-          <button onClick={() => setEditingKey(true)} className="text-xs text-blue-500 underline">עדכן API Key</button>
+          <button onClick={() => setEditingKey(true)} className="text-xs text-blue-700 dark:text-blue-400 underline">עדכן API Key</button>
         </div>
-        <button onClick={() => setState({ step: "idle" })} className="w-full py-3 bg-emerald-600 text-white rounded-xl text-sm font-medium">נסה שוב</button>
+        <button onClick={() => setState({ step: "idle" })} className="w-full py-3 bg-emerald-700 text-white rounded-xl text-sm font-medium">נסה שוב</button>
         <button onClick={() => { setState({ step: "idle" }); onCancel(); }} className="w-full py-3 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl text-sm font-medium">עבור להקלדת טקסט</button>
       </div>
     );
