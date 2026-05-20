@@ -35,11 +35,22 @@ jobs:
       - name: Build and check bundle size
         id: build
         run: |
-          BUILD_OUT=$(npx vite build 2>&1)
-          echo "$BUILD_OUT"
-          SIZE=$(echo "$BUILD_OUT" | grep "dist/assets/index-" | grep "\.js " | grep -oP '[\d.]+\s*kB' | head -1 | grep -oP '[\d.]+')
+          npx vite build
+          # Main entry chunk is dist/assets/index-<hash>.js (Vite naming).
+          # `|| true` keeps the no-match case from tripping pipefail/set -e
+          # before the `if [ -z "$MAIN_JS" ]` diagnostic can run.
+          MAIN_JS=$(ls -1 dist/assets/index-*.js 2>/dev/null | head -1 || true)
+          if [ -z "$MAIN_JS" ]; then
+            echo "::error::No main entry chunk found in dist/assets/"
+            ls -la dist/assets/ || true
+            exit 1
+          fi
+          # awk handles the float math without bc and is portable.
+          # Use decimal kB to match Vite's reported size (original 150 kB budget was set in decimal kB).
+          SIZE=$(awk -v b="$(stat -c%s "$MAIN_JS")" 'BEGIN{printf "%.2f", b/1000}')
+          echo "Main entry: $MAIN_JS = $SIZE kB"
           echo "bundle_size=$SIZE" >> $GITHUB_OUTPUT
-          if [ "$(echo "$SIZE > 150" | bc -l)" = "1" ]; then
+          if awk "BEGIN{exit !($SIZE > 150)}"; then
             echo "::error::Bundle size ${SIZE} kB exceeds 150 kB limit"
             exit 1
           fi
