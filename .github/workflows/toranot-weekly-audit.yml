@@ -37,7 +37,9 @@ jobs:
         run: |
           npx vite build
           # Main entry chunk is dist/assets/index-<hash>.js (Vite naming).
-          MAIN_JS=$(ls -1 dist/assets/index-*.js 2>/dev/null | head -1)
+          # `|| true` keeps the no-match case from tripping pipefail/set -e
+          # before the `if [ -z "$MAIN_JS" ]` diagnostic can run.
+          MAIN_JS=$(ls -1 dist/assets/index-*.js 2>/dev/null | head -1 || true)
           if [ -z "$MAIN_JS" ]; then
             echo "::error::No main entry chunk found in dist/assets/"
             ls -la dist/assets/ || true
