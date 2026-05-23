@@ -34,9 +34,16 @@ If matches found: WARN — potential API key in source.
 ## Branch + push + PR
 
 ```bash
-# Derive a short kebab-case slug from $ARGUMENTS
+# Derive a short kebab-case slug from $ARGUMENTS.
+# Fallback to a timestamp slug when the message is Hebrew-only / has no
+# ASCII letters or digits — otherwise the sed strip yields an empty slug
+# and `git checkout -b "claude/"` fails. Hebrew-only PR titles are common
+# in this repo.
 slug=$(echo "$ARGUMENTS" | tr '[:upper:]' '[:lower:]' \
   | sed -E 's/[^a-z0-9]+/-/g; s/^-+|-+$//g' | cut -c1-40)
+if [ -z "$slug" ]; then
+  slug="deploy-$(date +%Y%m%d-%H%M%S)"
+fi
 git checkout -b "claude/${slug}"
 
 git add -A

@@ -55,7 +55,11 @@ Patch exactly these fields (leave everything else untouched):
 git add SKILL.md 2>/dev/null || true
 # If skill file is in project knowledge, note the updates needed manually
 if ! git diff --cached --quiet; then
-  git checkout -b "claude/skill-currency-$(date +%Y%m%d)"
+  # Branch name carries date AND short HEAD sha so repeated same-day runs
+  # (or reruns after a partial failure) get unique branches instead of
+  # colliding at `git checkout -b`.
+  short_sha=$(git rev-parse --short HEAD)
+  git checkout -b "claude/skill-currency-$(date +%Y%m%d)-${short_sha}"
   git commit -m "docs: auto-update toranot skill $(date +%Y-%m-%d) [skip ci]"
   git push -u origin HEAD
   gh pr create --base main \
