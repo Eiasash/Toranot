@@ -7,7 +7,8 @@ Do NOT make any code changes. Only update the skill file.
 
 ## STEP 1 — Pull live state from snapshot endpoint
 ```
-GET https://toranot.netlify.app/.netlify/functions/skill-snapshot
+GET https://toranot.netlify.app/api/skill-snapshot
+# Direct path equivalent: /.netlify/functions/skill-snapshot
 ```
 Extract: patientCount, lastStateUpdate, backupCount, errorCount, health status.
 If endpoint is down, proceed with manual checks.
@@ -49,13 +50,21 @@ Patch exactly these fields (leave everything else untouched):
 | Component count | §1 repo structure | ls count |
 | Last audited date | Top of relevant section | today's date |
 
-## STEP 4 — Commit
+## STEP 4 — Commit via branch + PR (single-lane CLAUDE.md)
 ```bash
 git add SKILL.md 2>/dev/null || true
 # If skill file is in project knowledge, note the updates needed manually
-git diff --cached --quiet || git commit -m "docs: auto-update toranot skill $(date +%Y-%m-%d) [skip ci]"
-git push origin main
+if ! git diff --cached --quiet; then
+  git checkout -b "claude/skill-currency-$(date +%Y%m%d)"
+  git commit -m "docs: auto-update toranot skill $(date +%Y-%m-%d) [skip ci]"
+  git push -u origin HEAD
+  gh pr create --base main \
+    --title "docs: refresh skill currency $(date +%Y-%m-%d)" \
+    --body "Auto-opened by /toranot-update-skill. Docs-only, no source changes."
+fi
 ```
+Per audit-fix-deploy SKILL § D.5, this docs-only PR is eligible for self-merge
+after Codex green (or after a meaningful Codex absence with override rationale).
 
 If nothing changed, say "Skill file already up to date — no commit needed."
 

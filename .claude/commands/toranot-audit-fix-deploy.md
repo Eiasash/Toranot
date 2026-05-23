@@ -10,34 +10,45 @@ Repo: github.com/Eiasash/Toranot
 Live: https://toranot.netlify.app
 Netlify site ID: 85d12386-b960-4f65-bee8-80e210ecd683
 Stack: React 19 + TypeScript + Tailwind CSS 4 + Zustand 5 + Vite 7
-Tests: ~1,780 tests, 57 files
-Bundle target: <140KB
+Tests: ~2,310 tests, 73 files (query live: `npx vitest run | tail -3`)
+Bundle target: <150KB (main chunk gzipped; currently ~146KB / 37.7KB gzipped)
+
+## OPERATING MODEL — single lane (binding)
+
+Per repo `CLAUDE.md`, all non-trivial work goes through branch + PR + CI/Codex green
++ self-merge. **Never push to main directly.** Workflow each cycle:
+```
+git checkout -b claude/<slug>
+# ... edits, npm run typecheck, npm test, npm run build ...
+git add -A && git commit -m "<type>: <root cause>"
+git push -u origin claude/<slug>
+gh pr create --base main ...
+# Wait for CI green + Codex review (D.5 of audit-fix-deploy SKILL allows override
+# for trivial/additive/config-only PRs after a meaningful Codex wait)
+gh pr merge <n> --squash --delete-branch
+```
+The direct-push pattern shown in older versions of this command is superseded.
 
 ---
 
 ## MANDATORY WORKFLOW — AFTER EVERY CHANGE
 ```
 1. npx tsc --noEmit                    — zero TypeScript errors
-2. npx vitest run                      — ALL ~1,780 tests must pass, zero failures
-3. npx vite build                      — must succeed, bundle must be <140KB
-4. Update README.md                    — Recent Changes section
-5. git add -A && git commit -m "..."   — see push procedure
-6. git push origin main                — triggers auto-deploy
-7. Verify Netlify deploy state = "ready"
+2. npx vitest run                      — ALL ~2,310 tests must pass, zero failures
+3. npx vite build                      — must succeed, main chunk must be <150KB gzipped
+4. git checkout -b claude/<slug>       — never edit main directly
+5. git add -A && git commit -m "..."   — root-cause commit message
+6. git push -u origin claude/<slug>    — push to feature branch
+7. gh pr create --base main ...        — open PR
+8. Wait CI + Codex green, then `gh pr merge <n> --squash --delete-branch`
+9. Verify Netlify deploy state = "ready" AND live URL serves the new commit
 ```
 
-### Push Procedure
-```bash
-cd /home/claude/Toranot
-git remote set-url origin https://<TOKEN>@github.com/Eiasash/Toranot.git
-git config user.email "eias@toranot.app"
-git config user.name "Eias"
-git add -A && git commit -m "<type>: <description with root cause>"
-git push origin main
-# IMMEDIATELY after push — remove token from remote URL:
-git remote set-url origin https://github.com/Eiasash/Toranot.git
-```
-Remind user to revoke token at https://github.com/settings/tokens
+### Token / push procedure
+For PAT fetch, identity, and one-shot push procedure see
+`/mnt/skills/user/deploy-primitives.md § 5`. Do not embed token-injection scripts
+here — they rotate, and a stale literal silently mis-points the next reader.
+Push targets a `claude/<slug>` branch, never `main`.
 
 ### Deploy Verification
 ```
@@ -76,8 +87,11 @@ grep -rn "confirm(" src/
 # Must return zero results — use React modals instead
 
 # No console.log leaks in prod paths
-grep -rn "console\.log" src/ --include="*.ts" --include="*.tsx"
-# Gate behind: if (import.meta.env.DEV)
+grep -rn "console\.log" src/ --include="*.ts" --include="*.tsx" \
+  | grep -v "src/utils/debugLog.ts" \
+  | grep -v "src/__tests__/"
+# Gate behind: if (import.meta.env.DEV). The debugLog wrapper itself and
+# test fixtures that intentionally exercise the wrapper are excluded above.
 
 # Dismissed tasks filter — ensure aggregations exclude dismissed
 grep -rn "dismissed" src/components/ | grep -v "filter\|dismissed:"
@@ -130,21 +144,23 @@ grep "scenario\|test(" src/__tests__/roomFormat.simulation.test.ts | wc -l
 
 ### D. Bundle size check
 ```bash
-npx vite build 2>&1 | grep -E "dist/|kB|KB"
-# Total bundle must be <140KB
-# If >140KB — find what grew and tree-shake or lazy-load it
+npx vite build 2>&1 | grep -E "dist/index|kB|KB"
+# Main chunk must be <150KB gzipped (current baseline ~146KB / ~37.7KB gzipped).
+# If main chunk grows past 150KB — find what grew and tree-shake or lazy-load it.
 ```
 
 ### E. Test suite
 ```bash
 npx vitest run 2>&1 | tail -20
-# Must show: ~1,780 passed, 0 failed
-# If count changed — update SKILL.md test count
+# Must show: ~2,310 passed, 0 failed
+# If count changed — update SKILL.md test count and the baselines in this file.
 ```
 
 ### F. Skill snapshot endpoint
 ```
-GET https://toranot.netlify.app/.netlify/functions/skill-snapshot
+GET https://toranot.netlify.app/api/skill-snapshot
+# Equivalent direct path: /.netlify/functions/skill-snapshot
+# Both routes return JSON since PR #98 (May 2026).
 ```
 Verify it returns: rulesCount, testCount, bundleSize, supabaseHealth, lastUpdated.
 If endpoint missing — add it (see PHASE 3).
@@ -268,8 +284,8 @@ CREATE TABLE IF NOT EXISTS toranot_config (
 );
 
 INSERT INTO toranot_config (key, value) VALUES
-  ('claude_model', '"claude-sonnet-4-20250514"'),
-  ('monthly_token_usage', '{"input":0,"output":0,"month":"2026-03","cost_usd":0}'),
+  ('claude_model', '"claude-sonnet-4-6"'),
+  ('monthly_token_usage', '{"input":0,"output":0,"month":"2026-05","cost_usd":0}'),
   ('payload_schema_version', '"v1"'),
   ('keepalive_last', '"2026-03-20T00:00:00Z"'),
   ('app_version', '"current"')
@@ -439,8 +455,8 @@ jobs:
 ## PHASE 5 — SKILL FILE UPDATE
 
 After all changes committed and deployed, update `SKILL.md` (toranot-dev):
-- Update test count if changed (currently ~1,780 / 57 files)
-- Update bundle size if changed (currently ~138KB)
+- Update test count if changed (currently ~2,310 / 73 files)
+- Update bundle size if changed (currently main chunk ~146KB / ~37.7KB gzipped)
 - Add any new gotchas discovered
 - Add new components to §1 repo structure
 - Add new clinical rules to §4 engine section
@@ -463,4 +479,8 @@ Then run `/toranot-update-skill` to verify self-consistency.
 - Never filter planNotes/tomorrowNotes into trigger matching
 - Never count dismissed tasks in aggregations
 - Never store GitHub PAT — remove from remote URL immediately after push
-- Test count must be verified after every change — ~1,780 is the baseline
+- Never push direct to main — branch + PR + Codex review per single-lane CLAUDE.md
+- Test count must be verified after every change — ~2,310 is the baseline
+- The dual `netlify/functions/claude.ts` + `netlify/edge-functions/claude.ts` is
+  INTENTIONAL (functions version is the `/api/claude-legacy` emergency-rollback
+  target per `netlify.toml`). Audit grep checks must not flag it as duplication.

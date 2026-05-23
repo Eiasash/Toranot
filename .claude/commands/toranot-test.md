@@ -36,7 +36,7 @@ For each TS error:
 
 ```
 Typecheck: PASS/FAIL (N errors)
-Tests: N/~1,780 passing
+Tests: N/~2,310 passing
 
 FAILURES:
 1. [test name]
