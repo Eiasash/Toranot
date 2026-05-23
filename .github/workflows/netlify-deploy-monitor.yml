@@ -18,6 +18,10 @@ jobs:
     name: Verify Netlify deploy reaches ready state
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Poll Netlify deploy status for this commit
         env:
           SITE_ID: 85d12386-b960-4f65-bee8-80e210ecd683
@@ -74,3 +78,10 @@ jobs:
           echo "::error::Timed out after $((MAX_ATTEMPTS * 20 + 30))s waiting for Netlify deploy of $GITHUB_SHA"
           echo "::error::Last observed state: ${STATE:-none}"
           exit 1
+      - name: Smoke-test live /api/* routes
+        # Runs only if the deploy poll above succeeded (default behavior).
+        # Probes every critical-path /api/* route and fails on 404/5xx —
+        # catches netlify.toml redirect drift that the deploy-state poll
+        # would not detect (a deploy can reach 'ready' even with broken
+        # redirects, as PR #98 surfaced for /api/skill-snapshot).
+        run: node scripts/smoke-test.cjs

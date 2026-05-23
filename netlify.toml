@@ -54,10 +54,14 @@
   to = "/.netlify/functions/ocr-proxy"
   status = 200
 
-[[redirects]]
-  from = "/api/ocr-proxy"
-  to = "/.netlify/functions/ocr-proxy"
-  status = 200
+# Note: `/api/ocr-proxy` (the function's own name) was previously declared
+# here as a duplicate alias for `/api/ocr`, but Netlify's routing did not
+# fire that redirect at runtime — every request returned 404 SPA HTML even
+# though the parsed redirect rule was reported as valid in deploy checks.
+# The only client (`src/components/Scanner.tsx`) uses `/api/ocr`, so the
+# dead alias was removed in PR #100. If a need for a `/api/ocr-proxy`
+# alias resurfaces, investigate the Netlify routing edge case first
+# (a parallel issue affects `/api/claude-legacy` — surfaced for review).
 
 [[redirects]]
   from = "/api/github-pat"
