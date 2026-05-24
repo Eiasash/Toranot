@@ -1,0 +1,53 @@
+-- 2026-05-24 — drop duplicate proxy_rate_limits monotonic-count trigger.
+--
+-- Background
+-- ----------
+-- The 2026-05-23 RLS sanity audit (recorded in Geriatrics IMPROVEMENTS.md
+-- entry of the same date — see PR #271) discovered that the proxy_rate_limits
+-- table carries TWO BEFORE-UPDATE triggers enforcing the same monotonic-count
+-- invariant. Both reject NEW.count < OLD.count with the same
+-- check_violation ERRCODE — net effect of having both is identical to
+-- having only one.
+--
+-- Trigger A (KEEP) — documented in deploy-primitives § 3:
+--   name:        proxy_rate_limits_monotonic_count_trg
+--   function:    proxy_rate_limits_monotonic_count()
+--   search_path: 'pg_catalog, public'
+--   fires on:    BEFORE UPDATE (any column)
+--   error msg:   'proxy_rate_limits: count is monotonic per (device_id, date);
+--                 refusing decrement from <old> to <new>'
+--
+-- Trigger B (DROP) — undocumented, likely a re-deploy artifact:
+--   name:        trg_proxy_rate_limit_monotonic
+--   function:    enforce_proxy_rate_limit_monotonic()
+--   search_path: '' (empty)
+--   fires on:    BEFORE UPDATE OF count
+--   error msg:   'proxy_rate_limits.count cannot decrease (was <old>,
+--                 attempted <new>)'
+--
+-- Safety
+-- ------
+-- Pre-flight checks (recorded in Geriatrics IMPROVEMENTS.md 2026-05-24 entry):
+--   1. No other function or view in the database references
+--      enforce_proxy_rate_limit_monotonic (pg_proc + pg_views scan, empty).
+--   2. No application code in any of the 6 sibling PWA repos
+--      (watch-advisor2, Toranot, Geriatrics, InternalMedicine,
+--      FamilyMedicine, ward-helper) references either the trigger or
+--      function by name (recursive grep, 0 hits across all repos).
+--   3. The active audit-8 R1.5 long-probe firstfail artifacts
+--      (network log + console log, captured at min ~49 of the
+--      2026-05-24 run) show zero references to proxy_rate_limits,
+--      rate_limit, 429, or any of the trigger/function names — the
+--      bifurcation evidence is uncorrelated with the rate-limit machinery.
+--
+-- Behavioral effect of this migration:
+--   - The documented trigger continues to enforce the invariant
+--     unchanged.
+--   - Updates attempting to decrement `count` still fail with the
+--     check_violation ERRCODE, just with one error message instead of
+--     two-overlapping messages.
+--
+-- Idempotency: uses IF EXISTS so re-running is safe (and a no-op).
+
+DROP TRIGGER IF EXISTS trg_proxy_rate_limit_monotonic ON public.proxy_rate_limits;
+DROP FUNCTION IF EXISTS public.enforce_proxy_rate_limit_monotonic();
