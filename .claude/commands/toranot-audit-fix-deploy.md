@@ -86,17 +86,20 @@ grep -rn "animate-card-in" src/ | xargs grep -l "will-change" 2>/dev/null
 # Look for `window.confirm(` only in code (not comments — JSDoc and `//`
 # comments in `App.tsx` and `SimpleConfirm.tsx` legitimately mention the
 # banned API while documenting the ban).
-grep -rEn "(^|[^/*[:space:]])window\.confirm\(" src/ \
+grep -rEn "\bwindow\.confirm\(" src/ \
   --include="*.ts" --include="*.tsx" \
-  | grep -vE ':\s*(//|\*)' \
-  | grep -vE ':\s*\*?\s*\*'
+  | grep -vE ':\s*(//|\*)'
 # Must return zero results — use React modals (useSimpleConfirm) instead.
-# The old grep `confirm(` flagged the `SimpleConfirm` component (which
-# does have `confirm(` in its API) and any prose mentioning
-# "window.confirm()". Two layers of filtering above:
-#   1. `--include` restricts to source files.
-#   2. The grep -v steps drop lines whose first non-whitespace token is
-#      a JS/JSDoc comment marker.
+# The earlier regex `(^|[^/*[:space:]])window\.confirm\(` had a P1 bug
+# (Codex flagged on PR #99): it required `window` to be at column 1 OR
+# preceded by a non-whitespace char, which meant common indented usages
+# like `  const ok = window.confirm(x)` or `  return window.confirm(x)`
+# would NOT match — silently allowing banned calls past the audit gate.
+# The current regex uses `\b` (word boundary) so `window.confirm(`
+# matches anywhere it's a complete identifier (won't catch `mywindow`),
+# and the single grep -v drops lines whose first non-whitespace token
+# is `//` or `*` (line comments and JSDoc continuation lines, which
+# legitimately mention the banned API while documenting the ban).
 
 # No console.log leaks in prod paths
 grep -rn "console\.log" src/ --include="*.ts" --include="*.tsx" \
