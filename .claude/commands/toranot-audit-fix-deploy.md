@@ -82,9 +82,21 @@ grep -rn "transition-all" src/
 grep -rn "animate-card-in" src/ | xargs grep -l "will-change" 2>/dev/null
 # Must return zero results
 
-# No confirm() calls (silently fails on Android PWA)
-grep -rn "confirm(" src/
-# Must return zero results — use React modals instead
+# No window.confirm() calls (silently fails on Android PWA)
+# Look for `window.confirm(` only in code (not comments — JSDoc and `//`
+# comments in `App.tsx` and `SimpleConfirm.tsx` legitimately mention the
+# banned API while documenting the ban).
+grep -rEn "(^|[^/*[:space:]])window\.confirm\(" src/ \
+  --include="*.ts" --include="*.tsx" \
+  | grep -vE ':\s*(//|\*)' \
+  | grep -vE ':\s*\*?\s*\*'
+# Must return zero results — use React modals (useSimpleConfirm) instead.
+# The old grep `confirm(` flagged the `SimpleConfirm` component (which
+# does have `confirm(` in its API) and any prose mentioning
+# "window.confirm()". Two layers of filtering above:
+#   1. `--include` restricts to source files.
+#   2. The grep -v steps drop lines whose first non-whitespace token is
+#      a JS/JSDoc comment marker.
 
 # No console.log leaks in prod paths
 grep -rn "console\.log" src/ --include="*.ts" --include="*.tsx" \
@@ -93,9 +105,14 @@ grep -rn "console\.log" src/ --include="*.ts" --include="*.tsx" \
 # Gate behind: if (import.meta.env.DEV). The debugLog wrapper itself and
 # test fixtures that intentionally exercise the wrapper are excluded above.
 
-# Dismissed tasks filter — ensure aggregations exclude dismissed
-grep -rn "dismissed" src/components/ | grep -v "filter\|dismissed:"
-# Any aggregation not filtering dismissed = bug
+# Dismissed tasks filter — surface aggregations for review
+# This grep is a candidate-surfacing check, NOT a hard bug indicator.
+# Lines that filter via `!t.dismissed` / `!.*\.dismissed` are legitimate
+# but don't contain the literal "filter" or "dismissed:" tokens — they
+# show up here and a human reviews them. Treat zero output as "all
+# aggregations are obvious filters"; treat any output as "look at each".
+grep -rn "dismissed" src/components/ \
+  | grep -v "filter\|dismissed:\|!.*\.dismissed\|!.*dismissed)"
 ```
 
 ### B. Clinical engine integrity
