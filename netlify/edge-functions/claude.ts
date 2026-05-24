@@ -1,4 +1,11 @@
 /**
+ * ROLLBACK PAIR — DO NOT DELETE in isolation.
+ * This file is the edge-function half of the /api/claude rollback architecture.
+ * Standard-function half: netlify/functions/claude.ts
+ * See PR #103 (silent-404 routing fix) and audit-fix-deploy SKILL.md HARD CONSTRAINTS section.
+ * Deleting one without rotating the other breaks the rollback path.
+ */
+/**
  * Claude proxy — Netlify Edge Function (Deno runtime).
  *
  * Replaces the synchronous Netlify Function at `/api/claude` (which lives at
