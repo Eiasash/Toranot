@@ -1,10 +1,13 @@
 ---
-description: Typecheck, test, build, commit, and push Toranot to trigger deploy
-argument-hint: [commit message]
+description: Typecheck, test, build, branch+commit, push, and open a PR for Toranot
+argument-hint: [commit/PR message]
 allowed-tools: Bash, Read
 ---
 
-Deploy Toranot with commit message: **$ARGUMENTS**
+Ship the current working-tree changes as a PR with message: **$ARGUMENTS**
+
+Per repo `CLAUDE.md` single-lane operating model — **never push to main directly**.
+All work goes through `claude/<slug>` → PR → CI green + Codex review → self-merge.
 
 ## Pre-deploy checks (abort if any fail)
 
@@ -28,30 +31,46 @@ If build fails: STOP. Report the error.
 
 If matches found: WARN — potential API key in source.
 
-## Deploy
+## Branch + push + PR
 
 ```bash
+# Derive a short kebab-case slug from $ARGUMENTS.
+# Fallback to a timestamp slug when the message is Hebrew-only / has no
+# ASCII letters or digits — otherwise the sed strip yields an empty slug
+# and `git checkout -b "claude/"` fails. Hebrew-only PR titles are common
+# in this repo.
+slug=$(echo "$ARGUMENTS" | tr '[:upper:]' '[:lower:]' \
+  | sed -E 's/[^a-z0-9]+/-/g; s/^-+|-+$//g' | cut -c1-40)
+if [ -z "$slug" ]; then
+  slug="deploy-$(date +%Y%m%d-%H%M%S)"
+fi
+git checkout -b "claude/${slug}"
+
 git add -A
 git status
-```
 
-Review staged changes. Then commit:
-
-```bash
 git commit -m "$ARGUMENTS"
+git push -u origin "claude/${slug}"
+
+gh pr create --base main \
+  --title "$ARGUMENTS" \
+  --body "Auto-opened by /toranot-deploy. CI + Codex review required before self-merge."
 ```
 
-Then push:
+## Post-PR
+
+After CI + Codex green (see audit-fix-deploy SKILL § D.5 for override criteria
+on trivial/additive/config-only PRs):
 ```bash
-git pull --rebase origin main && git push origin main
+gh pr merge <n> --squash --delete-branch
 ```
-
-## Post-deploy
+Then verify Netlify deploy state == "ready" AND live URL serves the new commit.
 
 Report:
+- Branch + PR URL
 - Commit SHA
 - TypeScript: clean / N errors
-- Tests: N/~1,780 passing
+- Tests: N/~2,310 passing
 - Build: success / fail
-- CI/CD: GitHub Actions will run typecheck → test → build → deploy
+- CI/CD: GitHub Actions will run typecheck → test → build
 - Live URL: https://toranot.netlify.app
