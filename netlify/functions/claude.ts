@@ -1,3 +1,10 @@
+/**
+ * ROLLBACK PAIR — DO NOT DELETE in isolation.
+ * This file is the standard-function half of the /api/claude rollback architecture.
+ * Edge-function half: netlify/edge-functions/claude.ts
+ * See PR #103 (silent-404 routing fix) and audit-fix-deploy SKILL.md HARD CONSTRAINTS section.
+ * Deleting one without rotating the other breaks the rollback path.
+ */
 import type { Context, Config } from "@netlify/functions";
 import {
   checkAuth,
