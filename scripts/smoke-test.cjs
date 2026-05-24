@@ -109,20 +109,48 @@ const RESET = "[0m";
 const useColor = process.stdout.isTTY || process.env.CI === "true";
 const c = (color, s) => (useColor ? `${color}${s}${RESET}` : s);
 
+// Retry settings — transient `fetch failed` (DNS / TCP / edge cold-start) is
+// the most common false-positive in this script. A real routing failure
+// returns an HTTP response (404 / 5xx), not a network error. We retry only on
+// network errors with bounded backoff: 1s, 3s, 7s.
+const RETRY_DELAYS_MS = [1000, 3000, 7000];
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function fetchOnce(url, method) {
+  const res = await fetch(url, { method, redirect: "manual" });
+  const status = res.status;
+  const contentType = (res.headers.get("content-type") || "").split(";")[0].trim();
+  await res.text().catch(() => {});
+  return { status, contentType };
+}
+
 async function probe(p) {
   const url = `${BASE}${p.path}`;
   let status;
   let contentType = "";
   let err = "";
+  let attempts = 0;
 
-  try {
-    const res = await fetch(url, { method: p.method, redirect: "manual" });
-    status = res.status;
-    contentType = (res.headers.get("content-type") || "").split(";")[0].trim();
-    // Drain body so connection closes cleanly
-    await res.text().catch(() => {});
-  } catch (e) {
-    err = String(e?.message || e);
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    attempts = attempt + 1;
+    err = "";
+    try {
+      const r = await fetchOnce(url, p.method);
+      status = r.status;
+      contentType = r.contentType;
+      // Got a real HTTP response — no further retry needed regardless of
+      // status (5xx with proper body is a real routing answer, not flake).
+      break;
+    } catch (e) {
+      err = String(e?.message || e);
+      // Network-level error (DNS, TCP, edge cold-start). Retry with backoff.
+      if (attempt < RETRY_DELAYS_MS.length) {
+        await sleep(RETRY_DELAYS_MS[attempt]);
+        continue;
+      }
+      // Out of retries — leave err set, fall through to fail.
+    }
   }
 
   const statusOk = p.okStatuses.includes(status);
@@ -136,7 +164,7 @@ async function probe(p) {
   );
   const pass = !err && statusOk && ctOk;
 
-  return { ...p, url, status, contentType, err, pass, statusOk, ctOk, isSpaFallback };
+  return { ...p, url, status, contentType, err, pass, statusOk, ctOk, isSpaFallback, attempts };
 }
 
 async function main() {
@@ -150,10 +178,11 @@ async function main() {
     results.push(r);
 
     const tag = r.pass ? c(GREEN, "PASS") : c(RED, "FAIL");
+    const retrySuffix = r.attempts > 1 ? c(DIM, ` (after ${r.attempts} attempts)`) : "";
     const detail = r.err
       ? c(RED, `network error: ${r.err}`)
       : `${r.method} ${r.status}${r.contentType ? ` ${r.contentType}` : ""}`;
-    console.log(`  ${tag} ${p.path.padEnd(22)} ${detail}`);
+    console.log(`  ${tag} ${p.path.padEnd(22)} ${detail}${retrySuffix}`);
     if (!r.pass && !r.err) {
       if (r.isSpaFallback) {
         console.log(`       ${c(YELLOW, `${r.status} ${SPA_FALLBACK_CT} = SPA catch-all fired; redirect for ${p.path} is not active in netlify.toml`)}`);
