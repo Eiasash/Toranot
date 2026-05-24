@@ -502,5 +502,8 @@ Then run `/toranot-update-skill` to verify self-consistency.
 - Never push direct to main — branch + PR + Codex review per single-lane CLAUDE.md
 - Test count must be verified after every change — ~2,310 is the baseline
 - The dual `netlify/functions/claude.ts` + `netlify/edge-functions/claude.ts` is
-  INTENTIONAL (functions version is the `/api/claude-legacy` emergency-rollback
-  target per `netlify.toml`). Audit grep checks must not flag it as duplication.
+  INTENTIONAL (functions version is the emergency-rollback target, hit directly
+  at `/.netlify/functions/claude` per `netlify.toml` comments). The previous
+  `/api/claude-legacy` alias was removed in PR #103 — the `/api/claude*` prefix
+  collided with the edge function's `config.path` and silently 404'd. Audit
+  grep checks must not flag the dual files as duplication.
