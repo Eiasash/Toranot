@@ -32,6 +32,14 @@ const BASE = process.argv[2] || "https://toranot.netlify.app";
  *    note: string,
  *  }} Probe */
 
+// Universal sanity check: the SPA catch-all rewrite (`/* -> /index.html`) returns
+// `200 text/html` for unmatched paths. If ANY probe — even one accepting status
+// 200 — gets `text/html`, that's the SPA, not the function. Always a FAIL.
+// This is what makes the smoke test detect missing redirects in the first
+// place; without it a missing /api/<name> redirect would silently PASS for
+// every OPTIONS probe that accepts 200.
+const SPA_FALLBACK_CT = "text/html";
+
 /** @type {Probe[]} */
 const PROBES = [
   // Read endpoints — return JSON on GET, no auth required.
@@ -50,9 +58,12 @@ const PROBES = [
     note: "self-audit read (503 acceptable when Supabase env missing on this site)",
   },
 
-  // POST endpoints — gate auth/method without us needing valid credentials.
-  // OPTIONS preflight is sufficient: every function returns 204 for OPTIONS
-  // BEFORE checking auth, so any non-404 response proves routing works.
+  // POST endpoints — probe via OPTIONS preflight to avoid needing real credentials.
+  // Legitimate function OPTIONS responses are 204 with empty body (and thus no
+  // content-type header). A 200 with `text/html` means the SPA catch-all fired
+  // instead of the redirect — that's the routing failure mode we exist to catch
+  // (see Codex P1 on PR #100). The universal SPA-fallback guard in `probe()`
+  // rejects `text/html` for every route regardless of status.
   {
     path: "/api/claude",
     method: "OPTIONS",
@@ -78,10 +89,15 @@ const PROBES = [
     note: "feedback-notify CORS preflight (405 acceptable if OPTIONS not whitelisted)",
   },
   {
+    // github-pat: 401 / 405 prove function was reached; 503 is acceptable too
+    // because `checkAuth()` returns 503 when Supabase auth verification times
+    // out — routing is still correct, the auth service is just temporarily
+    // slow. Accepting 503 keeps the smoke test from going red on transient
+    // upstream issues unrelated to redirect drift (Codex P2 on PR #100).
     path: "/api/github-pat",
     method: "GET",
-    okStatuses: [401, 405],
-    note: "github-pat (401/405 both prove function was invoked; 404 = redirect missing)",
+    okStatuses: [401, 405, 503],
+    note: "github-pat (401/405 prove function was invoked; 503 = Supabase auth timeout, routing still healthy; 404 = redirect missing)",
   },
 ];
 
@@ -110,11 +126,17 @@ async function probe(p) {
   }
 
   const statusOk = p.okStatuses.includes(status);
-  const ctOk = !p.okContentTypePrefix ||
-    contentType.startsWith(p.okContentTypePrefix);
+  // SPA-fallback guard: text/html on a /api/* route always means the redirect
+  // didn't fire and Netlify served index.html via the catch-all. Always FAIL,
+  // overrides any okStatuses match. (Codex P1 on PR #100: without this, a
+  // missing redirect that returns 200 HTML would PASS OPTIONS probes.)
+  const isSpaFallback = contentType.startsWith(SPA_FALLBACK_CT);
+  const ctOk = !isSpaFallback && (
+    !p.okContentTypePrefix || contentType.startsWith(p.okContentTypePrefix)
+  );
   const pass = !err && statusOk && ctOk;
 
-  return { ...p, url, status, contentType, err, pass, statusOk, ctOk };
+  return { ...p, url, status, contentType, err, pass, statusOk, ctOk, isSpaFallback };
 }
 
 async function main() {
@@ -133,14 +155,15 @@ async function main() {
       : `${r.method} ${r.status}${r.contentType ? ` ${r.contentType}` : ""}`;
     console.log(`  ${tag} ${p.path.padEnd(22)} ${detail}`);
     if (!r.pass && !r.err) {
-      if (!r.statusOk) {
-        console.log(`       ${c(YELLOW, `expected status ∈ {${p.okStatuses.join(",")}}, got ${r.status}`)}`);
-      }
-      if (!r.ctOk) {
-        console.log(`       ${c(YELLOW, `expected content-type ${p.okContentTypePrefix}*, got ${r.contentType || "(none)"}`)}`);
-      }
-      if (r.status === 404 && r.contentType.startsWith("text/html")) {
-        console.log(`       ${c(YELLOW, "404 + HTML body = redirect rule missing in netlify.toml")}`);
+      if (r.isSpaFallback) {
+        console.log(`       ${c(YELLOW, `${r.status} ${SPA_FALLBACK_CT} = SPA catch-all fired; redirect for ${p.path} is not active in netlify.toml`)}`);
+      } else {
+        if (!r.statusOk) {
+          console.log(`       ${c(YELLOW, `expected status ∈ {${p.okStatuses.join(",")}}, got ${r.status}`)}`);
+        }
+        if (!r.ctOk) {
+          console.log(`       ${c(YELLOW, `expected content-type ${p.okContentTypePrefix}*, got ${r.contentType || "(none)"}`)}`);
+        }
       }
     }
     console.log(`       ${c(DIM, p.note)}`);
