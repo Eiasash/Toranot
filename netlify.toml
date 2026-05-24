@@ -11,9 +11,10 @@
 
 # ── Edge Functions — Deno runtime, no 26s sync wall, native streaming ──
 # /api/claude is served by netlify/edge-functions/claude.ts. It supersedes
-# the old netlify/functions/claude.ts (kept for emergency rollback at the
-# /api/claude-legacy redirect below). The Edge Function declares `path` in
-# its config export, so no `[[edge_functions]]` block needed here.
+# the old netlify/functions/claude.ts (kept as the emergency-rollback
+# target, hit directly at /.netlify/functions/claude — no /api alias, see
+# rollback note below). The Edge Function declares `path` in its config
+# export, so no `[[edge_functions]]` block needed here.
 
 [functions."toranot-keepalive"]
   schedule = "0 6 */5 * *"
@@ -36,13 +37,15 @@
 # ── API rewrites — map /api/* to Netlify Functions ──
 # /api/claude is intentionally NOT redirected here — the Edge Function at
 # netlify/edge-functions/claude.ts owns that path via its config.path export.
-# /api/claude-legacy is an emergency-rollback alias that bypasses the edge
-# runtime and hits the original sync function directly. Useful when the
-# edge function has a regression but the sync function is known-good.
-[[redirects]]
-  from = "/api/claude-legacy"
-  to = "/.netlify/functions/claude"
-  status = 200
+#
+# Emergency-rollback path for the /api/claude edge function: hit
+# /.netlify/functions/claude directly (the original sync function is still
+# deployed and untouched by edge-function changes). There is no /api/*
+# alias for it — a previous /api/claude-legacy redirect was removed
+# because Netlify's routing engine silently 404'd it (the redirect's
+# /api/claude* prefix collided with the edge function's config.path
+# matcher; same routing-precedence bug class that killed /api/ocr-proxy
+# in PR #100).
 
 [[redirects]]
   from = "/api/gemini"
@@ -59,9 +62,11 @@
 # fire that redirect at runtime — every request returned 404 SPA HTML even
 # though the parsed redirect rule was reported as valid in deploy checks.
 # The only client (`src/components/Scanner.tsx`) uses `/api/ocr`, so the
-# dead alias was removed in PR #100. If a need for a `/api/ocr-proxy`
-# alias resurfaces, investigate the Netlify routing edge case first
-# (a parallel issue affects `/api/claude-legacy` — surfaced for review).
+# dead alias was removed in PR #100. Same routing-precedence bug class
+# also killed `/api/claude-legacy` (removed in the PR introducing this
+# comment). If a need for a function-name-matching `/api/*` alias
+# resurfaces, use a semantically-different slug or hit
+# `/.netlify/functions/<name>` directly.
 
 [[redirects]]
   from = "/api/github-pat"
