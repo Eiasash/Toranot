@@ -30,10 +30,22 @@ const UPDATE_EVERY_MS = 5 * 60 * 1000;
 export function registerAndAutoUpdateSW() {
   if (!("serviceWorker" in navigator)) return;
 
+  // Capture whether a SW was already controlling the page BEFORE registration.
+  // The controllerchange event fires for BOTH first-install (no controller →
+  // new controller) and updates (old controller → new controller). Reloading
+  // on first-install is incorrect: the SW just gained control of a fresh
+  // page, there's nothing to refresh. Lighthouse counts the first-install
+  // reload as a page redirect, costing ~2.6s LCP on every first visit and
+  // dropping the perf score from ~100 → 88. Update-flow reload is preserved.
+  const hadControllerAtBoot = !!navigator.serviceWorker.controller;
+
   let refreshing = false;
 
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (refreshing) return;
+    // First-install path: SW now controls the page but no reload needed.
+    // The page was loaded fresh and rendered correctly from network.
+    if (!hadControllerAtBoot) return;
     refreshing = true;
     window.location.reload();
   });
