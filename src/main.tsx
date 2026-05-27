@@ -30,9 +30,26 @@ const UPDATE_EVERY_MS = 5 * 60 * 1000;
 export function registerAndAutoUpdateSW() {
   if (!("serviceWorker" in navigator)) return;
 
+  // If the tab boots with no controller, the FIRST controllerchange we'll
+  // see is the SW gaining control of this page — a first install, no reload
+  // needed (page already rendered correctly from network). But for the same
+  // long-lived tab, a LATER controllerchange comes from a real update
+  // (5-min reg.update() / SKIP_WAITING flow) and DOES need a reload so the
+  // user picks up the new bundle.
+  //
+  // Track this as a one-shot "skip" flag — consume on the first
+  // controllerchange and let every subsequent one reload as before. Codex
+  // P2 on #107 caught the earlier "stays false forever" version which
+  // regressed the update path for any session that first-installed in the
+  // same tab.
+  let pendingFirstInstallSkip = !navigator.serviceWorker.controller;
   let refreshing = false;
 
   navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (pendingFirstInstallSkip) {
+      pendingFirstInstallSkip = false; // consume — first install handled, future events reload
+      return;
+    }
     if (refreshing) return;
     refreshing = true;
     window.location.reload();
