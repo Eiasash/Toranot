@@ -30,22 +30,27 @@ const UPDATE_EVERY_MS = 5 * 60 * 1000;
 export function registerAndAutoUpdateSW() {
   if (!("serviceWorker" in navigator)) return;
 
-  // Capture whether a SW was already controlling the page BEFORE registration.
-  // The controllerchange event fires for BOTH first-install (no controller →
-  // new controller) and updates (old controller → new controller). Reloading
-  // on first-install is incorrect: the SW just gained control of a fresh
-  // page, there's nothing to refresh. Lighthouse counts the first-install
-  // reload as a page redirect, costing ~2.6s LCP on every first visit and
-  // dropping the perf score from ~100 → 88. Update-flow reload is preserved.
-  const hadControllerAtBoot = !!navigator.serviceWorker.controller;
-
+  // If the tab boots with no controller, the FIRST controllerchange we'll
+  // see is the SW gaining control of this page — a first install, no reload
+  // needed (page already rendered correctly from network). But for the same
+  // long-lived tab, a LATER controllerchange comes from a real update
+  // (5-min reg.update() / SKIP_WAITING flow) and DOES need a reload so the
+  // user picks up the new bundle.
+  //
+  // Track this as a one-shot "skip" flag — consume on the first
+  // controllerchange and let every subsequent one reload as before. Codex
+  // P2 on #107 caught the earlier "stays false forever" version which
+  // regressed the update path for any session that first-installed in the
+  // same tab.
+  let pendingFirstInstallSkip = !navigator.serviceWorker.controller;
   let refreshing = false;
 
   navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (pendingFirstInstallSkip) {
+      pendingFirstInstallSkip = false; // consume — first install handled, future events reload
+      return;
+    }
     if (refreshing) return;
-    // First-install path: SW now controls the page but no reload needed.
-    // The page was loaded fresh and rendered correctly from network.
-    if (!hadControllerAtBoot) return;
     refreshing = true;
     window.location.reload();
   });
