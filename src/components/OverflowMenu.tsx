@@ -193,7 +193,7 @@ export function OverflowMenu({ onOpenModal }: { onOpenModal: (m: OverflowModal) 
         <button
           onClick={() => setOpen((v) => !v)}
           className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-slate-200 active:bg-slate-700 transition-colors text-lg"
-          aria-label="תפריט נוסף"
+          aria-label="··· — תפריט נוסף"
         >
           ···
         </button>

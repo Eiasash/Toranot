@@ -392,7 +392,7 @@ function BottomNav({
       <button
         onClick={() => onAction("handoff")}
         className="flex-1 flex flex-col items-center justify-center gap-0.5 min-h-[56px] text-slate-300 active:bg-slate-700 transition-colors"
-        aria-label="מסירת משמרת"
+        aria-label="מסירה — מסירת משמרת"
       >
         <span className="text-xl leading-none">📤</span>
         <span className="text-[10px] text-slate-400">מסירה</span>

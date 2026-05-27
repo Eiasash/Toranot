@@ -146,7 +146,7 @@ export function PatientList() {
         <p className="text-sm mt-2 text-center leading-relaxed">
           צלמו דף תורן או הדביקו רשימה למעלה
           <br />
-          <span className="text-xs opacity-60">ניתן גם לגרור חולים מקטגוריה אחרת</span>
+          <span className="text-xs">ניתן גם לגרור חולים מקטגוריה אחרת</span>
         </p>
       </div>
     );
