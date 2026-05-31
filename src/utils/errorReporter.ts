@@ -14,6 +14,42 @@
 const MAX_REPORTS_PER_SESSION = 5;
 let reportCount = 0;
 
+// --- PHI scrub (mirrors ward-helper's src/debug/console.ts) ------------------
+// These error reports are PERSISTED to Supabase (toranot_errors). In a patient-
+// data app an error message or stack can echo a name / id, so scrub before the
+// POST — never after. Keep code locations; redact the PHI shapes.
+
+/** Redact the three highest-risk PHI shapes; keep English error text readable. */
+export function scrubPhi(input: unknown): string {
+  const s = input == null ? "" : String(input);
+  return s
+    .replace(/\d{4,}/g, "[#]") // teudat-zehut / MRN / phone / dates / big labs
+    .replace(/"[^"]{0,400}"/g, '"[redacted]"') // quoted input echo
+    .replace(/'[^']{0,400}'/g, "'[redacted]'")
+    .replace(/[֐-׿]+(?:[\s.,:;()/\-]+[֐-׿]+)*/g, "[he]"); // any Hebrew run
+}
+
+/**
+ * Keep only real stack frames, dropping the leading "Error: <message>" header —
+ * that header echoes the RAW message, which the message-scrub alone would miss.
+ * Frames (`at fn (file:line:col)`) carry no PHI, so line/col are preserved.
+ */
+export function cleanStack(stack: string): string {
+  const lines = stack.split("\n");
+  const start = lines.findIndex((l) => /^\s*at\s/.test(l) || /@.+:\d+/.test(l));
+  return (start >= 0 ? lines.slice(start) : []).slice(0, 6).join("\n");
+}
+
+/** Scrub each field individually — NOT the serialized JSON (that would redact the keys too). */
+export function scrubPayload(payload: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(payload)) {
+    if (typeof v === "string") out[k] = k === "stack" ? cleanStack(v) : scrubPhi(v);
+    else out[k] = v; // numbers (lineno / colno) etc. — no PHI
+  }
+  return out;
+}
+
 function getSupabaseConfig(): { url: string; key: string } | null {
   try {
     const url = import.meta.env.VITE_SUPABASE_URL;
@@ -35,8 +71,8 @@ function sendError(level: "error" | "warn", source: string, message: string, pay
   const body = {
     level,
     source,
-    message: message.slice(0, 500), // truncate long messages
-    payload: payload ? JSON.stringify(payload).slice(0, 2000) : null,
+    message: scrubPhi(message).slice(0, 500), // PHI-scrub, then truncate
+    payload: payload ? JSON.stringify(scrubPayload(payload)).slice(0, 2000) : null,
     created_at: new Date().toISOString(),
   };
 
