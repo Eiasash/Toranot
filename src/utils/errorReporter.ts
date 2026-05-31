@@ -40,14 +40,34 @@ export function cleanStack(stack: string): string {
   return (start >= 0 ? lines.slice(start) : []).slice(0, 6).join("\n");
 }
 
-/** Scrub each field individually — NOT the serialized JSON (that would redact the keys too). */
-export function scrubPayload(payload: Record<string, unknown>): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(payload)) {
-    if (typeof v === "string") out[k] = k === "stack" ? cleanStack(v) : scrubPhi(v);
-    else out[k] = v; // numbers (lineno / colno) etc. — no PHI
+// Code-location fields are not PHI even when the number is large.
+const LOCATION_KEYS = new Set(["lineno", "colno", "line", "col", "lineNumber", "columnNumber"]);
+
+function scrubValue(key: string, v: unknown): unknown {
+  if (typeof v === "string") return key === "stack" ? cleanStack(v) : scrubPhi(v);
+  if (typeof v === "number") {
+    if (LOCATION_KEYS.has(key)) return v; // code location, not PHI
+    return Math.abs(v) >= 1000 ? "[#]" : v; // large numbers may be teudat-zehut / MRN / phone
   }
+  if (Array.isArray(v)) return v.map((item) => scrubValue(key, item));
+  if (v && typeof v === "object") return scrubObject(v as Record<string, unknown>);
+  return v; // boolean / null / undefined
+}
+
+function scrubObject(obj: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) out[k] = scrubValue(k, v);
   return out;
+}
+
+/**
+ * Scrub each field individually — NOT the serialized JSON (that would redact the keys too) —
+ * recursing through nested objects/arrays so PHI inside `reportError`'s `Record<string, unknown>`
+ * payload can't slip through. Strings -> scrubPhi (stack -> cleanStack); numbers >= 1000 -> [#]
+ * except code-location fields (lineno/colno).
+ */
+export function scrubPayload(payload: Record<string, unknown>): Record<string, unknown> {
+  return scrubObject(payload);
 }
 
 function getSupabaseConfig(): { url: string; key: string } | null {

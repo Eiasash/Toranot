@@ -51,6 +51,23 @@ describe("scrubPayload", () => {
     expect(json).not.toMatch(/[֐-׿]/); // values scrubbed
     expect(json).not.toContain("99999");
   });
+
+  it("recurses into nested objects/arrays + redacts large numeric ids, keeping code locations (Codex P2)", () => {
+    const out = scrubPayload({
+      patient: { name: "כהן", id: 312345678 },
+      ids: [987654321, 12],
+      lineno: 4242, // code location — kept even though >= 1000
+      count: 7, // small number — kept
+    });
+    const json = JSON.stringify(out);
+    expect(json).not.toMatch(/[֐-׿]/); // nested Hebrew scrubbed
+    expect(json).not.toContain("312345678"); // nested numeric id redacted
+    expect(json).not.toContain("987654321"); // array numeric id redacted
+    expect(json).toContain("patient"); // keys preserved
+    expect(out.lineno).toBe(4242);
+    expect((out.patient as Record<string, unknown>).name).toBe("[he]");
+    expect((out.ids as unknown[])[1]).toBe(12);
+  });
 });
 
 describe("reportError → Supabase POST is PHI-scrubbed (message AND payload)", () => {
