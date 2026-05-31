@@ -42,9 +42,16 @@ interface Rule {
 // Only explicit comfort/palliative flags trigger suppression.
 const COMFORT_CARE_PATTERN =
   /comfort\s*care|palliative|פליאטיב|טיפול תומך בלבד|טיפול מנחם|EOL|end.of.life|הנוחות בלבד|טיפולי נוחות/i;
-// High-dose combined sedation (fentanyl + dormicum/midazolam) strongly implies end-of-life comfort sedation
-const COMFORT_SEDATION_PATTERN =
-  /(?=.*(?:fentanyl|פנטניל))(?=.*(?:dormicum|דורמיקום|midazolam|מידזולם|מידאזולם))/i;
+// ⚠️ DO NOT re-add a drug-co-presence comfort trigger. A former
+// COMFORT_SEDATION_PATTERN inferred comfort-care from bare fentanyl+midazolam
+// co-presence. It was removed in the P0 clinical-safety fix: that combination is
+// routine ICU / step-down / procedural sedation and does NOT imply end-of-life.
+// It silently flipped isComfortCarePatient=true and suppressed the ENTIRE
+// emergency workup (sepsis/AKI/pneumonia/ACS…) for non-EOL patients — verified
+// as 0 sepsis tasks for a septic intubated patient. Comfort-care suppression now
+// REQUIRES an explicit designation: clinicalMeta.goalsOfCare === "comfort_only"
+// OR explicit comfort/palliative/EOL text (COMFORT_CARE_PATTERN). Never infer
+// comfort goals from sedation drugs.
 
 // Rule groups that are suppressed for comfort-care-only patients.
 // These represent aggressive workup/intervention that conflicts with comfort goals.
@@ -1648,8 +1655,7 @@ export function isComfortCarePatient(patient: PatientEntry): boolean {
   ].join(" ");
   return (
     patient.clinicalMeta?.goalsOfCare === "comfort_only" ||
-    COMFORT_CARE_PATTERN.test(signal) ||
-    COMFORT_SEDATION_PATTERN.test(signal)
+    COMFORT_CARE_PATTERN.test(signal)
   );
 }
 
@@ -1680,8 +1686,7 @@ export function applyRules(patient: PatientEntry): Task[] {
   ].join(" ");
   const isComfortCareOnly =
     patient.clinicalMeta?.goalsOfCare === "comfort_only" ||
-    COMFORT_CARE_PATTERN.test(comfortSignalText) ||
-    COMFORT_SEDATION_PATTERN.test(comfortSignalText);
+    COMFORT_CARE_PATTERN.test(comfortSignalText);
   const allFlags = comfortSignalText; // keep allFlags for backward compat with any callers
 
   // Pre-build text blobs for each trigger scope
@@ -1763,6 +1768,29 @@ export function applyRules(patient: PatientEntry): Task[] {
         });
       }
     }
+  }
+
+  // ── Visible comfort-care suppression indicator (P0 clinical-safety) ──
+  // Comfort-care suppression must NEVER be silent. When comfort-care mode is
+  // active, aggressive workup (sepsis/AKI/pneumonia/ACS…) is auto-suppressed —
+  // so the on-call doctor must not misread a short/empty task list as
+  // "nothing to do". Gated on isComfortCareOnly so it fires for EXACTLY the
+  // suppressed patient set (same condition that drives suppression above).
+  // Appears as one routine generated task (intentionally counted in task
+  // lists / handoff totals — that visibility is the point).
+  if (isComfortCareOnly) {
+    generated.push({
+      id: generateId("gen-"),
+      text: "טיפול תומך (comfort care) פעיל — בירור/טיפול אגרסיבי אינו נוצר אוטומטית. ודא שיעדי הטיפול מעודכנים.",
+      urgency: "routine",
+      category: "other",
+      source: "generated",
+      done: false,
+      doneTime: null,
+      time: null,
+      confidence: 1,
+      generatedFrom: "מצב טיפול תומך",
+    });
   }
 
   // Deduplicate: if two rules independently generated an identical task text,

@@ -147,21 +147,24 @@ describe("Comfort care / palliative hints", () => {
   });
 });
 
-// ── Regression: Hebrew Dormicum (dורמיקום) ──────────────────────────────────
+// ── Regression: sedation alone must NOT infer comfort-care (P0 clinical-safety fix) ──
+// A former COMFORT_SEDATION_PATTERN flipped comfort-care from a bare fentanyl+midazolam
+// co-presence and silently suppressed the entire workup. It was removed: routine
+// ICU/procedural sedation is NOT end-of-life. These tests previously asserted
+// suppression (toBeUndefined) — they are now INVERTED to assert the corrected,
+// safe behavior: sedation regimens (any spelling) no longer suppress, so the COPD
+// workup must still generate. Explicit comfort flags are tested above.
 
-describe("COMFORT_SEDATION_PATTERN — Hebrew Dormicum regression", () => {
-  it("detects comfort from Hebrew dormicum + fentanyl (exact image text)", () => {
-    // Bug: pattern had 'dormicum' but not Hebrew spelling
-    // Image shows: "תחת דורמיקום 10 fentanyl"
+describe("sedation alone does NOT infer comfort-care (COMFORT_SEDATION_PATTERN removed)", () => {
+  it("Hebrew דורמיקום + fentanyl alone → COPD workup still generates", () => {
     const p = makePatient({
       status: ["תחת דורמיקום 10 fentanyl"],
       tasks: [{ text: "COPD exacerbation" }],
     });
-    const tasks = applyRules(p);
-    expect(tasks.find(t => t.generatedFrom === "החמרת COPD")).toBeUndefined();
+    expect(applyRules(p).find(t => t.generatedFrom === "החמרת COPD")).toBeDefined();
   });
 
-  it("does NOT trigger from fentanyl alone", () => {
+  it("fentanyl alone → COPD workup generates", () => {
     const p = makePatient({
       status: ["fentanyl patch 25mcg/h"],
       tasks: [{ text: "COPD exacerbation" }],
@@ -169,7 +172,7 @@ describe("COMFORT_SEDATION_PATTERN — Hebrew Dormicum regression", () => {
     expect(applyRules(p).find(t => t.generatedFrom === "החמרת COPD")).toBeDefined();
   });
 
-  it("does NOT trigger from dormicum alone", () => {
+  it("dormicum alone → COPD workup generates", () => {
     const p = makePatient({
       status: ["דורמיקום 2.5mg PRN"],
       tasks: [{ text: "COPD exacerbation" }],
@@ -177,20 +180,20 @@ describe("COMFORT_SEDATION_PATTERN — Hebrew Dormicum regression", () => {
     expect(applyRules(p).find(t => t.generatedFrom === "החמרת COPD")).toBeDefined();
   });
 
-  it("detects English dormicum + fentanyl", () => {
+  it("English dormicum + fentanyl alone → COPD workup generates", () => {
     const p = makePatient({
       status: ["dormicum + fentanyl drip"],
       tasks: [{ text: "COPD exacerbation" }],
     });
-    expect(applyRules(p).find(t => t.generatedFrom === "החמרת COPD")).toBeUndefined();
+    expect(applyRules(p).find(t => t.generatedFrom === "החמרת COPD")).toBeDefined();
   });
 
-  it("detects midazolam + fentanyl", () => {
+  it("midazolam + fentanyl alone → COPD workup generates", () => {
     const p = makePatient({
       status: ["midazolam 5 + fentanyl infusion"],
       tasks: [{ text: "COPD exacerbation" }],
     });
-    expect(applyRules(p).find(t => t.generatedFrom === "החמרת COPD")).toBeUndefined();
+    expect(applyRules(p).find(t => t.generatedFrom === "החמרת COPD")).toBeDefined();
   });
 });
 

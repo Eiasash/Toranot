@@ -69,8 +69,11 @@ describe("isComfortCarePatient", () => {
     expect(isComfortCarePatient(makePatient({ flags: ["טיפול מנחם"] }))).toBe(true);
   });
 
-  it("detects comfort sedation (fentanyl + dormicum)", () => {
-    expect(isComfortCarePatient(makePatient({ status: ["fentanyl drip + dormicum IV"] }))).toBe(true);
+  it("does NOT infer comfort from sedation alone (fentanyl + dormicum) — P0 fix", () => {
+    // INVERTED (was .toBe(true)): COMFORT_SEDATION_PATTERN removed. Routine
+    // ICU/procedural sedation is not EOL — comfort-care now requires an explicit
+    // flag (goalsOfCare === "comfort_only" or comfort/palliative/EOL text).
+    expect(isComfortCarePatient(makePatient({ status: ["fentanyl drip + dormicum IV"] }))).toBe(false);
   });
 
   it("detects clinicalMeta.goalsOfCare = comfort_only", () => {
