@@ -37,7 +37,7 @@ Live: https://toranot.netlify.app
 
 ```bash
 npm run dev          # Dev server at http://localhost:5173/Toranot/
-npm test             # Run all tests (vitest, ~2,150 tests across 69 files)
+npm test             # Run all tests (vitest, ~2,150 tests across 75 files)
 npm run build        # TypeScript check + Vite build → dist/
 npm run typecheck    # tsc --noEmit (strict mode)
 ```
@@ -98,10 +98,11 @@ src/
 │   ├── AddAdmissionModal.tsx  # Admission workflow
 │   ├── OnCallProtocols.tsx    # IV/clinical protocol reference
 │   └── ...                    # 38+ more components (many lazy-loaded)
-└── __tests__/                 # 69 test files, ~2,150 tests
+└── __tests__/                 # 75 test files, ~2,150 tests
 
 netlify/functions/             # Serverless API proxies + ops helpers
 ├── claude.ts, gemini.ts, ocr-proxy.ts, github-pat.ts  # AI/auth proxies
+├── feedback-notify.ts                                  # feedback triage webhook
 ├── self-audit.js, skill-snapshot.js, toranot-keepalive.js  # ops/scheduled
 └── _utils.ts                  # Shared auth, rate limiting, validation
 
@@ -109,7 +110,7 @@ public/
 ├── sw.js, manifest.json, iv-protocols.json, szmc-iv-protocols.json
 ```
 
-**Codebase size**: ~162 TypeScript/TSX files (~92 source + 69 test + 1 index).
+**Codebase size**: ~168 TypeScript/TSX files (~92 source + 75 test + 1 index).
 
 ## Architecture
 
@@ -131,7 +132,7 @@ All clinical logic in `src/engine/` — deterministic, pure functions, heavily t
 
 ## Testing
 
-**~2,150 tests across 69 files** — run `npm test` to see current count.
+**~2,150 tests across 75 files** — run `npm test` to see current count.
 
 Always run `npm test` before every push. ALL tests must pass.
 
@@ -220,13 +221,13 @@ UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN, API_SECRET
 | Metric | Value |
 |--------|-------|
 | Source files (TS/TSX) | ~92 |
-| Test files | 69 |
+| Test files | 75 |
 | Total tests | ~2,150 |
 | Components | 46 |
 | Engine modules | 13 |
 | Clinical rule groups | 57 |
 | Renal dosing drugs | 19 |
-| Netlify functions | 7 (+1 shared utils) |
+| Netlify functions | 8 (+1 shared utils) |
 | Patient sections | 5 (SIDE_A–C, REHAB, MONITOR) |
 
 ---
