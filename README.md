@@ -2,10 +2,10 @@
 
 ## Recent Changes
 
-### Scanner: decode HEIC via lazy WASM (2026-06-04)
+### Revert client-side HEIC WASM decode — CSP violation (2026-06-04)
 
-- Confirmed on-device: the Oppo's `createImageBitmap` also can't decode HEIC (no OS HEIF codec exposed), so the prior native-decode path still couldn't scan HEIC — only showed the clear error.
-- Fix: detect HEIC/HEIF (MIME or extension; Android often reports empty MIME) and convert to JPEG via `heic2any` (libheif WASM), dynamically imported only on the HEIC path. Separate ~1.35MB chunk (gzip 341KB), SW-cached after first use; main bundle stays 146.5KB, JPEG/PNG flow unchanged.
+- The heic2any decode added in the prior change crashed at runtime with an uncaught `EvalError`: heic2any 0.0.4 bundles the old plain-JS libheif build, which uses `new Function(...)` for emscripten dynCall glue. The app's hardened CSP (`script-src 'self'`, no `'unsafe-eval'`) blocks that. The test suite did not catch it because vitest/jsdom do not apply the deployed CSP headers — it only fires in a real browser.
+- Reverted to the prior decode behaviour: `createImageBitmap` (native codecs) with an `<img>` fallback and a clear Hebrew error if the format cannot be decoded. No CSP change, no extra client bundle. HEIC still cannot be decoded client-side on devices whose OS exposes no HEIF codec; the recommended fix is to set the phone camera to JPEG, or convert HEIC server-side (no CSP impact) if in-app HEIC support is required.
 
 ### Dependency refresh (within-range) + declare @types/node (2026-06-04)
 
