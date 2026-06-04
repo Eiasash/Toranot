@@ -2,6 +2,12 @@
 
 ## Recent Changes
 
+### Dependency refresh (within-range) + declare @types/node (2026-06-04)
+
+- `npm update` bumped all deps to the latest within their caret ranges (react 19.2.7, @supabase/supabase-js 2.107.0, vite 7.3.5, @vitejs/plugin-react 5.2.0, dompurify 3.4.8, zustand 5.0.14, vitest/coverage 4.1.8, etc.). Majors held back deliberately: vite 8, typescript 6, @vitejs/plugin-react 6.
+- The update surfaced latent fragility: node-using test files (`serviceWorker.test.ts`, `jsxTextEscapeGuard.test.ts`) relied on a **transitive** `@types/node` that the refresh dropped → tsc broke (runtime tests + build were unaffected). Fixed by declaring `@types/node` (^22, matching the Node 22 runtime) explicitly in devDependencies.
+- Verified: tsc 0 errors · vitest 2323 passed · build OK.
+
 ### Scanner: broaden image decode (HEIC) + legible decode failure (2026-06-04)
 
 - **Symptom:** a clean printed ward sheet "couldn't scan" with no useful error.

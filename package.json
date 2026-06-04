@@ -13,6 +13,7 @@
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.18",
     "@types/dompurify": "^3.0.6",
+    "@types/node": "^22.19.19",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.4",
@@ -23,7 +24,7 @@
     "vite": "^7.3.1",
     "vitest": "^4.0.18"
   },
-  "description": "Hospital ward shift management PWA \u2014 patient tracking, task automation, drug safety alerts, and lab trend monitoring for on-call doctors",
+  "description": "Hospital ward shift management PWA — patient tracking, task automation, drug safety alerts, and lab trend monitoring for on-call doctors",
   "main": "index.js",
   "repository": {
     "type": "git",
