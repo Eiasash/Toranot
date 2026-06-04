@@ -231,40 +231,63 @@ async function runClaudeOCR(file: File, apiKey: string, sectionHint?: string): P
     .join("\n");
 }
 
-// Resize + compress + sharpen image for optimal OCR accuracy
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
+// Decode a File into a canvas-drawable source. Tries createImageBitmap first
+// (uses native platform codecs — decodes HEIF/HEIC on capable devices and
+// respects EXIF orientation), and falls back to <img> decode for older
+// browsers. Throws a clear, actionable error when the format can't be decoded
+// at all — the common silent failure when a phone hands the picker a HEIC file
+// that the browser's <img> canvas can't read.
+async function decodeImage(file: File): Promise<ImageBitmap | HTMLImageElement> {
+  if (typeof createImageBitmap === "function") {
+    try {
+      return await createImageBitmap(file, { imageOrientation: "from-image" });
+    } catch {
+      // fall through to the <img> path
+    }
+  }
+  return await new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
-    img.onload = () => {
-      let { width, height } = img;
-      if (width > IMAGE_MAX_EDGE || height > IMAGE_MAX_EDGE) {
-        if (width > height) { height = Math.round(height * IMAGE_MAX_EDGE / width); width = IMAGE_MAX_EDGE; }
-        else { width = Math.round(width * IMAGE_MAX_EDGE / height); height = IMAGE_MAX_EDGE; }
-      }
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) { reject(new Error("Failed to get canvas 2D context")); return; }
-
-      // Draw base image
-      ctx.drawImage(img, 0, 0, width, height);
-
-      // Apply light sharpening via unsharp mask for OCR clarity
-      // Boost contrast slightly — helps with faded printouts and phone photos
-      ctx.filter = "contrast(1.15) brightness(1.02)";
-      ctx.globalCompositeOperation = "source-over";
-      ctx.drawImage(canvas, 0, 0);
-      ctx.filter = "none";
-
+    img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = () => {
       URL.revokeObjectURL(url);
-      const dataUrl = canvas.toDataURL("image/jpeg", IMAGE_JPEG_QUALITY);
-      resolve(dataUrl.split(",")[1]);
+      reject(new Error("פורמט התמונה לא נתמך (ייתכן HEIC) — צלם מחדש או שמור כ-JPG"));
     };
-    img.onerror = reject;
     img.src = url;
   });
+}
+
+// Resize + compress + sharpen image for optimal OCR accuracy
+async function fileToBase64(file: File): Promise<string> {
+  const source = await decodeImage(file);
+  let width = source.width;
+  let height = source.height;
+  if (width > IMAGE_MAX_EDGE || height > IMAGE_MAX_EDGE) {
+    if (width > height) { height = Math.round(height * IMAGE_MAX_EDGE / width); width = IMAGE_MAX_EDGE; }
+    else { width = Math.round(width * IMAGE_MAX_EDGE / height); height = IMAGE_MAX_EDGE; }
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    if ("close" in source) source.close();
+    throw new Error("Failed to get canvas 2D context");
+  }
+
+  // Draw base image
+  ctx.drawImage(source, 0, 0, width, height);
+
+  // Apply light sharpening via unsharp mask for OCR clarity
+  // Boost contrast slightly — helps with faded printouts and phone photos
+  ctx.filter = "contrast(1.15) brightness(1.02)";
+  ctx.globalCompositeOperation = "source-over";
+  ctx.drawImage(canvas, 0, 0);
+  ctx.filter = "none";
+
+  if ("close" in source) source.close();
+  const dataUrl = canvas.toDataURL("image/jpeg", IMAGE_JPEG_QUALITY);
+  return dataUrl.split(",")[1];
 }
 
 function getStoredKey(): string {

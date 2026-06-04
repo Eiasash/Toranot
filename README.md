@@ -2,6 +2,12 @@
 
 ## Recent Changes
 
+### Scanner: broaden image decode (HEIC) + legible decode failure (2026-06-04)
+
+- **Symptom:** a clean printed ward sheet "couldn't scan" with no useful error.
+- **Diagnosis:** OCR backend proven working (extracted all 11 rows + section header against the real sheet via the proxy). Failure was the **client-side decode**: `fileToBase64` used `new Image()` + `<canvas>`, which on Android cannot decode HEIC, and `img.onerror` rejected with a raw event so the user saw `[object Event]`.
+- **Fix:** decode via `createImageBitmap()` first (native codecs — decodes HEIF/HEIC on capable devices, respects EXIF), fall back to `<img>`; on total decode failure throw a clear Hebrew error ("פורמט התמונה לא נתמך (ייתכן HEIC) — צלם מחדש או שמור כ-JPG"). All resize/contrast/quality logic unchanged; no bundle bloat.
+
 ### Cloud-sync labels rendered raw \uXXXX escapes — fixed (2026-06-04)
 
 - **Bug:** the overflow-menu cloud-sync status (`☁️ מסונכרן`), the disconnect button (`התנתק מהענן`), and the logged-out auth labels in `CloudAuthPanel.tsx` displayed literal backslash-u text instead of Hebrew/emoji.
