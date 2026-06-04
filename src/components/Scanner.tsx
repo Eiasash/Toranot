@@ -231,47 +231,27 @@ async function runClaudeOCR(file: File, apiKey: string, sectionHint?: string): P
     .join("\n");
 }
 
-// True if the file is HEIC/HEIF. Android often reports an empty MIME type for
-// these, so fall back to the filename extension.
-function isHeic(file: File): boolean {
-  const t = (file.type || "").toLowerCase();
-  if (t === "image/heic" || t === "image/heif") return true;
-  if (t === "") return /\.(heic|heif)$/i.test(file.name);
-  return false;
-}
-
-// Decode a File into a canvas-drawable source. HEIC/HEIF can't be decoded by
-// <img> or createImageBitmap on most Android devices (the OS codec isn't
-// exposed to the browser), so those are converted to JPEG via a WASM decoder
-// that is lazy-loaded ONLY on the HEIC path — the normal JPEG/PNG flow and the
-// main bundle are untouched. Then createImageBitmap is tried first (native
-// codecs, EXIF-correct) with an <img> fallback, and a clear, actionable error
-// is thrown when nothing can decode the image.
+// Decode a File into a canvas-drawable source. Tries createImageBitmap first
+// (uses native platform codecs — decodes HEIF/HEIC on capable devices and
+// respects EXIF orientation), and falls back to <img> decode for older
+// browsers. Throws a clear, actionable error when the format can't be decoded
+// at all — the common silent failure when a phone hands the picker a HEIC file
+// that the browser's <img> canvas can't read.
 async function decodeImage(file: File): Promise<ImageBitmap | HTMLImageElement> {
-  let decodable: Blob = file;
-  if (isHeic(file)) {
-    try {
-      const heic2any = (await import("heic2any")).default;
-      const out = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
-      decodable = Array.isArray(out) ? out[0] : out;
-    } catch {
-      throw new Error("המרת HEIC נכשלה — צלם מחדש או שמור כ-JPG");
-    }
-  }
   if (typeof createImageBitmap === "function") {
     try {
-      return await createImageBitmap(decodable, { imageOrientation: "from-image" });
+      return await createImageBitmap(file, { imageOrientation: "from-image" });
     } catch {
       // fall through to the <img> path
     }
   }
   return await new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
-    const url = URL.createObjectURL(decodable);
+    const url = URL.createObjectURL(file);
     img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error("פורמט התמונה לא נתמך — צלם מחדש או שמור כ-JPG"));
+      reject(new Error("פורמט התמונה לא נתמך (ייתכן HEIC) — צלם מחדש או שמור כ-JPG"));
     };
     img.src = url;
   });
