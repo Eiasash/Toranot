@@ -2,6 +2,13 @@
 
 ## Recent Changes
 
+### Cloud-sync labels rendered raw \uXXXX escapes — fixed (2026-06-04)
+
+- **Bug:** the overflow-menu cloud-sync status (`☁️ מסונכרן`), the disconnect button (`התנתק מהענן`), and the logged-out auth labels in `CloudAuthPanel.tsx` displayed literal backslash-u text instead of Hebrew/emoji.
+- **Root cause:** JSX does not decode `\uXXXX` escapes in **text children** — only inside string literals (`{"..."}`) or attribute values. The file uses ASCII escapes for Hebrew (to avoid the U+200F LRM `str_replace` trap), and 7 labels sat in JSX text position.
+- **Fix:** wrapped the 7 text-node escapes in `{"..."}` (keeps the ASCII-escape convention, decodes correctly).
+- **Guard:** `src/__tests__/jsxTextEscapeGuard.test.ts` statically scans all `.tsx` and fails the build on any unicode escape in JSX text position (verified it pinpoints the offending line when re-broken).
+
 ### Admission workflow upgrade + room format fix (2026-04-10)
 
 **Geriatric baseline on admission:**
