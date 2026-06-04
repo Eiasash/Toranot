@@ -2,6 +2,11 @@
 
 ## Recent Changes
 
+### Scanner: decode HEIC via lazy WASM (2026-06-04)
+
+- Confirmed on-device: the Oppo's `createImageBitmap` also can't decode HEIC (no OS HEIF codec exposed), so the prior native-decode path still couldn't scan HEIC — only showed the clear error.
+- Fix: detect HEIC/HEIF (MIME or extension; Android often reports empty MIME) and convert to JPEG via `heic2any` (libheif WASM), dynamically imported only on the HEIC path. Separate ~1.35MB chunk (gzip 341KB), SW-cached after first use; main bundle stays 146.5KB, JPEG/PNG flow unchanged.
+
 ### Dependency refresh (within-range) + declare @types/node (2026-06-04)
 
 - `npm update` bumped all deps to the latest within their caret ranges (react 19.2.7, @supabase/supabase-js 2.107.0, vite 7.3.5, @vitejs/plugin-react 5.2.0, dompurify 3.4.8, zustand 5.0.14, vitest/coverage 4.1.8, etc.). Majors held back deliberately: vite 8, typescript 6, @vitejs/plugin-react 6.
