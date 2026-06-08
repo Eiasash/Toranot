@@ -46,6 +46,13 @@ function extractAliases(src: string): Record<string, string> {
   return out;
 }
 
+/** Extract the implicit default model — `if (!raw) return "..."` in normalizeClaudeModel. */
+function extractDefaultModel(src: string): string {
+  const m = src.match(/if\s*\(\s*!raw\s*\)\s*return\s*"([^"]+)"/);
+  if (!m) throw new Error("empty-input default return not found");
+  return m[1];
+}
+
 const edgeSrc = read("../../netlify/edge-functions/claude.ts");
 const nodeSrc = read("../../netlify/functions/claude.ts");
 
@@ -53,6 +60,8 @@ const edgeModels = extractAllowedModels(edgeSrc);
 const nodeModels = extractAllowedModels(nodeSrc);
 const edgeAliases = extractAliases(edgeSrc);
 const nodeAliases = extractAliases(nodeSrc);
+const edgeDefault = extractDefaultModel(edgeSrc);
+const nodeDefault = extractDefaultModel(nodeSrc);
 
 describe("proxy model-normalization parity (edge ↔ node claude.ts)", () => {
   it("both copies define normalizeClaudeModel", () => {
@@ -75,5 +84,13 @@ describe("proxy model-normalization parity (edge ↔ node claude.ts)", () => {
     for (const [alias, target] of Object.entries(edgeAliases)) {
       expect(allowed.has(target), `alias "${alias}" → "${target}" not in ALLOWED_MODELS`).toBe(true);
     }
+  });
+
+  // Codex P2 (#118): a one-sided change to the empty-input default would alter
+  // rollback behavior for every caller that omits `model` while still passing the
+  // set/alias checks. Pin the default's parity too, and require it be allowed.
+  it("implicit default model (empty input) is identical across both halves and allowed", () => {
+    expect(edgeDefault).toBe(nodeDefault);
+    expect(edgeModels).toContain(edgeDefault);
   });
 });
