@@ -41,7 +41,7 @@ npx vite build
 ```
 Then assert main bundle stays under 150KB:
 ```
-bash scripts/preflight.sh --bundle-gate
+bash .agents/skills/toranot-ship/scripts/preflight.sh --bundle-gate
 ```
 (Falls back to `du -sb dist/assets/index-*.js | awk '{ if ($1 > 153600) exit 1 }'`.)
 
@@ -52,19 +52,23 @@ If the user did not update `README.md` Recent Changes, prompt for a one-line ent
 ```
 Commit it in the same commit as the feature.
 
-### Step 5 — Push with PAT rotation
-Uses `scripts/push-with-pat.sh`:
-1. `git remote set-url origin https://$GH_PAT@github.com/Eiasash/Toranot.git`
-2. `git config user.email "eias@toranot.app"`
-3. `git config user.name "Eias"`
-4. `git add -A && git commit -m "<type>: <description>" && git push origin main`
+### Step 5 — Branch-push with PAT rotation + PR
+Uses `.agents/skills/toranot-ship/scripts/push-with-pat.sh`. It NEVER pushes
+`main` directly — the release path is branch → PR → CI green + Codex review →
+merge (AGENTS.md):
+1. Resolves the ship branch: reuses the current non-main branch, or creates
+   `codex/ship-<utc-stamp>` when invoked from `main`. Refuses `main` outright.
+2. `git remote set-url origin https://$GH_PAT@github.com/Eiasash/Toranot.git`
+3. `git config user.email "eias@toranot.app"` + `git config user.name "Eias"`
+4. `git add -A && git commit -m "<type>: <description>" && git push -u origin <ship-branch>`
 5. **Immediately** `git remote set-url origin https://github.com/Eiasash/Toranot.git` (scrubs PAT)
-6. Print reminder: `Revoke at https://github.com/settings/tokens`
+6. Opens the PR via `gh pr create` (or prints the compare URL if `gh` is unavailable)
+7. Print reminder: `Revoke at https://github.com/settings/tokens`
 
 Commit message convention: `feat:`, `fix:`, `refactor:`, `test:`, `chore:`, `docs:`.
 
-### Step 6 — Netlify deploy verification
-Uses `scripts/verify-deploy.sh`:
+### Step 6 — Netlify deploy verification (after the PR merges)
+Uses `.agents/skills/toranot-ship/scripts/verify-deploy.sh`:
 - Poll `https://api.netlify.com/api/v1/sites/85d12386-b960-4f65-bee8-80e210ecd683/deploys?per_page=1`
 - Wait up to 5 minutes. State progression: `uploading → building → ready`.
 - On `ready`: assert `commit_ref` matches the just-pushed SHA.

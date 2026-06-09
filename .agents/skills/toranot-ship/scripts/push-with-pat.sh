@@ -1,15 +1,21 @@
 #!/usr/bin/env bash
-# Safe push to Eiasash/Toranot with PAT rotation.
+# Safe branch-push to Eiasash/Toranot with PAT rotation.
 # The PAT is injected into the remote URL only for the push, then scrubbed
 # back to a tokenless HTTPS URL IMMEDIATELY — even on failure.
 #
+# Ships via the AGENTS.md release path: branch -> PR -> CI green + Codex
+# review -> merge. This script NEVER pushes main directly.
+#
 # Usage:
-#   GH_PAT=ghp_xxx bash .claude/skills/toranot-ship/scripts/push-with-pat.sh "feat: description"
+#   GH_PAT=ghp_xxx bash .agents/skills/toranot-ship/scripts/push-with-pat.sh "feat: description" [branch-name]
+#
+# If branch-name is omitted and HEAD is on main, a codex/ship-<utc-stamp>
+# branch is created. If HEAD is already on a non-main branch, it is reused.
 #
 # Fails (non-zero exit) if:
 #   - GH_PAT is unset
 #   - commit message is missing
-#   - branch is not main
+#   - the resolved ship branch is main
 #   - push fails
 #
 # On any exit path, scrub the remote.
@@ -41,15 +47,31 @@ if ! [[ "$COMMIT_MSG" =~ ^(feat|fix|refactor|test|chore|docs|perf|style)(\(.+\))
   exit 12
 fi
 
-CUR_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-if [[ "$CUR_BRANCH" != "main" ]]; then
-  echo "[push] refusing to ship from branch '$CUR_BRANCH' — switch to main first" >&2
-  exit 13
-fi
-
 if [[ -z "$(git status --porcelain)" ]]; then
   echo "[push] nothing to commit — working tree clean" >&2
   exit 14
+fi
+
+CUR_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+SHIP_BRANCH="${2:-}"
+if [[ -z "$SHIP_BRANCH" ]]; then
+  if [[ "$CUR_BRANCH" == "main" ]]; then
+    SHIP_BRANCH="codex/ship-$(date -u +%Y%m%d-%H%M%S)"
+  else
+    SHIP_BRANCH="$CUR_BRANCH"
+  fi
+fi
+
+if [[ "$SHIP_BRANCH" == "main" ]]; then
+  echo "[push] refusing to push main directly — release path is branch -> PR -> CI + Codex review -> merge (AGENTS.md)" >&2
+  exit 13
+fi
+
+if [[ "$CUR_BRANCH" != "$SHIP_BRANCH" ]]; then
+  if ! git checkout -b "$SHIP_BRANCH"; then
+    echo "[push] could not create branch $SHIP_BRANCH" >&2
+    exit 17
+  fi
 fi
 
 git config user.email "$COMMITTER_EMAIL"
@@ -64,11 +86,23 @@ if ! git commit -m "$COMMIT_MSG"; then
   exit 15
 fi
 
-if ! git push origin main; then
+if ! git push -u origin "$SHIP_BRANCH"; then
   echo "[push] push failed — remote is scrubbed via trap; resolve and retry" >&2
   exit 16
 fi
 
+scrub_remote
+
 SHA=$(git rev-parse --short HEAD)
-echo "[push] OK — pushed $SHA to main"
+echo "[push] OK — pushed $SHA to $SHIP_BRANCH"
+
+# Open the PR (gh if authenticated, otherwise print the compare URL)
+if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+  gh pr create --base main --head "$SHIP_BRANCH" --title "$COMMIT_MSG" \
+    --body "Shipped via toranot-ship. Merge requires CI green + Codex review per AGENTS.md." \
+    || echo "[push] gh pr create failed — open manually: https://github.com/Eiasash/Toranot/compare/main...$SHIP_BRANCH" >&2
+else
+  echo "[push] open the PR: https://github.com/Eiasash/Toranot/compare/main...$SHIP_BRANCH"
+fi
+
 echo "[push] REMINDER: revoke this PAT at https://github.com/settings/tokens"
