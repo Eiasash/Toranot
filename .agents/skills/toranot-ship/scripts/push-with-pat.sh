@@ -12,10 +12,15 @@
 # If branch-name is omitted and HEAD is on main, a codex/ship-<utc-stamp>
 # branch is created. If HEAD is already on a non-main branch, it is reused.
 #
+# Resume: if a previous run committed but the push failed, rerun the same
+# command from the ship branch — unpushed commits are detected and re-pushed
+# (no new commit is created when the tree is clean).
+#
 # Fails (non-zero exit) if:
 #   - GH_PAT is unset
 #   - commit message is missing
 #   - the resolved ship branch is main
+#   - nothing to ship (clean tree AND no unpushed commits)
 #   - push fails
 #
 # On any exit path, scrub the remote.
@@ -47,11 +52,6 @@ if ! [[ "$COMMIT_MSG" =~ ^(feat|fix|refactor|test|chore|docs|perf|style)(\(.+\))
   exit 12
 fi
 
-if [[ -z "$(git status --porcelain)" ]]; then
-  echo "[push] nothing to commit — working tree clean" >&2
-  exit 14
-fi
-
 CUR_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 SHIP_BRANCH="${2:-}"
 if [[ -z "$SHIP_BRANCH" ]]; then
@@ -67,6 +67,19 @@ if [[ "$SHIP_BRANCH" == "main" ]]; then
   exit 13
 fi
 
+# Ship-needed check: dirty tree (fresh run) OR unpushed commits on the ship
+# branch (resume after a failed push — rerun from the ship branch itself).
+DIRTY=$(git status --porcelain)
+if git rev-parse --verify -q "origin/$SHIP_BRANCH" >/dev/null 2>&1; then
+  UNPUSHED=$(git rev-list --count "origin/$SHIP_BRANCH..HEAD" 2>/dev/null || echo 0)
+else
+  UNPUSHED=$(git rev-list --count "origin/main..HEAD" 2>/dev/null || echo 0)
+fi
+if [[ -z "$DIRTY" && "$UNPUSHED" -eq 0 ]]; then
+  echo "[push] nothing to ship — working tree clean and no unpushed commits" >&2
+  exit 14
+fi
+
 if [[ "$CUR_BRANCH" != "$SHIP_BRANCH" ]]; then
   if ! git checkout -b "$SHIP_BRANCH"; then
     echo "[push] could not create branch $SHIP_BRANCH" >&2
@@ -80,10 +93,14 @@ git config user.name "$COMMITTER_NAME"
 # Inject PAT ONLY for the push
 git remote set-url origin "https://${GH_PAT}@github.com/Eiasash/Toranot.git"
 
-git add -A
-if ! git commit -m "$COMMIT_MSG"; then
-  echo "[push] commit failed" >&2
-  exit 15
+if [[ -n "$DIRTY" ]]; then
+  git add -A
+  if ! git commit -m "$COMMIT_MSG"; then
+    echo "[push] commit failed" >&2
+    exit 15
+  fi
+else
+  echo "[push] resuming — re-pushing $UNPUSHED stranded local commit(s) on $SHIP_BRANCH"
 fi
 
 if ! git push -u origin "$SHIP_BRANCH"; then
