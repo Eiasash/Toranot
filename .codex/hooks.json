@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'if echo \"$CLAUDE_TOOL_INPUT\" | grep -q \"push origin main\" 2>/dev/null; then echo \"[skill-hook] Deploy pushed — run /toranot-update-skill to sync skill file\"; fi'"
+          }
+        ]
+      }
+    ]
+  }
+}
