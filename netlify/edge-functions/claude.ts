@@ -129,6 +129,29 @@ function trackUsage(
   }).catch(() => {});
 }
 
+// ─── Server-side grounding (reads private textbook_chapters via service_role) ──
+// Additive: only runs when the request includes `ground: { book, chapter }`.
+// The chapter text is injected into the Anthropic `system` param and is NEVER
+// returned to the client — only the model's synthesized answer is.
+async function fetchGrounding(book: string, chapter: number): Promise<string | null> {
+  const sbUrl = Netlify.env.get("SUPABASE_URL") || Netlify.env.get("VITE_SUPABASE_URL");
+  const sbKey = Netlify.env.get("SUPABASE_SERVICE_KEY"); // service_role only — anon cannot read this table
+  if (!sbUrl || !sbKey) return null;
+  try {
+    const r = await fetch(
+      `${sbUrl}/rest/v1/textbook_chapters?book=eq.${encodeURIComponent(book)}&chapter=eq.${chapter}&select=content`,
+      { headers: { apikey: sbKey, Authorization: `Bearer ${sbKey}` } },
+    );
+    if (!r.ok) return null;
+    const rows = await r.json();
+    if (!Array.isArray(rows) || !rows.length) return null;
+    const c = rows[0]?.content;
+    return typeof c === "string" && c.length ? c : null;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Handler ────────────────────────────────────────────────────────────────
 
 export default async (req: Request, _context: Context) => {
@@ -200,6 +223,24 @@ export default async (req: Request, _context: Context) => {
     return new Response("Invalid messages format", { status: 400, headers: corsHeaders(req) });
   }
 
+  // Server-side grounding: client sends { ground: { book, chapter } } instead of
+  // shipping copyrighted chapter text. We fetch it here and add it to `system`.
+  let groundSystem = "";
+  if (b?.ground && typeof b.ground === "object") {
+    const g = b.ground as { book?: unknown; chapter?: unknown };
+    const gBook = String(g.book ?? "").toLowerCase();
+    const gChapter = Number(g.chapter);
+    if (gBook && Number.isInteger(gChapter)) {
+      const content = await fetchGrounding(gBook, gChapter);
+      if (content) {
+        groundSystem =
+          `Use the following authoritative reference excerpt to ground your answer. ` +
+          `Do NOT reproduce it verbatim or quote long passages — synthesize and explain in your own words.\n\n` +
+          `<reference book="${gBook}" chapter="${gChapter}">\n${content}\n</reference>\n\n`;
+      }
+    }
+  }
+
   const wantsStream = b?.stream === true;
 
   const payload: Record<string, unknown> = {
@@ -208,7 +249,11 @@ export default async (req: Request, _context: Context) => {
     messages,
   };
   if (wantsStream) payload.stream = true;
-  if (typeof b?.system === "string") payload.system = b.system;
+  {
+    const clientSystem = typeof b?.system === "string" ? b.system : "";
+    const finalSystem = groundSystem + clientSystem;
+    if (finalSystem) payload.system = finalSystem;
+  }
   // Opus 4.7 rejects temperature/top_p with non-default values (returns 400).
   // Silently drop them for that model rather than propagating the error to clients
   // that historically pass these defensively.
