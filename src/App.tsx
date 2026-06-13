@@ -349,7 +349,7 @@ export type Modal =
 
 // ─── Bottom Navigation Bar ─────────────────────────────────
 // Primary actions at thumb-reach. 56px height + safe area inset.
-// Four slots: Search | Dashboard | Handoff | Reference
+// Four slots: Search | Tasks | Handoff | Tools
 function BottomNav({
   onAction,
   pendingStat,
@@ -373,14 +373,14 @@ function BottomNav({
         <span className="text-[10px] text-slate-400">חיפוש</span>
       </button>
 
-      {/* Dashboard — badge when stat tasks pending */}
+      {/* Tasks — badge when stat tasks pending */}
       <button
         onClick={() => onAction("dashboard")}
         className="flex-1 flex flex-col items-center justify-center gap-0.5 min-h-[56px] text-slate-300 active:bg-slate-700 transition-colors relative"
-        aria-label={`לוח משימות${pendingStat > 0 ? ` — ${pendingStat} סטט פתוחים` : ""}`}
+        aria-label={`משימות${pendingStat > 0 ? ` — ${pendingStat} סטט פתוחים` : ""}`}
       >
         <span className="text-xl leading-none">🎯</span>
-        <span className="text-[10px] text-slate-400">לוח</span>
+        <span className="text-[10px] text-slate-400">משימות</span>
         {pendingStat > 0 && (
           <span className="absolute top-2 right-[calc(50%-10px)] translate-x-2.5 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-0.5">
             {pendingStat > 99 ? "99+" : pendingStat}
@@ -398,14 +398,14 @@ function BottomNav({
         <span className="text-[10px] text-slate-400">מסירה</span>
       </button>
 
-      {/* Quick Reference */}
+      {/* Tools */}
       <button
         onClick={() => onAction("reference")}
         className="flex-1 flex flex-col items-center justify-center gap-0.5 min-h-[56px] text-slate-300 active:bg-slate-700 transition-colors"
-        aria-label="עזר קליני מהיר"
+        aria-label="כלים קליניים"
       >
         <span className="text-xl leading-none">📋</span>
-        <span className="text-[10px] text-slate-400">עזר</span>
+        <span className="text-[10px] text-slate-400">כלים</span>
       </button>
     </nav>
   );
@@ -677,7 +677,7 @@ function AppInner() {
             <button
               onClick={() => setModal("dashboard")}
               className="flex items-center gap-1.5 min-h-[44px] px-3 rounded-lg bg-red-700/80 text-red-100 text-sm font-semibold active:bg-red-600 transition-colors"
-              aria-label={`${pendingStat} משימות סטט פתוחות — פתח לוח`}
+              aria-label={`${pendingStat} משימות סטט פתוחות — פתח משימות`}
             >
               🔴 {pendingStat}
             </button>
@@ -866,5 +866,3 @@ export function App() {
     </AppErrorBoundary>
   );
 }
-
-

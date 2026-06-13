@@ -10,7 +10,7 @@
  * to open windows but does NOT maintain its own timers or alarm state.
  */
 
-const CACHE_VERSION = 1777334400000; // 2026-04-28 shared install-promo integrated
+const CACHE_VERSION = 1781308800000; // 2026-06-13 shared navigation IA cleanup
 const CACHE_NAME = `toranot-v${CACHE_VERSION}`;
 
 const PRECACHE_ASSETS = [
@@ -392,5 +392,4 @@ function fireTaskAlarm(taskId, taskText) {
     actions: [{ action: "dismiss", title: "ביטול" }],
   });
 }
-
 
