@@ -37,7 +37,7 @@ Live: https://toranot.netlify.app
 
 ```bash
 npm run dev          # Dev server at http://localhost:5173/Toranot/
-npm test             # Run all tests (vitest, ~2,150 tests across 75 files)
+npm test             # Run all tests (vitest, ~2,150 tests across 77 files)
 npm run build        # TypeScript check + Vite build → dist/
 npm run typecheck    # tsc --noEmit (strict mode)
 ```
@@ -98,7 +98,7 @@ src/
 │   ├── AddAdmissionModal.tsx  # Admission workflow
 │   ├── OnCallProtocols.tsx    # IV/clinical protocol reference
 │   └── ...                    # 38+ more components (many lazy-loaded)
-└── __tests__/                 # 75 test files, ~2,150 tests
+└── __tests__/                 # 77 test files, ~2,150 tests
 
 netlify/functions/             # Serverless API proxies + ops helpers
 ├── claude.ts, gemini.ts, ocr-proxy.ts, github-pat.ts  # AI/auth proxies
@@ -132,7 +132,7 @@ All clinical logic in `src/engine/` — deterministic, pure functions, heavily t
 
 ## Testing
 
-**~2,150 tests across 75 files** — run `npm test` to see current count.
+**~2,150 tests across 77 files** — run `npm test` to see current count.
 
 Always run `npm test` before every push. ALL tests must pass.
 
@@ -221,7 +221,7 @@ UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN, API_SECRET
 | Metric | Value |
 |--------|-------|
 | Source files (TS/TSX) | ~92 |
-| Test files | 75 |
+| Test files | 77 |
 | Total tests | ~2,150 |
 | Components | 46 |
 | Engine modules | 13 |
