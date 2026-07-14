@@ -1,0 +1,24 @@
+title = "Eias PWAs — gitleaks config"
+
+# Default gitleaks rules PLUS the allowlist below. Allowlisted values are EITHER
+# public-by-design OR already-exposed-and-scheduled-for-rotation (tracked in the
+# P0 secret-rotation runbook). After Eias rotates the proxy secret and completes
+# the signed-token cutover, delete the two proxy-secret regexes so CI will catch
+# any re-introduction. Every OTHER secret (real Anthropic sk-ant keys, Supabase
+# service_role JWTs, new proxy secrets, private keys) is still flagged.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Public-by-design + already-exposed-pending-rotation values (see P0 runbook)"
+regexes = [
+  '''sb_publishable_tUuqQQ8RKMvLDwTz5cKkOg_o_y-rHtw''',
+  '''toranot-proxy-34207b1d12f35873d7f22d8ca0388b2a-r2''',
+  '''shlav-a-mega-1f97f311d307-2026''',
+]
+paths = [
+  '''(.*\.)?test\.(ts|js|tsx|jsx|mjs|cjs)$''',
+  '''.*__tests__/.*''',
+  '''.*/tests?/.*''',
+]

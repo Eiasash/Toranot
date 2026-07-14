@@ -223,6 +223,11 @@ export function safeContentType(upstream: Response): string {
  *   const limitError = await checkRateLimit(req, "ai");
  *   if (limitError) return limitError;
  */
+function clampEnvInt(name: string, def: number): number {
+  const v = Number(Netlify.env.get(name));
+  return Number.isFinite(v) && v > 0 ? Math.floor(v) : def;
+}
+
 export async function checkRateLimit(
   req: Request,
   tier: "ai" | "ocr" = "ai"
@@ -240,15 +245,23 @@ export async function checkRateLimit(
     req.headers.get("x-nf-client-connection-ip") ??
     "unknown";
 
-  const limits = { ai: 30, ocr: 10 } as const;
-  const limit  = limits[tier];
+  // Layered caps (all env-tunable): per-IP/minute for interactive bursts, and a
+  // per-IP/day hard cap that bounds sustained abuse of the shared proxy secret
+  // (which ships in client bundles) WITHOUT enabling a global DoS — each IP is
+  // limited independently. A global/day counter is ALERT-ONLY (never blocks), so
+  // an attacker cannot weaponize it to deny service to the clinical apps.
+  const perMin      = tier === "ai" ? clampEnvInt("RL_AI_PER_MIN", 30)          : clampEnvInt("RL_OCR_PER_MIN", 10);
+  const perDay      = tier === "ai" ? clampEnvInt("RL_AI_PER_DAY", 2000)        : clampEnvInt("RL_OCR_PER_DAY", 300);
+  const globalAlert = tier === "ai" ? clampEnvInt("RL_AI_GLOBAL_DAY_ALERT", 5000) : clampEnvInt("RL_OCR_GLOBAL_DAY_ALERT", 800);
 
-  // Fixed window: bucket per IP per minute
-  const window = Math.floor(Date.now() / 60_000);
-  const key    = `rl:${tier}:${ip}:${window}`;
+  const minWindow = Math.floor(Date.now() / 60_000);
+  const dayWindow = Math.floor(Date.now() / 86_400_000);
+  const minKey    = `rl:${tier}:${ip}:${minWindow}`;
+  const dayKey    = `rl:${tier}:d:${ip}:${dayWindow}`;
+  const gKey      = `rl:${tier}:global:${dayWindow}`;
 
   try {
-    // INCR + EXPIRE in a single pipeline call to Upstash REST API
+    // INCR + EXPIRE the minute, per-IP-day, and global-day counters in one pipeline.
     const res = await fetch(`${url}/pipeline`, {
       method: "POST",
       headers: {
@@ -256,8 +269,9 @@ export async function checkRateLimit(
         "Content-Type": "application/json",
       },
       body: JSON.stringify([
-        ["INCR", key],
-        ["EXPIRE", key, 90], // 90s TTL — covers current + next window
+        ["INCR", minKey], ["EXPIRE", minKey, 90],       // covers current + next minute window
+        ["INCR", dayKey], ["EXPIRE", dayKey, 90_000],   // ~25h — day window
+        ["INCR", gKey],   ["EXPIRE", gKey, 90_000],
       ]),
       signal: AbortSignal.timeout(1500), // 1.5s max — never block the request long
     });
@@ -267,23 +281,35 @@ export async function checkRateLimit(
       return null;
     }
 
-    const data = (await res.json()) as [{ result: number }, unknown];
-    const count = data[0]?.result ?? 0;
+    const data = (await res.json()) as Array<{ result: number }>;
+    const minCount = data[0]?.result ?? 0;
+    const dayCount = data[2]?.result ?? 0;
+    const gCount   = data[4]?.result ?? 0;
 
-    if (count > limit) {
-      console.warn(`[rate-limit] ${tier} IP=${ip} count=${count}/${limit} — throttled`);
+    // Abuse monitoring — global spike ALERT only (does NOT throttle; avoids DoS on clinical apps).
+    if (gCount === globalAlert || gCount === globalAlert * 2 || gCount === globalAlert * 5) {
+      console.error(`[rate-limit][ALERT] ${tier} GLOBAL daily count=${gCount} crossed ${globalAlert} — possible shared-secret abuse; review Upstash / rotate the proxy secret`);
+    }
+
+    const over =
+      minCount > perMin ? { scope: "min", count: minCount, limit: perMin, retry: "60",   reset: (minWindow + 1) * 60 } :
+      dayCount > perDay ? { scope: "day", count: dayCount, limit: perDay, retry: "3600", reset: (dayWindow + 1) * 86_400 } :
+      null;
+
+    if (over) {
+      console.warn(`[rate-limit] ${tier} IP=${ip} ${over.scope} count=${over.count}/${over.limit} — throttled`);
       return new Response("Too Many Requests", {
         status: 429,
         headers: {
-          "Retry-After": "60",
-          "X-RateLimit-Limit": String(limit),
+          "Retry-After": over.retry,
+          "X-RateLimit-Limit": String(over.limit),
           "X-RateLimit-Remaining": "0",
-          "X-RateLimit-Reset": String((window + 1) * 60),
+          "X-RateLimit-Reset": String(over.reset),
         },
       });
     }
 
-    return null; // under limit — allow
+    return null; // under all limits — allow
   } catch (err) {
     console.warn("[rate-limit] Upstash unreachable — failing open:", err);
     return null; // fail-open on network error
