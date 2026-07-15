@@ -657,4 +657,14 @@ describe("checkRateLimit", () => {
     const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
     expect(body.p_keys[2]).toBe("ai:sess:user-abc-123");
   });
+
+  it("prefers the clientIp arg (Netlify Edge context.ip) over the header", async () => {
+    SB();
+    const fetchSpy = rpc([1, 1, 1, 1]);
+    vi.stubGlobal("fetch", fetchSpy);
+    const req = makeRequest({ headers: { "x-nf-client-connection-ip": "9.9.9.9" } });
+    await checkRateLimit(req, "ai", "5.6.7.8");
+    const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
+    expect(body.p_keys[0]).toBe("ai:min:5.6.7.8"); // context.ip wins over header
+  });
 });

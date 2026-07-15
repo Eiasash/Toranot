@@ -256,7 +256,8 @@ function sessionIdFromReq(req: Request): string | null {
 
 export async function checkRateLimit(
   req: Request,
-  tier: "ai" | "ocr" = "ai"
+  tier: "ai" | "ocr" = "ai",
+  clientIp?: string
 ): Promise<Response | null> {
   // Explicit kill-switch (set RL_DISABLE=1 to fail-open everything).
   if (Netlify.env.get("RL_DISABLE") === "1") return null;
@@ -271,8 +272,13 @@ export async function checkRateLimit(
     return null; // fail-open
   }
 
-  // Only trust Netlify's own client-IP header (x-forwarded-for is spoofable).
-  const ip = req.headers.get("x-nf-client-connection-ip") ?? "unknown";
+  // Client IP: Netlify Edge exposes it on context.ip (passed in as clientIp);
+  // the x-nf-client-connection-ip header only exists in the Functions runtime.
+  // Never key on x-forwarded-for (spoofable — an attacker could poison another
+  // IP's bucket). Falls back to "unknown" (all such traffic shares one bucket).
+  const ip = (clientIp && clientIp.trim())
+    || req.headers.get("x-nf-client-connection-ip")
+    || "unknown";
   const sess = sessionIdFromReq(req) ?? `ip:${ip}`;
 
   // Layered caps (all env-tunable): per-IP/minute for interactive bursts; a
