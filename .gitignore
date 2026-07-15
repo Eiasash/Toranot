@@ -8,3 +8,6 @@ coverage/
 
 # Ad-hoc command-output redirects (e.g. `npm run build > build_out.log`)
 *_out.log
+
+# Local Netlify folder
+.netlify

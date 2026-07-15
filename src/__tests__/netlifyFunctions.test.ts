@@ -506,7 +506,16 @@ describe("checkAuth", () => {
 // ═════════════════��════════════════════════════════════���══════════════════════
 
 describe("checkRateLimit", () => {
-  it("returns null (skip) when Upstash not configured", async () => {
+  // Supabase-backed limiter: one RPC to public.proxy_rate_hit returns the
+  // post-increment counts in order [perMin, perDay/IP, perSession, global].
+  const SB = () => {
+    envStore["SUPABASE_URL"] = "https://test.supabase.co";
+    envStore["SUPABASE_SERVICE_KEY"] = "test-service-key";
+  };
+  const rpc = (counts: number[]) =>
+    vi.fn().mockResolvedValue(new Response(JSON.stringify(counts), { status: 200 }));
+
+  it("returns null (skip) when Supabase not configured", async () => {
     const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const req = makeRequest();
     const result = await checkRateLimit(req);
@@ -514,48 +523,71 @@ describe("checkRateLimit", () => {
     spy.mockRestore();
   });
 
-  it("allows request under limit", async () => {
-    envStore["UPSTASH_REDIS_REST_URL"] = "https://redis.upstash.io";
-    envStore["UPSTASH_REDIS_REST_TOKEN"] = "test-token";
+  it("returns null (skip) when RL_DISABLE=1 kill-switch is set", async () => {
+    SB();
+    envStore["RL_DISABLE"] = "1";
+    const fetchSpy = rpc([999, 999, 999, 999]);
+    vi.stubGlobal("fetch", fetchSpy);
+    const req = makeRequest();
+    const result = await checkRateLimit(req, "ai");
+    expect(result).toBeNull();
+    expect(fetchSpy).not.toHaveBeenCalled(); // short-circuits before any RPC
+  });
 
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      new Response(JSON.stringify([{ result: 5 }, {}]), { status: 200 })
-    ));
-
+  it("allows request under all limits", async () => {
+    SB();
+    vi.stubGlobal("fetch", rpc([5, 12, 3, 100]));
     const req = makeRequest({
       headers: { "x-nf-client-connection-ip": "1.2.3.4" },
     });
     const result = await checkRateLimit(req, "ai");
-    expect(result).toBeNull(); // under limit (5 < 30)
+    expect(result).toBeNull(); // 5<30, 12<2000, 3<1000
   });
 
-  it("returns 429 when over AI limit (30/min)", async () => {
-    envStore["UPSTASH_REDIS_REST_URL"] = "https://redis.upstash.io";
-    envStore["UPSTASH_REDIS_REST_TOKEN"] = "test-token";
-
+  it("returns 429 when over AI per-minute limit (30/min)", async () => {
+    SB();
     const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      new Response(JSON.stringify([{ result: 31 }, {}]), { status: 200 })
-    ));
-
+    vi.stubGlobal("fetch", rpc([31, 12, 3, 100]));
     const req = makeRequest({
       headers: { "x-nf-client-connection-ip": "1.2.3.4" },
     });
     const result = await checkRateLimit(req, "ai");
     expect(result).not.toBeNull();
     expect(result!.status).toBe(429);
+    expect(result!.headers.get("Retry-After")).toBe("60");
     spy.mockRestore();
   });
 
-  it("returns 429 when over OCR limit (10/min)", async () => {
-    envStore["UPSTASH_REDIS_REST_URL"] = "https://redis.upstash.io";
-    envStore["UPSTASH_REDIS_REST_TOKEN"] = "test-token";
-
+  it("returns 429 when over per-IP/day limit (2000/day)", async () => {
+    SB();
     const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      new Response(JSON.stringify([{ result: 11 }, {}]), { status: 200 })
-    ));
+    vi.stubGlobal("fetch", rpc([5, 2001, 3, 100]));
+    const req = makeRequest({
+      headers: { "x-nf-client-connection-ip": "1.2.3.4" },
+    });
+    const result = await checkRateLimit(req, "ai");
+    expect(result!.status).toBe(429);
+    expect(result!.headers.get("Retry-After")).toBe("3600");
+    spy.mockRestore();
+  });
 
+  it("returns 429 when over per-session/day limit (1000/day)", async () => {
+    SB();
+    const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.stubGlobal("fetch", rpc([5, 12, 1001, 100]));
+    const req = makeRequest({
+      headers: { "x-nf-client-connection-ip": "1.2.3.4" },
+    });
+    const result = await checkRateLimit(req, "ai");
+    expect(result!.status).toBe(429);
+    expect(result!.headers.get("Retry-After")).toBe("3600");
+    spy.mockRestore();
+  });
+
+  it("returns 429 when over OCR per-minute limit (10/min)", async () => {
+    SB();
+    const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.stubGlobal("fetch", rpc([11, 12, 3, 100]));
     const req = makeRequest({
       headers: { "x-nf-client-connection-ip": "1.2.3.4" },
     });
@@ -565,15 +597,10 @@ describe("checkRateLimit", () => {
     spy.mockRestore();
   });
 
-  it("includes Retry-After header on 429", async () => {
-    envStore["UPSTASH_REDIS_REST_URL"] = "https://redis.upstash.io";
-    envStore["UPSTASH_REDIS_REST_TOKEN"] = "test-token";
-
+  it("includes Retry-After + X-RateLimit-Remaining headers on 429", async () => {
+    SB();
     const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      new Response(JSON.stringify([{ result: 50 }, {}]), { status: 200 })
-    ));
-
+    vi.stubGlobal("fetch", rpc([50, 12, 3, 100]));
     const req = makeRequest();
     const result = await checkRateLimit(req, "ai");
     expect(result).not.toBeNull();
@@ -582,50 +609,52 @@ describe("checkRateLimit", () => {
     spy.mockRestore();
   });
 
-  it("fails open when Upstash returns error", async () => {
-    envStore["UPSTASH_REDIS_REST_URL"] = "https://redis.upstash.io";
-    envStore["UPSTASH_REDIS_REST_TOKEN"] = "test-token";
-
+  it("fails open when Supabase RPC returns an error status", async () => {
+    SB();
     const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
       new Response("Server Error", { status: 500 })
     ));
-
     const req = makeRequest();
     const result = await checkRateLimit(req, "ai");
     expect(result).toBeNull(); // fail-open
     spy.mockRestore();
   });
 
-  it("fails open when Upstash is unreachable (network error)", async () => {
-    envStore["UPSTASH_REDIS_REST_URL"] = "https://redis.upstash.io";
-    envStore["UPSTASH_REDIS_REST_TOKEN"] = "test-token";
-
+  it("fails open when Supabase is unreachable (network error)", async () => {
+    SB();
     const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("ECONNREFUSED")));
-
     const req = makeRequest();
     const result = await checkRateLimit(req, "ai");
     expect(result).toBeNull(); // fail-open
     spy.mockRestore();
   });
 
-  it("uses x-nf-client-connection-ip for IP extraction", async () => {
-    envStore["UPSTASH_REDIS_REST_URL"] = "https://redis.upstash.io";
-    envStore["UPSTASH_REDIS_REST_TOKEN"] = "test-token";
-
-    const fetchSpy = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify([{ result: 1 }, {}]), { status: 200 })
-    );
+  it("sends the per-IP min bucket keyed on x-nf-client-connection-ip", async () => {
+    SB();
+    const fetchSpy = rpc([1, 1, 1, 1]);
     vi.stubGlobal("fetch", fetchSpy);
-
     const req = makeRequest({
       headers: { "x-nf-client-connection-ip": "10.0.0.1" },
     });
     await checkRateLimit(req, "ai");
+    const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
+    expect(body.p_keys[0]).toBe("ai:min:10.0.0.1");
+    expect(body.p_keys[1]).toBe("ai:day:10.0.0.1");
+    // no JWT => session bucket falls back to the IP
+    expect(body.p_keys[2]).toBe("ai:sess:ip:10.0.0.1");
+  });
 
-    // Verify the Redis key includes the IP
-    const callBody = JSON.parse(fetchSpy.mock.calls[0][1].body);
-    expect(callBody[0][1]).toContain("10.0.0.1");
+  it("derives the per-session bucket from the JWT sub claim", async () => {
+    SB();
+    const fetchSpy = rpc([1, 1, 1, 1]);
+    vi.stubGlobal("fetch", fetchSpy);
+    const payload = Buffer.from(JSON.stringify({ sub: "user-abc-123" })).toString("base64url");
+    const jwt = `eyJhbGciOiJIUzI1NiJ9.${payload}.sig`;
+    const req = makeRequest({ headers: { authorization: `Bearer ${jwt}` } });
+    await checkRateLimit(req, "ai");
+    const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
+    expect(body.p_keys[2]).toBe("ai:sess:user-abc-123");
   });
 });
