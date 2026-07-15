@@ -154,7 +154,7 @@ async function fetchGrounding(book: string, chapter: number): Promise<string | n
 
 // ─── Handler ────────────────────────────────────────────────────────────────
 
-export default async (req: Request, _context: Context) => {
+export default async (req: Request, context: Context) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders(req) });
   }
@@ -178,7 +178,7 @@ export default async (req: Request, _context: Context) => {
     });
   }
 
-  const limitError = await checkRateLimit(req, "ai");
+  const limitError = await checkRateLimit(req, "ai", context.ip);
   if (limitError) {
     return new Response(await limitError.text(), {
       status: limitError.status,
