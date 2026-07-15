@@ -205,19 +205,24 @@ export function safeContentType(upstream: Response): string {
   return "application/json";
 }
 
-// ─── Rate limiting (Upstash Redis) ───────────────────────────────────────────
+// ─── Rate limiting (Supabase Postgres) ───────────────────────────────────────────
 
 /**
- * Fixed-window rate limiter via Upstash Redis REST API.
- * No SDK required — plain HTTP.
+ * Fixed-window rate limiter backed by Supabase Postgres.
+ * No SDK required — plain HTTPS to the PostgREST RPC endpoint, using the same
+ * SUPABASE_URL + SUPABASE_SERVICE_KEY the proxy already uses for token-usage
+ * tracking and grounding (so no extra infrastructure or env vars).
  *
- * Limits per endpoint type:
- *   ai:  30 requests / minute / IP  (claude, gemini)
- *   ocr: 10 requests / minute / IP  (OCR — expensive, slow)
+ * Buckets per request (one atomic RPC, public.proxy_rate_hit):
+ *   <tier>:min:<ip>    — per-IP / minute (interactive burst guard)
+ *   <tier>:day:<ip>    — per-IP / day    (coarse abuse backstop)
+ *   <tier>:sess:<sub>  — per-session / day (per-user; sub = JWT subject, falls
+ *                        back to the IP when the caller used x-api-secret)
+ *   <tier>:global      — global / day    (ALERT-ONLY; never throttles)
  *
- * Degrades gracefully: if Upstash is not configured or unreachable,
- * the request is ALLOWED (fail-open) with a console warning.
- * This prevents Upstash outages from taking down the app.
+ * Degrades gracefully: if Supabase is not configured, RL_DISABLE=1 is set, or
+ * the RPC errors/times out, the request is ALLOWED (fail-open) with a warning —
+ * a rate-limit backend outage can never take down the clinical AI proxy.
  *
  * Usage:
  *   const limitError = await checkRateLimit(req, "ai");
@@ -228,76 +233,99 @@ function clampEnvInt(name: string, def: number): number {
   return Number.isFinite(v) && v > 0 ? Math.floor(v) : def;
 }
 
+// Extract a stable session id from the (already-verified) Supabase JWT so we can
+// rate-limit per user, not just per IP — important behind shared hospital NATs
+// where many legitimate users share one egress IP. Decodes (does NOT verify) the
+// JWT payload; checkAuth already verified the token upstream. Returns null when
+// the caller used x-api-secret instead of a Bearer JWT.
+function sessionIdFromReq(req: Request): string | null {
+  const auth = req.headers.get("authorization") ?? "";
+  if (!auth.startsWith("Bearer ")) return null;
+  const parts = auth.slice(7).split(".");
+  if (parts.length !== 3) return null;
+  try {
+    let b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    while (b64.length % 4) b64 += "=";
+    const payload = JSON.parse(atob(b64));
+    const sub = payload?.sub;
+    return typeof sub === "string" && sub ? sub : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function checkRateLimit(
   req: Request,
   tier: "ai" | "ocr" = "ai"
 ): Promise<Response | null> {
-  const url   = Netlify.env.get("UPSTASH_REDIS_REST_URL");
-  const token = Netlify.env.get("UPSTASH_REDIS_REST_TOKEN");
+  // Explicit kill-switch (set RL_DISABLE=1 to fail-open everything).
+  if (Netlify.env.get("RL_DISABLE") === "1") return null;
 
-  if (!url || !token) {
-    console.warn("[rate-limit] Upstash not configured — skipping rate limit");
+  // Backed by the SAME service_role Supabase the proxy already uses for
+  // token-usage tracking + grounding — no extra infra, no extra env vars.
+  const sbUrl = Netlify.env.get("SUPABASE_URL") || Netlify.env.get("VITE_SUPABASE_URL");
+  const sbKey = Netlify.env.get("SUPABASE_SERVICE_KEY");
+
+  if (!sbUrl || !sbKey) {
+    console.warn("[rate-limit] Supabase not configured — skipping rate limit");
     return null; // fail-open
   }
 
-  // Extract client IP — only trust Netlify's own header (x-forwarded-for is spoofable)
-  const ip =
-    req.headers.get("x-nf-client-connection-ip") ??
-    "unknown";
+  // Only trust Netlify's own client-IP header (x-forwarded-for is spoofable).
+  const ip = req.headers.get("x-nf-client-connection-ip") ?? "unknown";
+  const sess = sessionIdFromReq(req) ?? `ip:${ip}`;
 
-  // Layered caps (all env-tunable): per-IP/minute for interactive bursts, and a
-  // per-IP/day hard cap that bounds sustained abuse of the shared proxy secret
-  // (which ships in client bundles) WITHOUT enabling a global DoS — each IP is
-  // limited independently. A global/day counter is ALERT-ONLY (never blocks), so
-  // an attacker cannot weaponize it to deny service to the clinical apps.
-  const perMin      = tier === "ai" ? clampEnvInt("RL_AI_PER_MIN", 30)          : clampEnvInt("RL_OCR_PER_MIN", 10);
-  const perDay      = tier === "ai" ? clampEnvInt("RL_AI_PER_DAY", 2000)        : clampEnvInt("RL_OCR_PER_DAY", 300);
-  const globalAlert = tier === "ai" ? clampEnvInt("RL_AI_GLOBAL_DAY_ALERT", 5000) : clampEnvInt("RL_OCR_GLOBAL_DAY_ALERT", 800);
+  // Layered caps (all env-tunable): per-IP/minute for interactive bursts; a
+  // per-IP/day coarse abuse backstop; a per-SESSION/day per-user fairness cap
+  // (the primary control now that callers carry JWTs); and a global/day counter
+  // that is ALERT-ONLY (never blocks) so it can't be weaponised into a DoS.
+  const perMin      = tier === "ai" ? clampEnvInt("RL_AI_PER_MIN", 30)             : clampEnvInt("RL_OCR_PER_MIN", 10);
+  const perDay      = tier === "ai" ? clampEnvInt("RL_AI_PER_DAY", 2000)           : clampEnvInt("RL_OCR_PER_DAY", 300);
+  const perSession  = tier === "ai" ? clampEnvInt("RL_AI_PER_SESSION_DAY", 1000)   : clampEnvInt("RL_OCR_PER_SESSION_DAY", 200);
+  const globalAlert = tier === "ai" ? clampEnvInt("RL_AI_GLOBAL_DAY_ALERT", 5000)  : clampEnvInt("RL_OCR_GLOBAL_DAY_ALERT", 800);
 
-  const minWindow = Math.floor(Date.now() / 60_000);
-  const dayWindow = Math.floor(Date.now() / 86_400_000);
-  const minKey    = `rl:${tier}:${ip}:${minWindow}`;
-  const dayKey    = `rl:${tier}:d:${ip}:${dayWindow}`;
-  const gKey      = `rl:${tier}:global:${dayWindow}`;
+  // One atomic RPC increments all buckets and returns their post-increment counts
+  // in order: [perMin, perDay/IP, perSession, global]. Fixed-window TTLs.
+  const keys = [`${tier}:min:${ip}`, `${tier}:day:${ip}`, `${tier}:sess:${sess}`, `${tier}:global`];
+  const ttls = [60, 86_400, 86_400, 86_400];
 
   try {
-    // INCR + EXPIRE the minute, per-IP-day, and global-day counters in one pipeline.
-    const res = await fetch(`${url}/pipeline`, {
+    const res = await fetch(`${sbUrl}/rest/v1/rpc/proxy_rate_hit`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
+        "apikey": sbKey,
+        "Authorization": `Bearer ${sbKey}`,
       },
-      body: JSON.stringify([
-        ["INCR", minKey], ["EXPIRE", minKey, 90],       // covers current + next minute window
-        ["INCR", dayKey], ["EXPIRE", dayKey, 90_000],   // ~25h — day window
-        ["INCR", gKey],   ["EXPIRE", gKey, 90_000],
-      ]),
-      signal: AbortSignal.timeout(1500), // 1.5s max — never block the request long
+      body: JSON.stringify({ p_keys: keys, p_ttls: ttls }),
+      signal: AbortSignal.timeout(1500), // never block the request long
     });
 
     if (!res.ok) {
-      console.warn(`[rate-limit] Upstash error ${res.status} — failing open`);
+      console.warn(`[rate-limit] Supabase RPC ${res.status} — failing open`);
       return null;
     }
 
-    const data = (await res.json()) as Array<{ result: number }>;
-    const minCount = data[0]?.result ?? 0;
-    const dayCount = data[2]?.result ?? 0;
-    const gCount   = data[4]?.result ?? 0;
+    const counts = (await res.json()) as number[];
+    const minCount  = counts?.[0] ?? 0;
+    const dayCount  = counts?.[1] ?? 0;
+    const sessCount = counts?.[2] ?? 0;
+    const gCount    = counts?.[3] ?? 0;
 
     // Abuse monitoring — global spike ALERT only (does NOT throttle; avoids DoS on clinical apps).
     if (gCount === globalAlert || gCount === globalAlert * 2 || gCount === globalAlert * 5) {
-      console.error(`[rate-limit][ALERT] ${tier} GLOBAL daily count=${gCount} crossed ${globalAlert} — possible shared-secret abuse; review Upstash / rotate the proxy secret`);
+      console.error(`[rate-limit][ALERT] ${tier} GLOBAL daily count=${gCount} crossed ${globalAlert} — possible proxy abuse (mass JWT mint / shared secret); review access`);
     }
 
+    const nowSec = Math.floor(Date.now() / 1000);
     const over =
-      minCount > perMin ? { scope: "min", count: minCount, limit: perMin, retry: "60",   reset: (minWindow + 1) * 60 } :
-      dayCount > perDay ? { scope: "day", count: dayCount, limit: perDay, retry: "3600", reset: (dayWindow + 1) * 86_400 } :
+      minCount  > perMin     ? { scope: "min",  count: minCount,  limit: perMin,     retry: "60",   reset: nowSec + 60 } :
+      dayCount  > perDay     ? { scope: "day",  count: dayCount,  limit: perDay,     retry: "3600", reset: nowSec + 3600 } :
+      sessCount > perSession ? { scope: "sess", count: sessCount, limit: perSession, retry: "3600", reset: nowSec + 3600 } :
       null;
 
     if (over) {
-      console.warn(`[rate-limit] ${tier} IP=${ip} ${over.scope} count=${over.count}/${over.limit} — throttled`);
+      console.warn(`[rate-limit] ${tier} ip=${ip} ${over.scope} count=${over.count}/${over.limit} — throttled`);
       return new Response("Too Many Requests", {
         status: 429,
         headers: {
@@ -311,7 +339,7 @@ export async function checkRateLimit(
 
     return null; // under all limits — allow
   } catch (err) {
-    console.warn("[rate-limit] Upstash unreachable — failing open:", err);
-    return null; // fail-open on network error
+    console.warn("[rate-limit] Supabase unreachable — failing open:", err);
+    return null; // fail-open on network error / timeout
   }
 }
