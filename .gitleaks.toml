@@ -3,10 +3,8 @@ title = "Eias PWAs — gitleaks (targeted high-signal rules)"
 # NOTE: default gitleaks rules produce ~55 false positives on these repos
 # (UUIDs, Vite content hashes, base64 test fixtures via the noisy generic-api-key
 # rule). We therefore use TARGETED rules matching the secret CLASSES that actually
-# matter here. The allowlist exempts values that are public-by-design or already
-# exposed + scheduled for rotation (see the P0 secret-rotation runbook). After
-# rotation + the signed-token cutover, remove the two proxy-secret allowlist
-# regexes so any re-introduction (incl. the rotated value hardcoded) is caught.
+# matter here. The allowlist exempts values that are public-by-design (e.g. the
+# publishable Supabase key).
 
 [[rules]]
 id = "anthropic-api-key"
@@ -51,9 +49,7 @@ regex = '''gh[pousr]_[A-Za-z0-9]{36,255}'''
 keywords = ["ghp_", "gho_", "ghu_", "ghs_", "ghr_"]
 
 [allowlist]
-description = "Public-by-design + already-exposed-pending-rotation (see P0 runbook)"
+description = "Public-by-design"
 regexes = [
   '''sb_publishable_tUuqQQ8RKMvLDwTz5cKkOg_o_y-rHtw''',
-  '''toranot-proxy-34207b1d12f35873d7f22d8ca0388b2a-r2''',
-  '''shlav-a-mega-1f97f311d307-2026''',
 ]
