@@ -304,3 +304,31 @@ describe("serviceWorker — fireTaskAlarm helper", () => {
     expect(sw).toContain("ביטול"); // "cancel" in Hebrew
   });
 });
+
+// ── Shared-origin cache scope (behavioral) ───────────────────────────────────
+import vm from "vm";
+describe("serviceWorker — activate only deletes this app's stale caches", () => {
+  it("keeps foreign caches and the current cache, deletes stale toranot- caches", async () => {
+    const handlers: Record<string, (e: unknown) => void> = {};
+    const current = sw.match(/const CACHE_VERSION\s*=\s*(\d+)/)![1];
+    const names = [`toranot-v${current}`, "toranot-v1", "hazzard-shell-v29", "shlav-a-v10", "stage-a-v1"];
+    const deleted: string[] = [];
+    const ctx = {
+      self: {
+        addEventListener: (t: string, fn: (e: unknown) => void) => { handlers[t] = fn; },
+        clients: { claim: async () => {}, matchAll: async () => [] },
+        registration: { showNotification: async () => {} },
+        skipWaiting: () => {},
+      },
+      caches: { keys: async () => names, delete: async (n: string) => { deleted.push(n); return true; }, open: async () => ({}) },
+      console, setTimeout, clearTimeout, URL, Date, Promise,
+      fetch: async () => { throw new Error("offline"); },
+    };
+    vm.runInNewContext(sw, ctx);
+    let done: Promise<unknown> = Promise.resolve();
+    handlers.activate({ waitUntil: (p: Promise<unknown>) => { done = p; } });
+    await done;
+    expect(deleted).toEqual(["toranot-v1"]);
+  });
+});
+
