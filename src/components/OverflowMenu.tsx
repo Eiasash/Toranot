@@ -111,7 +111,10 @@ export function OverflowMenu({ onOpenModal }: { onOpenModal: (m: OverflowModal) 
       // Unregister stale service workers
       if ("serviceWorker" in navigator) {
         const registrations = await navigator.serviceWorker.getRegistrations();
+        // Only this app's worker: other apps share the eiasash.github.io origin.
+        const base = new URL(import.meta.env.BASE_URL || "/", window.location.origin).href;
         for (const reg of registrations) {
+          if (!reg.scope.startsWith(base)) continue;
           await reg.unregister();
         }
       }
@@ -119,6 +122,8 @@ export function OverflowMenu({ onOpenModal }: { onOpenModal: (m: OverflowModal) 
       if ("caches" in window) {
         const names = await caches.keys();
         for (const name of names) {
+          // Only this app's caches: other apps share the eiasash.github.io origin.
+          if (!name.startsWith("toranot-")) continue;
           await caches.delete(name);
         }
       }

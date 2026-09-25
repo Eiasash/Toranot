@@ -42,7 +42,7 @@ self.addEventListener("activate", (event) => {
       caches.keys().then((names) =>
         Promise.all(
           names
-            .filter((n) => n !== CACHE_NAME)
+            .filter((n) => n !== CACHE_NAME && n.startsWith("toranot-"))
             .map((n) => caches.delete(n)),
         ),
       ),
