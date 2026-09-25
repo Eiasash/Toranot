@@ -119,6 +119,8 @@ export function OverflowMenu({ onOpenModal }: { onOpenModal: (m: OverflowModal) 
       if ("caches" in window) {
         const names = await caches.keys();
         for (const name of names) {
+          // Only this app's caches: other apps share the eiasash.github.io origin.
+          if (!name.startsWith("toranot-")) continue;
           await caches.delete(name);
         }
       }
